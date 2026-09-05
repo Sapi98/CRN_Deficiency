@@ -1,9 +1,21 @@
 import unittest
 
-from parser_utils import ReactionParseError, parse_reaction_file, parse_reaction_text
+from crn_models import ReactionNetwork
+from parser_utils import (
+    ReactionFileParser,
+    ReactionParseError,
+    parse_reaction_file,
+    parse_reaction_text,
+)
 
 
 class ReactionParserTests(unittest.TestCase):
+    def test_object_api_returns_domain_model(self):
+        network = ReactionFileParser().parse_file("Example_Data/crn1.react")
+        self.assertIsInstance(network, ReactionNetwork)
+        self.assertEqual(network.reactions[0].source_complex, 0)
+        self.assertEqual(network.reaction_graph.edges[0].weight, 1.0)
+
     def test_example_file(self):
         result = parse_reaction_file("Example_Data/crn1.react")
         self.assertEqual(len(result["reactions"]), 6)
@@ -33,7 +45,19 @@ class ReactionParserTests(unittest.TestCase):
 
     def test_undefined_rate_is_an_error(self):
         with self.assertRaisesRegex(ReactionParseError, "Undefined rate constant"):
-            parse_reaction_text("Reactions:\nA k1-> B")
+            parse_reaction_text("Reactions:\nA k1-> B", unresolved="error")
+
+    def test_missing_values_are_symbolic_by_default(self):
+        result = parse_reaction_text("Reactions:\na A k1-> B")
+        self.assertEqual(result["reactions"][0]["reactants"], {"A": "a"})
+        self.assertIsNone(result["reactions"][0]["rate"])
+        self.assertEqual(result["reaction_graph"]["edges"][0]["weight"], "k1")
+        self.assertEqual(result["complex_index"], {"a A": 0, "B": 1})
+
+    def test_missing_values_can_be_set_to_one(self):
+        result = parse_reaction_text("Reactions:\na A k1-> B", unresolved="one")
+        self.assertEqual(result["reactions"][0]["reactants"], {"A": 1})
+        self.assertEqual(result["reactions"][0]["rate"], 1.0)
 
 
 if __name__ == "__main__":
