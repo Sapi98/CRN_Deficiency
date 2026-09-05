@@ -1,7 +1,7 @@
 import unittest
 
 from crn_models import ReactionNetwork
-from reaction_parser_utils import (
+from reaction_parser import (
     ReactionFileParser,
     ReactionParseError,
     parse_reaction_file,

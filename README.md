@@ -1,7 +1,7 @@
 # CRN_Deficiency
 
 ```python
-from parser_utils import parse_reaction_file
+from reaction_parser import parse_reaction_file
 
 network = parse_reaction_file("Example_Data/crn1.react")
 print(network["reactants"])
@@ -37,7 +37,7 @@ The functional API above remains available for backward compatibility. New
 analysis code can work directly with typed domain objects:
 
 ```python
-from parser_utils import ReactionFileParser
+from reaction_parser import ReactionFileParser
 
 network = ReactionFileParser(unresolved="symbolic").parse_file(
     "Example_Data/crn1.react"
@@ -54,9 +54,37 @@ The implementation is separated by responsibility:
 - `parser_policies.py` implements interchangeable strategies for unresolved
   parameters and a factory for selecting them.
 - `graph_utils.py` owns complex identity/indexing and graph construction.
-- `parser_utils.py` coordinates section, assignment, complex, and reaction
+- `reaction_parser.py` coordinates section, assignment, complex, and reaction
   parsing through `ReactionFileParser`.
 
 Dependencies can be injected into `ReactionFileParser`, allowing future file
 syntaxes, value policies, and graph builders to be added without changing the
 domain models or existing callers.
+
+## ODE input
+
+Mass-action ODE files use the same network models and unresolved-value
+strategies:
+
+```python
+from ode_parser import ODEFileParser, parse_ode_file
+
+# Typed result: source equations, ReactionNetwork, and warnings
+parsed = ODEFileParser(unresolved="symbolic").parse_file("model.ode")
+network = parsed.network
+
+# Backward-friendly dictionary containing the same network data
+result = parse_ode_file("model.ode")
+```
+
+The ODE parser groups terms having the same rate constant and concentration
+monomial. Monomial exponents form the reactant complex, while signed ODE
+coefficients form the reaction vector. It rejects non-integer exponents and any
+term that would create a product with negative stoichiometry. Because an ODE
+can have multiple reaction-network realizations, the returned reactions are the
+canonical grouped realization used by this project.
+
+`Example_Data/crn2.ode` intentionally fails ordinary mass-action validation:
+its `k2 * A^3 * B^2` term consumes `X`, although `X` is absent from that
+reactant monomial. Correct the equation or use a future generalized-kinetics
+model before performing deficiency analysis.

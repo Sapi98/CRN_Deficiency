@@ -1,7 +1,7 @@
-"""Object-oriented parser for the ``.react`` chemical-network format.
+"""Public parser API for the ``.react`` chemical-network format.
 
-The functional helpers at the bottom are retained as a stable compatibility
-facade. New code may use :class:`ReactionFileParser` to obtain domain objects.
+The functional file/text helpers return dictionaries for callers that do not
+need the :class:`ReactionNetwork` domain model.
 """
 
 from __future__ import annotations
@@ -18,6 +18,13 @@ from parser_policies import (
     UnresolvedValuePolicyFactory,
 )
 
+__all__ = [
+    "ReactionFileParser",
+    "ReactionParseError",
+    "parse_reaction_file",
+    "parse_reaction_text",
+]
+
 
 class ReactionParseError(ValueError):
     """Raised when reaction input does not conform to the expected format."""
@@ -31,7 +38,10 @@ class SectionParser:
     def parse(self, text: str) -> Dict[str, List[Tuple[int, str]]]:
         sections: Dict[str, List[Tuple[int, str]]] = {}
         current_section: Optional[str] = None
-        for line_number, line in self._meaningful_lines(text.splitlines()):
+        for line_number, raw_line in enumerate(text.splitlines(), 1):
+            line = raw_line.split("#", 1)[0].strip()
+            if not line or set(line) <= {"="}:
+                continue
             heading = self.section_pattern.match(line)
             if heading:
                 current_section = heading.group(1).strip().lower()
@@ -39,14 +49,6 @@ class SectionParser:
             elif current_section is not None:
                 sections[current_section].append((line_number, line))
         return sections
-
-    @staticmethod
-    def _meaningful_lines(lines: Iterable[str]):
-        for line_number, raw_line in enumerate(lines, 1):
-            line = raw_line.split("#", 1)[0].strip()
-            if line and not set(line) <= {"="}:
-                yield line_number, line
-
 
 class AssignmentParser:
     """Parses name-to-number sections such as rates and initial conditions."""
@@ -115,33 +117,22 @@ class ComplexParser:
                 raise ReactionParseError(
                     f"Negative stoichiometric coefficient on line {line_number}"
                 )
-            self._add_species(species, species_name, coefficient, line_number)
+            if species_name in species:
+                previous = species[species_name]
+                if isinstance(previous, str) or isinstance(coefficient, str):
+                    raise ReactionParseError(
+                        f"Cannot combine repeated species {species_name!r} with "
+                        f"unresolved coefficients on line {line_number}"
+                    )
+                coefficient += previous
+            species[species_name] = coefficient
 
-        normalized = {
-            name: self._normalize(value) for name, value in species.items()
-        }
-        return normalized, symbols
-
-    @staticmethod
-    def _normalize(value: Scalar) -> Scalar:
-        if isinstance(value, float) and value.is_integer():
-            return int(value)
-        return value
-
-    @staticmethod
-    def _add_species(
-        species: Dict[str, Scalar], name: str, coefficient: Scalar, line_number: int
-    ) -> None:
-        if name not in species:
-            species[name] = coefficient
-            return
-        previous = species[name]
-        if isinstance(previous, str) or isinstance(coefficient, str):
-            raise ReactionParseError(
-                f"Cannot combine repeated species {name!r} with unresolved coefficients "
-                f"on line {line_number}"
-            )
-        species[name] = previous + coefficient
+        return {
+            name: int(value)
+            if isinstance(value, float) and value.is_integer()
+            else value
+            for name, value in species.items()
+        }, symbols
 
 
 class ReactionFileParser:
@@ -255,28 +246,10 @@ class ReactionFileParser:
         )
 
 
-# Compatibility facade: existing code continues to receive plain dictionaries.
+# Dictionary facade for callers that do not need domain objects.
 def parse_reaction_text(text: str, unresolved: str = "symbolic") -> dict:
     return ReactionFileParser(unresolved).parse_text(text).to_dict()
 
 
 def parse_reaction_file(path: Union[str, Path], unresolved: str = "symbolic") -> dict:
     return ReactionFileParser(unresolved).parse_file(path).to_dict()
-
-
-def reaction_parser(
-    reaction_string: str,
-    rate_constants=None,
-    coefficients=None,
-    unresolved: str = "symbolic",
-) -> dict:
-    reaction = ReactionFileParser(unresolved).parse_reaction(
-        reaction_string, rate_constants, coefficients
-    )
-    result = {
-        "reactants": dict(reaction.reactants),
-        "products": dict(reaction.products),
-        "rate_constant": reaction.rate_constant,
-        "rate": reaction.rate,
-    }
-    return result
