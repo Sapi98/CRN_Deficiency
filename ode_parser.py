@@ -12,9 +12,8 @@ from graph_utils import ComplexRegistry, ReactionGraphBuilder
 from parser_policies import (
     UnresolvedValueError,
     UnresolvedValuePolicy,
-    UnresolvedValuePolicyFactory,
 )
-from reaction_parser import AssignmentParser, ReactionParseError, SectionParser
+from parser_utils import AssignmentParser, BaseFileParser, ParserError, SectionParser
 
 __all__ = [
     "ODEEquation",
@@ -27,7 +26,7 @@ __all__ = [
 ]
 
 
-class ODEParseError(ReactionParseError):
+class ODEParseError(ParserError):
     """Raised when an ODE cannot be parsed or realized as a mass-action CRN."""
 
 
@@ -92,7 +91,7 @@ class _ReactionContribution:
     line_numbers: List[int] = field(default_factory=list)
 
 
-class ODEFileParser:
+class ODEFileParser(BaseFileParser[ODEParseResult]):
     """Convert polynomial mass-action ODEs into a canonical reaction network.
 
     Terms with the same rate constant and reactant monomial are grouped into one
@@ -104,6 +103,7 @@ class ODEFileParser:
     signed_term_pattern = re.compile(r"([+-]?)\s*([^+-]+)")
     factor_pattern = re.compile(r"^([A-Za-z_]\w*)(?:\s*\^\s*(\d+(?:\.\d*)?|[A-Za-z_]\w*))?$")
     integer_pattern = re.compile(r"^\d+$")
+    error_type = ODEParseError
 
     def __init__(
         self,
@@ -114,20 +114,20 @@ class ODEFileParser:
         assignment_parser: Optional[AssignmentParser] = None,
         graph_builder: Optional[ReactionGraphBuilder] = None,
     ) -> None:
-        self.policy = policy or UnresolvedValuePolicyFactory.create(unresolved)
-        self.section_parser = section_parser or SectionParser()
-        self.assignment_parser = assignment_parser or AssignmentParser()
-        self.graph_builder = graph_builder or ReactionGraphBuilder()
-
-    def parse_file(self, path: Union[str, Path]) -> ODEParseResult:
-        return self.parse_text(Path(path).read_text(encoding="utf-8"))
+        super().__init__(
+            unresolved,
+            policy=policy,
+            section_parser=section_parser,
+            assignment_parser=assignment_parser,
+            graph_builder=graph_builder,
+        )
 
     def parse_text(self, text: str) -> ODEParseResult:
-        sections = self.section_parser.parse(text)
+        sections = self.parse_sections(text)
         rows = sections.get("ode model", [])
         if not rows:
             raise ODEParseError("No equations were found in the ODE Model section")
-        values = self.assignment_parser.parse(sections.get("coefficients", []), "Coefficients")
+        values = self.parse_assignments(sections, "coefficients", "Coefficients")
 
         equation_specs = [self._split_equation(number, line) for number, line in rows]
         species_names = self._species_names(equation_specs)

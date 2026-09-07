@@ -8,14 +8,14 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Dict, Iterable, List, Mapping, Optional, Tuple, Union
+from typing import Dict, Mapping, Optional, Tuple, Union
 
 from crn_models import Reaction, ReactionNetwork, Scalar
 from graph_utils import ComplexRegistry, ReactionGraphBuilder
+from parser_utils import AssignmentParser, BaseFileParser, ParserError, SectionParser
 from parser_policies import (
     UnresolvedValueError,
     UnresolvedValuePolicy,
-    UnresolvedValuePolicyFactory,
 )
 
 __all__ = [
@@ -26,48 +26,8 @@ __all__ = [
 ]
 
 
-class ReactionParseError(ValueError):
+class ReactionParseError(ParserError):
     """Raised when reaction input does not conform to the expected format."""
-
-
-class SectionParser:
-    """Lexes a document into named sections while retaining source line numbers."""
-
-    section_pattern = re.compile(r"^\s*([A-Za-z ]+?)\s*:\s*$")
-
-    def parse(self, text: str) -> Dict[str, List[Tuple[int, str]]]:
-        sections: Dict[str, List[Tuple[int, str]]] = {}
-        current_section: Optional[str] = None
-        for line_number, raw_line in enumerate(text.splitlines(), 1):
-            line = raw_line.split("#", 1)[0].strip()
-            if not line or set(line) <= {"="}:
-                continue
-            heading = self.section_pattern.match(line)
-            if heading:
-                current_section = heading.group(1).strip().lower()
-                sections.setdefault(current_section, [])
-            elif current_section is not None:
-                sections[current_section].append((line_number, line))
-        return sections
-
-class AssignmentParser:
-    """Parses name-to-number sections such as rates and initial conditions."""
-
-    assignment_pattern = re.compile(
-        r"^\s*([A-Za-z_]\w*)\s*=\s*"
-        r"([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)\s*$"
-    )
-
-    def parse(self, rows: Iterable[Tuple[int, str]], section_name: str) -> Dict[str, float]:
-        values = {}
-        for line_number, line in rows:
-            match = self.assignment_pattern.match(line)
-            if not match:
-                raise ReactionParseError(
-                    f"Invalid assignment in {section_name} on line {line_number}: {line!r}"
-                )
-            values[match.group(1)] = float(match.group(2))
-        return values
 
 
 class ComplexParser:
@@ -135,12 +95,13 @@ class ComplexParser:
         }, symbols
 
 
-class ReactionFileParser:
+class ReactionFileParser(BaseFileParser[ReactionNetwork]):
     """Facade coordinating parsing, domain construction, and graph building."""
 
     reaction_pattern = re.compile(
         r"^\s*(.*?)\s+([A-Za-z_]\w*)\s*->\s*(.*?)\s*$"
     )
+    error_type = ReactionParseError
 
     def __init__(
         self,
@@ -151,30 +112,27 @@ class ReactionFileParser:
         assignment_parser: Optional[AssignmentParser] = None,
         graph_builder: Optional[ReactionGraphBuilder] = None,
     ) -> None:
-        self.policy = policy or UnresolvedValuePolicyFactory.create(unresolved)
-        self.section_parser = section_parser or SectionParser()
-        self.assignment_parser = assignment_parser or AssignmentParser()
+        super().__init__(
+            unresolved,
+            policy=policy,
+            section_parser=section_parser,
+            assignment_parser=assignment_parser,
+            graph_builder=graph_builder,
+        )
         self.complex_parser = ComplexParser(self.policy)
-        self.graph_builder = graph_builder or ReactionGraphBuilder()
-
-    def parse_file(self, path: Union[str, Path]) -> ReactionNetwork:
-        return self.parse_text(Path(path).read_text(encoding="utf-8"))
 
     def parse_text(self, text: str) -> ReactionNetwork:
-        sections = self.section_parser.parse(text)
+        sections = self.parse_sections(text)
         reaction_rows = sections.get("reactions", [])
         if not reaction_rows:
             raise ReactionParseError("No reactions were found in the Reactions section")
 
-        rates = self.assignment_parser.parse(
-            sections.get("rate constants", []), "Rate Constants"
+        rates = self.parse_assignments(sections, "rate constants", "Rate Constants")
+        coefficients = self.parse_assignments(
+            sections, "stoichiometric coefficients", "Stoichiometric Coefficients"
         )
-        coefficients = self.assignment_parser.parse(
-            sections.get("stoichiometric coefficients", []),
-            "Stoichiometric Coefficients",
-        )
-        initial_conditions = self.assignment_parser.parse(
-            sections.get("initial conditions", []), "Initial Conditions"
+        initial_conditions = self.parse_assignments(
+            sections, "initial conditions", "Initial Conditions"
         )
 
         registry = ComplexRegistry()

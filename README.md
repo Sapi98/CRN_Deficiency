@@ -53,9 +53,11 @@ The implementation is separated by responsibility:
   graph domain models.
 - `parser_policies.py` implements interchangeable strategies for unresolved
   parameters and a factory for selecting them.
+- `parser_utils.py` contains shared file loading, section parsing, assignment
+  parsing, dependency setup, and the base parser template.
 - `graph_utils.py` owns complex identity/indexing and graph construction.
-- `reaction_parser.py` coordinates section, assignment, complex, and reaction
-  parsing through `ReactionFileParser`.
+- `reaction_parser.py` and `ode_parser.py` contain only their format-specific
+  grammar and network-construction rules.
 
 Dependencies can be injected into `ReactionFileParser`, allowing future file
 syntaxes, value policies, and graph builders to be added without changing the

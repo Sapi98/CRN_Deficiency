@@ -36,6 +36,10 @@ class ODEParserTests(unittest.TestCase):
         with self.assertRaisesRegex(ODEParseError, "consumes 'X'"):
             ODEFileParser().parse_file("Example_Data/crn2.ode")
 
+    def test_invalid_assignment_uses_ode_error(self):
+        with self.assertRaises(ODEParseError):
+            parse_ode_text("ODE Model:\ndx/dt = k * X\nCoefficients:\nk = nope")
+
     def test_warns_about_unused_coefficient(self):
         result = parse_ode_text(VALID_ODE + "unused = 4\n")
         self.assertEqual(result["warnings"], ["Coefficient 'unused' is defined but not used"])

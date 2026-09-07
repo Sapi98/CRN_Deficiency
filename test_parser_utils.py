@@ -47,6 +47,10 @@ class ReactionParserTests(unittest.TestCase):
         with self.assertRaisesRegex(ReactionParseError, "Undefined rate constant"):
             parse_reaction_text("Reactions:\nA k1-> B", unresolved="error")
 
+    def test_invalid_assignment_uses_reaction_error(self):
+        with self.assertRaises(ReactionParseError):
+            parse_reaction_text("Reactions:\nA k1-> B\nRate Constants:\nk1 = nope")
+
     def test_missing_values_are_symbolic_by_default(self):
         result = parse_reaction_text("Reactions:\na A k1-> B")
         self.assertEqual(result["reactions"][0]["reactants"], {"A": "a"})
