@@ -46,12 +46,12 @@ class StrictValuePolicy(UnresolvedValuePolicy):
     def coefficient(self, symbol: str, values: Mapping[str, float]):
         if symbol not in values:
             raise UnresolvedValueError(f"Undefined stoichiometric coefficient {symbol!r}")
-        return _positive_rate(symbol, values[symbol])
+        return values[symbol]
 
     def rate(self, symbol: str, values: Mapping[str, float]):
         if symbol not in values:
             raise UnresolvedValueError(f"Undefined rate constant {symbol!r}")
-        return values[symbol]
+        return _positive_rate(symbol, values[symbol])
 
 
 class UnitValuePolicy(UnresolvedValuePolicy):
