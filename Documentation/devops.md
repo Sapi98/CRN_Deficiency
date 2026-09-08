@@ -7,6 +7,7 @@ belongs in `scientific_methods.md`.
 
 ## Contents
 
+- [Project structure](#project-structure)
 - [Architecture](#architecture)
 - [Processing flows](#processing-flows)
 - [Class diagram](#class-diagram)
@@ -20,6 +21,42 @@ belongs in `scientific_methods.md`.
 - [Local development](#local-development)
 - [Packaging](#packaging)
 - [Version and release checklist](#version-and-release-checklist)
+
+## Project structure
+
+```text
+CRN_Deficiency/
+├── crntanalysis/                       # Installable Python package
+│   ├── __init__.py                     # Package version and public API exports
+│   ├── crn_models.py                   # Complex, reaction, graph, and network models
+│   ├── deficiency_utils.py             # Global and linkage-class deficiency calculation
+│   ├── graph_utils.py                  # Complex registry and weighted graph construction
+│   ├── ode_parser.py                   # Mass-action ODE parsing and CRN realization
+│   ├── orchestrator.py                 # Analysis service, reporting, persistence, and CLI
+│   ├── parser_policies.py              # Strategies for unresolved parameter values
+│   ├── parser_utils.py                 # Shared section, assignment, and base parser logic
+│   ├── reaction_parser.py              # Explicit reaction-file parsing
+│   └── visualiztion.py                 # Reserved for future visualization support
+├── Documentation/
+│   ├── devops.md                       # Architecture, APIs, development, and release guide
+│   └── scientific_methods.md           # CRNT mathematics and scientific methodology
+├── Example_Data/
+│   ├── crn1.react                      # Example explicit reaction-network input
+│   └── crn2.ode                        # Example containing a non-mass-action ODE term
+├── test_deficiency_utils.py            # Deficiency and symbolic-rank unit tests
+├── test_ode_parser.py                  # ODE parsing and validation unit tests
+├── test_orchestrator.py                # Service, CLI, and report-writing unit tests
+├── test_parser_utils.py                # Reaction parsing, policies, and graph unit tests
+├── README.md                           # Project overview, installation, and user guide
+├── requirements.txt                    # Runtime dependency constraints
+├── pyproject.toml                      # PEP 517 build-system requirements
+├── setup.py                            # Distribution metadata and console entry point
+└── .gitignore                          # Cache, build, environment, and output exclusions
+```
+
+The `output/` directory is created at runtime when the CLI or
+`AnalysisReportWriter` writes a report. It contains generated data and is not
+part of the source tree.
 
 ## Architecture
 

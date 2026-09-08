@@ -219,3 +219,6 @@ __marimo__/
 
 # Folder structure cache
 .DS_Store
+
+# Generated analysis reports
+output/
