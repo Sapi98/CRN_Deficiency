@@ -134,6 +134,7 @@ class ConsoleReportFormatter:
 
     def format(self, outcome: AnalysisOutcome) -> str:
         result = outcome.deficiency
+        complexes = {item.index: item for item in outcome.network.complexes}
         lines = [
             "Chemical Reaction Network Deficiency Analysis",
             f"Input: {outcome.source or '<provided text>'}",
@@ -149,7 +150,7 @@ class ConsoleReportFormatter:
             "Linkage classes",
         ]
         for item in result.linkage_classes:
-            labels = [outcome.network.complexes[index].label for index in item.complex_indices]
+            labels = [complexes[index].label for index in item.complex_indices]
             lines.append(
                 f"  L{item.index}: complexes={item.complex_indices} "
                 f"({', '.join(labels)}), n={item.number_of_complexes}, "

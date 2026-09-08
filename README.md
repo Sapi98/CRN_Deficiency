@@ -120,3 +120,45 @@ If complexes contain unresolved symbolic coefficients, SymPy calculates the
 generic symbolic rank and `result.symbolic_rank` is `True`. Special parameter
 values can lower that rank and therefore change the deficiency; resolve those
 coefficients first when a parameter-specific result is required.
+
+## Complete analysis pipeline
+
+Run a file from the console. Its `.react` or `.ode` suffix selects the parser:
+
+```bash
+python3 orchestrator.py Example_Data/crn1.react
+```
+
+The command prints a summary and writes structured JSON to
+`output/crn1_analysis.analysis`. Use the alternate extension or disable file
+output with:
+
+```bash
+python3 orchestrator.py model.react --extension output
+python3 orchestrator.py model.react --no-file
+```
+
+Raw document text is also accepted:
+
+```bash
+python3 orchestrator.py --format react --text $'Reactions:\nA k1-> B'
+```
+
+Running `python3 orchestrator.py` without arguments starts an interactive
+prompt. For pasted text, enter `END` on a separate line.
+
+A future GUI should call the console-independent service rather than `main()`:
+
+```python
+from orchestrator import AnalysisReportWriter, CRNAnalysisService
+
+service = CRNAnalysisService()
+outcome = service.analyze_file("model.react")
+# Or: outcome = service.analyze_text(editor_contents, input_format="react")
+
+report_path = AnalysisReportWriter().write(outcome, "output")
+```
+
+`AnalysisOutcome` contains the parsed network, deficiency result, input
+metadata, and parser warnings. This separates UI input/output from the analysis
+pipeline so a GUI can display the same object without capturing terminal text.
