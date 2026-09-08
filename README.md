@@ -92,3 +92,31 @@ canonical grouped realization used by this project.
 its `k2 * A^3 * B^2` term consumes `X`, although `X` is absent from that
 reactant monomial. Correct the equation or use a future generalized-kinetics
 model before performing deficiency analysis.
+
+## Deficiency calculation
+
+```python
+from deficiency_utils import calculate_deficiency
+from reaction_parser import ReactionFileParser
+
+network = ReactionFileParser().parse_file("Example_Data/crn1.react")
+result = calculate_deficiency(network)
+
+print(result.number_of_complexes)          # n
+print(result.stoichiometric_rank)          # s
+print(result.number_of_linkage_classes)    # l
+print(result.deficiency)                   # n - s - l
+
+for linkage_class in result.linkage_classes:
+    print(linkage_class.complex_indices, linkage_class.deficiency)
+```
+
+Each linkage-class deficiency is calculated as `n_i - s_i - 1`. The global
+stoichiometric rank is calculated independently and must not be replaced by the
+sum of the class ranks. Rate constants and adjacency weights do not affect
+deficiency.
+
+If complexes contain unresolved symbolic coefficients, SymPy calculates the
+generic symbolic rank and `result.symbolic_rank` is `True`. Special parameter
+values can lower that rank and therefore change the deficiency; resolve those
+coefficients first when a parameter-specific result is required.
