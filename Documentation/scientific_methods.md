@@ -4,6 +4,36 @@ This document specifies the Chemical Reaction Network Theory conventions used
 by `crntanalysis`. It describes how reaction and ODE inputs become complexes,
 graphs, stoichiometric subspaces, linkage classes, and deficiencies.
 
+## Contents
+
+- [Chemical reaction networks](#chemical-reaction-networks)
+- [Complex indexing and reaction graph](#complex-indexing-and-reaction-graph)
+- [Weighted undirected adjacency](#weighted-undirected-adjacency)
+- [Deterministic mass-action kinetics](#deterministic-mass-action-kinetics)
+- [Canonical realization of ODE input](#canonical-realization-of-ode-input)
+- [Stoichiometric subspace](#stoichiometric-subspace)
+- [Linkage classes](#linkage-classes)
+- [Whole-network deficiency](#whole-network-deficiency)
+- [Linkage-class deficiency](#linkage-class-deficiency)
+- [Symbolic coefficients](#symbolic-coefficients)
+- [Example calculation](#example-calculation)
+- [Reference](#reference)
+
+## Method overview
+
+```mermaid
+flowchart LR
+    A[Reaction or ODE input] --> B[Complexes and reactions]
+    B --> C[Undirected complex graph]
+    B --> D[Reaction vectors]
+    C --> E[Linkage classes l]
+    D --> F[Stoichiometric rank s]
+    B --> G[Number of complexes n]
+    E --> H[Deficiency delta = n - s - l]
+    F --> H
+    G --> H
+```
+
 ## Chemical reaction networks
 
 A chemical reaction network consists of a finite species set, a finite set of
@@ -17,17 +47,11 @@ nonnegative linear combination of species. For example,
 has complex vector `(2, 3)` in species order `(X, Y)`. The zero complex `0` is
 represented by the empty species mapping and is a valid graph node.
 
-A reaction
+A reaction (y \rightarrow y') has reaction vector
 
-```text
-y -> y'
-```
-
-has reaction vector
-
-```text
-y' - y.
-```
+\[
+v = y' - y.
+\]
 
 Complex identity is determined by species and resolved stoichiometric
 coefficients, not by formatting or the order in which terms were written.
@@ -58,18 +82,20 @@ not depend on matrix value types.
 
 ## Deterministic mass-action kinetics
 
-For reaction `rho` with reactant vector `r`, product vector `p`, and positive
-rate constant `k`, deterministic mass action assigns rate
+For reaction \(\rho\) with reactant vector \(r_\rho\), product vector
+\(p_\rho\), and positive rate constant \(k_\rho\), deterministic mass action
+assigns the rate
 
-```text
-rate_rho(x) = k * product_i x_i ** r_i.
-```
+\[
+R_\rho(x)=k_\rho\prod_{i=1}^{m}x_i^{r_{\rho i}}.
+\]
 
 The species dynamics are
 
-```text
-dx/dt = sum_rho (p_rho - r_rho) * rate_rho(x).
-```
+\[
+\frac{dx}{dt}
+=\sum_{\rho\in\mathcal R}(p_\rho-r_\rho)R_\rho(x).
+\]
 
 Therefore, a rate monomial determines a reactant complex, while its signed
 coefficients across species equations determine the reaction vector.
@@ -114,9 +140,9 @@ constructing a generalized-kinetics network.
 
 Let the reaction vectors be
 
-```text
-v_rho = y'_rho - y_rho.
-```
+\[
+v_\rho=y'_\rho-y_\rho.
+\]
 
 The stoichiometric subspace is their linear span. Its dimension `s` is the rank
 of the matrix whose rows are the reaction vectors in a consistent species
@@ -138,9 +164,9 @@ and reaction endpoints.
 
 The standard network deficiency is
 
-```text
-delta = n - s - l,
-```
+\[
+\delta=n-s-\ell,
+\]
 
 where:
 
@@ -152,12 +178,12 @@ The global rank is calculated from all reaction vectors together.
 
 ## Linkage-class deficiency
 
-For linkage class `i`, the project restricts attention to its complexes and
+For linkage class \(i\), the project restricts attention to its complexes and
 reactions and calculates
 
-```text
-delta_i = n_i - s_i - 1.
-```
+\[
+\delta_i=n_i-s_i-1.
+\]
 
 Here, `n_i` is the number of complexes in that class and `s_i` is the rank of
 the reaction vectors belonging to the class. The linkage count is one by
@@ -205,3 +231,12 @@ The five linkage-class deficiencies are:
 
 This example also demonstrates why class deficiencies should be reported
 alongside, but not substituted for, the whole-network deficiency.
+
+## Reference
+
+The deterministic mass-action convention follows the CRN semantics summarized
+in Section 2 of:
+
+X. Huang, T. H. Klinge, J. I. Lathrop, X. Li, and J. H. Lutz,
+“Real-Time Computability of Real Numbers by Chemical Reaction Networks,”
+[arXiv:1803.10267](https://arxiv.org/abs/1803.10267).

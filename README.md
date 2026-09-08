@@ -32,7 +32,9 @@ library is required.
 
 ## Installation
 
-Install from the repository root:
+### Standard installation
+
+Install from the repository root into the active Python environment:
 
 ```bash
 python3 -m pip install .
@@ -42,6 +44,51 @@ For editable development:
 
 ```bash
 python3 -m pip install -e .
+```
+
+### Using `venv`
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+python -m pip install --upgrade pip
+python -m pip install .
+```
+
+Use `python -m pip install -e .` on the last line for an editable development
+installation. Run `deactivate` to leave the environment.
+
+### Using Conda
+
+```bash
+conda create --name crntanalysis python=3.12 pip
+conda activate crntanalysis
+python -m pip install .
+```
+
+Although Conda creates and manages the environment, pip installs this local
+package and its declared Python dependencies inside that environment.
+
+### Using pyenv
+
+Select an isolated Python version with pyenv:
+
+```bash
+pyenv install 3.12.4
+pyenv local 3.12.4
+python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+python -m pip install --upgrade pip
+python -m pip install .
+```
+
+If the optional `pyenv-virtualenv` plugin is installed, it can replace the
+`venv` steps:
+
+```bash
+pyenv virtualenv 3.12.4 crntanalysis
+pyenv local crntanalysis
+python -m pip install .
 ```
 
 After installation, verify the package:
