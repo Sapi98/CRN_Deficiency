@@ -41,17 +41,19 @@ complexes, and directed reactions between complexes. A complex is a formal
 nonnegative linear combination of species. For example,
 
 ```text
-2 X + 3 Y
+2X + 3Y
 ```
 
 has complex vector `(2, 3)` in species order `(X, Y)`. The zero complex `0` is
 represented by the empty species mapping and is a valid graph node.
 
-A reaction (y \rightarrow y') has reaction vector
+A reaction $y \rightarrow y'$ has reaction vector
 
-\[
-v = y' - y.
-\]
+$$
+v = y' - y,\ where\ y,y'\in\mathbb{Z}_{\ge 0}^{|S|}.
+$$
+
+Here, $|S|$ is the number of species the network contains. The reaction vector is a signed integer vector in the stoichiometric subspace.
 
 Complex identity is determined by species and resolved stoichiometric
 coefficients, not by formatting or the order in which terms were written.
@@ -82,20 +84,20 @@ not depend on matrix value types.
 
 ## Deterministic mass-action kinetics
 
-For reaction \(\rho\) with reactant vector \(r_\rho\), product vector
-\(p_\rho\), and positive rate constant \(k_\rho\), deterministic mass action
+For reaction $\rho$ with reactant vector $r_\rho$, product vector
+$p_\rho$, and positive rate constant $k_\rho$, deterministic mass action
 assigns the rate
 
-\[
+$$
 R_\rho(x)=k_\rho\prod_{i=1}^{m}x_i^{r_{\rho i}}.
-\]
+$$
 
 The species dynamics are
 
-\[
+$$
 \frac{dx}{dt}
 =\sum_{\rho\in\mathcal R}(p_\rho-r_\rho)R_\rho(x).
-\]
+$$
 
 Therefore, a rate monomial determines a reactant complex, while its signed
 coefficients across species equations determine the reaction vector.
@@ -118,18 +120,20 @@ reactant monomial contains enough `X` to support that consumption.
 
 For example,
 
-```text
-dx/dt = k1 * X^2 * Y
-dy/dt = -k1 * X^2 * Y
-```
+$$
+\begin{aligned}
+\frac{dx}{dt} &= k_1 x^2y, \\
+\frac{dy}{dt} &= -k_1 x^2y.
+\end{aligned}
+$$
 
 is canonically realized as
 
-```text
-2 X + Y -> 3 X
-```
+$$
+2X+Y \xrightarrow{k_1} 3X.
+$$
 
-with rate constant `k1`.
+The reaction label displays the rate constant $k_1$ above the arrow.
 
 The provided `Example_Data/crn2.ode` does not pass ordinary mass-action
 validation. Its `k2 * A^3 * B^2` contribution consumes `X`, although `X` is
@@ -140,9 +144,9 @@ constructing a generalized-kinetics network.
 
 Let the reaction vectors be
 
-\[
+$$
 v_\rho=y'_\rho-y_\rho.
-\]
+$$
 
 The stoichiometric subspace is their linear span. Its dimension `s` is the rank
 of the matrix whose rows are the reaction vectors in a consistent species
@@ -164,9 +168,9 @@ and reaction endpoints.
 
 The standard network deficiency is
 
-\[
-\delta=n-s-\ell,
-\]
+$$
+\delta=n-s-l,
+$$
 
 where:
 
@@ -178,12 +182,12 @@ The global rank is calculated from all reaction vectors together.
 
 ## Linkage-class deficiency
 
-For linkage class \(i\), the project restricts attention to its complexes and
+For linkage class $i$, the project restricts attention to its complexes and
 reactions and calculates
 
-\[
+$$
 \delta_i=n_i-s_i-1.
-\]
+$$
 
 Here, `n_i` is the number of complexes in that class and `s_i` is the rank of
 the reaction vectors belonging to the class. The linkage count is one by
@@ -214,14 +218,11 @@ required.
 
 ## Example calculation
 
-For `Example_Data/crn1.react`, the implementation obtains:
+For `Example_Data/crn1.react`, the implementation obtains
 
-```text
-n = 11
-s = 4
-l = 5
-delta = 2
-```
+$$
+n=11, \qquad s=4, \qquad l=5, \qquad \delta=2.
+$$
 
 The five linkage-class deficiencies are:
 
