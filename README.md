@@ -1,127 +1,58 @@
-# CRN_Deficiency
+# Chemical Reaction Network Theory Analysis (CRNTAnalysis)
 
-## Requirements and installation
+`crntanalysis` is a Python package for parsing chemical reaction networks,
+constructing their complex graphs, and calculating standard Chemical Reaction
+Network Theory (CRNT) deficiency. It accepts explicit reaction files and
+mass-action polynomial ODE files, provides typed and dictionary APIs, and
+includes a command-line analysis pipeline that writes structured reports.
 
-- Python 3.9 or newer.
-- SymPy 1.13 or newer, below major version 2, for exact and symbolic
-  stoichiometric-rank calculations.
-- Setuptools 61 or newer and `wheel` are build requirements. Pip installs them
-  automatically in an isolated build environment.
+The project is currently an alpha release (`0.1.0`).
 
-All other imports (`argparse`, `dataclasses`, `json`, `pathlib`, `typing`, and
-`unittest`) come from the Python standard library. No NumPy, SciPy, or graph
+## Features
+
+- Parse `.react` files into indexed complexes and directed reactions.
+- Parse compatible mass-action `.ode` files into a canonical reaction-network
+  realization.
+- Preserve unresolved rate constants and stoichiometric coefficients as
+  symbols, or apply strict/default-one policies.
+- Build a directed complex graph and a weighted undirected adjacency matrix.
+- Calculate whole-network and per-linkage-class deficiency.
+- Calculate exact and generic symbolic stoichiometric ranks with SymPy.
+- Analyze files or raw text through a reusable service layer.
+- Print console summaries and write JSON `.analysis` or `.output` reports.
+
+## Requirements
+
+- Python 3.9 or newer
+- SymPy 1.13 or newer and below version 2
+
+Pip installs SymPy automatically. Setuptools 61+ and wheel are declared as
+isolated build requirements in `pyproject.toml`. No NumPy, SciPy, or graph
 library is required.
 
-Install from the project directory:
+## Installation
+
+Install from the repository root:
 
 ```bash
 python3 -m pip install .
 ```
 
-For development, install in editable mode:
+For editable development:
 
 ```bash
 python3 -m pip install -e .
-python3 -m unittest -v
 ```
 
-After installation, both regular imports and the `crntanalysis` console command
-are available.
+After installation, verify the package:
 
-```python
-from crntanalysis import parse_reaction_file
-
-network = parse_reaction_file("Example_Data/crn1.react")
-print(network["reactions"])
-print(network["complexes"])
-print(network["reaction_graph"])
-print(network["adjacency_matrix"])
+```bash
+python3 -c "import crntanalysis; print(crntanalysis.__version__)"
 ```
 
-Complexes are indexed from zero in first-appearance order. The same index is
-used in `complexes`, every reaction's `source_complex` and `target_complex`, the
-directed `reaction_graph`, and the rows and columns of `adjacency_matrix`.
-Complex data is stored once in `complexes`; reactions refer to their source and
-target by index. Graph edges use the numerical rate constant as `weight`. The
-undirected adjacency matrix contains `0` for no path, a numerical or symbolic
-weight for one path, and a list of weights when parallel or reverse reactions
-connect the same pair of complexes.
+## Quick start
 
-Missing rate constants and stoichiometric coefficient values are symbolic by
-default. An undefined rate such as `k1` is stored with `rate=None` and used as
-the graph edge's symbolic `weight`; an undefined coefficient such as `a` is
-retained in the complex as `{"A": "a"}`. Alternative policies are explicit:
-
-```python
-strict_network = parse_reaction_file("network.react", unresolved="error")
-unit_network = parse_reaction_file("network.react", unresolved="one")
-```
-
-The `error` policy requires every referenced value to be defined. The `one`
-policy substitutes `1.0` and should only be used when that assumption is
-mathematically intended.
-
-## Object-oriented API
-
-The functional API above remains available for backward compatibility. New
-analysis code can work directly with typed domain objects:
-
-```python
-from crntanalysis import ReactionFileParser
-
-network = ReactionFileParser(unresolved="symbolic").parse_file(
-    "Example_Data/crn1.react"
-)
-
-for reaction in network.reactions:
-    print(reaction.source_complex, reaction.target_complex, reaction.rate)
-```
-
-The implementation is separated by responsibility:
-
-- `crn_models.py` contains the `ReactionNetwork`, `Reaction`, `Complex`, and
-  graph domain models.
-- `parser_policies.py` implements interchangeable strategies for unresolved
-  parameters and a factory for selecting them.
-- `parser_utils.py` contains shared file loading, section parsing, assignment
-  parsing, dependency setup, and the base parser template.
-- `graph_utils.py` owns complex identity/indexing and graph construction.
-- `reaction_parser.py` and `ode_parser.py` contain only their format-specific
-  grammar and network-construction rules.
-
-Dependencies can be injected into `ReactionFileParser`, allowing future file
-syntaxes, value policies, and graph builders to be added without changing the
-domain models or existing callers.
-
-## ODE input
-
-Mass-action ODE files use the same network models and unresolved-value
-strategies:
-
-```python
-from crntanalysis import ODEFileParser, parse_ode_file
-
-# Typed result: source equations, ReactionNetwork, and warnings
-parsed = ODEFileParser(unresolved="symbolic").parse_file("model.ode")
-network = parsed.network
-
-# Backward-friendly dictionary containing the same network data
-result = parse_ode_file("model.ode")
-```
-
-The ODE parser groups terms having the same rate constant and concentration
-monomial. Monomial exponents form the reactant complex, while signed ODE
-coefficients form the reaction vector. It rejects non-integer exponents and any
-term that would create a product with negative stoichiometry. Because an ODE
-can have multiple reaction-network realizations, the returned reactions are the
-canonical grouped realization used by this project.
-
-`Example_Data/crn2.ode` intentionally fails ordinary mass-action validation:
-its `k2 * A^3 * B^2` term consumes `X`, although `X` is absent from that
-reactant monomial. Correct the equation or use a future generalized-kinetics
-model before performing deficiency analysis.
-
-## Deficiency calculation
+Parse a reaction file and calculate its deficiency:
 
 ```python
 from crntanalysis import ReactionFileParser, calculate_deficiency
@@ -129,63 +60,161 @@ from crntanalysis import ReactionFileParser, calculate_deficiency
 network = ReactionFileParser().parse_file("Example_Data/crn1.react")
 result = calculate_deficiency(network)
 
-print(result.number_of_complexes)          # n
-print(result.stoichiometric_rank)          # s
-print(result.number_of_linkage_classes)    # l
-print(result.deficiency)                   # n - s - l
+print(f"n = {result.number_of_complexes}")
+print(f"s = {result.stoichiometric_rank}")
+print(f"l = {result.number_of_linkage_classes}")
+print(f"deficiency = {result.deficiency}")
 
 for linkage_class in result.linkage_classes:
     print(linkage_class.complex_indices, linkage_class.deficiency)
 ```
 
-Each linkage-class deficiency is calculated as `n_i - s_i - 1`. The global
-stoichiometric rank is calculated independently and must not be replaced by the
-sum of the class ranks. Rate constants and adjacency weights do not affect
-deficiency.
+For `Example_Data/crn1.react`, the whole-network result is `n=11`, `s=4`,
+`l=5`, and deficiency `2`.
 
-If complexes contain unresolved symbolic coefficients, SymPy calculates the
-generic symbolic rank and `result.symbolic_rank` is `True`. Special parameter
-values can lower that rank and therefore change the deficiency; resolve those
-coefficients first when a parameter-specific result is required.
+Parse a mass-action ODE model:
 
-## Complete analysis pipeline
+```python
+from crntanalysis import ODEFileParser, calculate_deficiency
 
-Run a file from the console. Its `.react` or `.ode` suffix selects the parser:
-
-```bash
-python3 -m crntanalysis.orchestrator Example_Data/crn1.react
+parsed = ODEFileParser().parse_file("model.ode")
+network = parsed.network
+result = calculate_deficiency(network)
 ```
 
-The command prints a summary and writes structured JSON to
-`output/crn1_analysis.analysis`. Use the alternate extension or disable file
-output with:
+Dictionary-returning convenience functions are also available:
+
+```python
+from crntanalysis import parse_ode_file, parse_reaction_file
+
+reaction_data = parse_reaction_file("model.react")
+ode_data = parse_ode_file("model.ode")
+```
+
+## Input formats
+
+A reaction file contains labeled sections such as:
+
+```text
+Reactions:
+2 X + Y k1-> 3 X
+
+Rate Constants:
+k1 = 0.5
+
+Initial Conditions:
+X = 1.0
+Y = 2.0
+```
+
+An ODE file contains polynomial mass-action equations:
+
+```text
+ODE Model:
+dx/dt = k1 * X^2 * Y
+dy/dt = -k1 * X^2 * Y
+
+Coefficients:
+k1 = 0.5
+```
+
+Unspecified values remain symbolic by default. Alternative policies are:
+
+```python
+ReactionFileParser(unresolved="symbolic")  # Default
+ReactionFileParser(unresolved="error")     # Require every value
+ReactionFileParser(unresolved="one")       # Substitute 1.0
+```
+
+See [Scientific methods](Documentation/scientific_methods.md) for the precise
+CRNT interpretation, ODE realization rules, adjacency semantics, and symbolic
+rank limitations.
+
+## Command-line usage
+
+Analyze a file using its `.react` or `.ode` suffix:
+
+```bash
+crntanalysis Example_Data/crn1.react
+```
+
+By default, this prints a summary and creates
+`output/crn1_analysis.analysis`. Useful options include:
 
 ```bash
 crntanalysis model.react --extension output
+crntanalysis model.react --output-dir reports
+crntanalysis model.react --unresolved error
 crntanalysis model.react --no-file
-```
-
-Raw document text is also accepted:
-
-```bash
 crntanalysis --format react --text $'Reactions:\nA k1-> B'
 ```
 
-Running `crntanalysis` without arguments starts an interactive
-prompt. For pasted text, enter `END` on a separate line.
+Run `crntanalysis` without arguments for interactive input. Enter `END` on a
+line by itself after pasting a model.
 
-A future GUI should call the console-independent service rather than `main()`:
+For GUI or application integration, use the console-independent service:
 
 ```python
 from crntanalysis.orchestrator import AnalysisReportWriter, CRNAnalysisService
 
 service = CRNAnalysisService()
 outcome = service.analyze_file("model.react")
-# Or: outcome = service.analyze_text(editor_contents, input_format="react")
+# outcome = service.analyze_text(editor_text, input_format="react")
 
-report_path = AnalysisReportWriter().write(outcome, "output")
+AnalysisReportWriter().write(outcome, "output")
 ```
 
-`AnalysisOutcome` contains the parsed network, deficiency result, input
-metadata, and parser warnings. This separates UI input/output from the analysis
-pipeline so a GUI can display the same object without capturing terminal text.
+## Output
+
+`AnalysisOutcome` provides the parsed network, global and linkage-class
+deficiencies, source metadata, and parser warnings. Written reports use JSON so
+they can be loaded by a GUI or another program even when the filename ends in
+`.analysis` or `.output`.
+
+Complex compositions are stored once and indexed. Reactions refer to source
+and target complex indices. An adjacency cell is `0` when no connection exists,
+a number or symbol for one reaction path, and a list for parallel or reverse
+paths.
+
+## Project structure
+
+```text
+crntanalysis/              Installable Python package
+Documentation/             Engineering and scientific documentation
+Example_Data/              Example reaction and ODE inputs
+test_*.py                  Unit tests
+README.md                  User overview and usage guide
+requirements.txt           Runtime dependency list
+pyproject.toml             Build-system configuration
+setup.py                   Package metadata and console entry point
+```
+
+For module responsibilities, architecture, extension points, packaging, and
+release workflow, see [Developer and operations guide](Documentation/devops.md).
+
+## Testing
+
+Run the complete test suite from the repository root:
+
+```bash
+python3 -m unittest -v
+```
+
+The tests cover reaction parsing, ODE parsing and validation, symbolic values,
+graph construction, weighted adjacency, deficiency calculation, orchestration,
+and report writing.
+
+## Known limitations
+
+- ODE-to-network inversion is not unique; the ODE parser returns the canonical
+  grouped realization documented in the scientific methods guide.
+- ODEs that cannot represent an ordinary mass-action CRN are rejected.
+- Symbolic rank is generic. Special parameter values may change the rank and
+  deficiency.
+- A graphical interface is not included yet; the service layer is designed for
+  future GUI integration.
+
+## Detailed Documentation
+
+- [Developer and operations guide](Documentation/devops.md)
+- [Scientific methods](Documentation/scientific_methods.md)
