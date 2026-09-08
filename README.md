@@ -1,7 +1,35 @@
 # CRN_Deficiency
 
+## Requirements and installation
+
+- Python 3.9 or newer.
+- SymPy 1.13 or newer, below major version 2, for exact and symbolic
+  stoichiometric-rank calculations.
+- Setuptools 61 or newer and `wheel` are build requirements. Pip installs them
+  automatically in an isolated build environment.
+
+All other imports (`argparse`, `dataclasses`, `json`, `pathlib`, `typing`, and
+`unittest`) come from the Python standard library. No NumPy, SciPy, or graph
+library is required.
+
+Install from the project directory:
+
+```bash
+python3 -m pip install .
+```
+
+For development, install in editable mode:
+
+```bash
+python3 -m pip install -e .
+python3 -m unittest -v
+```
+
+After installation, both regular imports and the `crntanalysis` console command
+are available.
+
 ```python
-from reaction_parser import parse_reaction_file
+from crntanalysis import parse_reaction_file
 
 network = parse_reaction_file("Example_Data/crn1.react")
 print(network["reactions"])
@@ -39,7 +67,7 @@ The functional API above remains available for backward compatibility. New
 analysis code can work directly with typed domain objects:
 
 ```python
-from reaction_parser import ReactionFileParser
+from crntanalysis import ReactionFileParser
 
 network = ReactionFileParser(unresolved="symbolic").parse_file(
     "Example_Data/crn1.react"
@@ -71,7 +99,7 @@ Mass-action ODE files use the same network models and unresolved-value
 strategies:
 
 ```python
-from ode_parser import ODEFileParser, parse_ode_file
+from crntanalysis import ODEFileParser, parse_ode_file
 
 # Typed result: source equations, ReactionNetwork, and warnings
 parsed = ODEFileParser(unresolved="symbolic").parse_file("model.ode")
@@ -96,8 +124,7 @@ model before performing deficiency analysis.
 ## Deficiency calculation
 
 ```python
-from deficiency_utils import calculate_deficiency
-from reaction_parser import ReactionFileParser
+from crntanalysis import ReactionFileParser, calculate_deficiency
 
 network = ReactionFileParser().parse_file("Example_Data/crn1.react")
 result = calculate_deficiency(network)
@@ -126,7 +153,7 @@ coefficients first when a parameter-specific result is required.
 Run a file from the console. Its `.react` or `.ode` suffix selects the parser:
 
 ```bash
-python3 orchestrator.py Example_Data/crn1.react
+python3 -m crntanalysis.orchestrator Example_Data/crn1.react
 ```
 
 The command prints a summary and writes structured JSON to
@@ -134,23 +161,23 @@ The command prints a summary and writes structured JSON to
 output with:
 
 ```bash
-python3 orchestrator.py model.react --extension output
-python3 orchestrator.py model.react --no-file
+crntanalysis model.react --extension output
+crntanalysis model.react --no-file
 ```
 
 Raw document text is also accepted:
 
 ```bash
-python3 orchestrator.py --format react --text $'Reactions:\nA k1-> B'
+crntanalysis --format react --text $'Reactions:\nA k1-> B'
 ```
 
-Running `python3 orchestrator.py` without arguments starts an interactive
+Running `crntanalysis` without arguments starts an interactive
 prompt. For pasted text, enter `END` on a separate line.
 
 A future GUI should call the console-independent service rather than `main()`:
 
 ```python
-from orchestrator import AnalysisReportWriter, CRNAnalysisService
+from crntanalysis.orchestrator import AnalysisReportWriter, CRNAnalysisService
 
 service = CRNAnalysisService()
 outcome = service.analyze_file("model.react")
