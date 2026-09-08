@@ -223,7 +223,8 @@ class ODEFileParser(BaseFileParser[ODEParseResult]):
                     except UnresolvedValueError as error:
                         raise ODEParseError(f"{error} on line {line_number}") from None
             exponent = self._normalize_exponent(exponent, line_number)
-            reactant[canonical_species] = exponent
+            if exponent != 0:
+                reactant[canonical_species] = exponent
 
         if len(rate_names) != 1:
             raise ODEParseError(
@@ -276,9 +277,6 @@ class ODEFileParser(BaseFileParser[ODEParseResult]):
             reactions.append(
                 Reaction(
                     index=index,
-                    reactants=dict(contribution.reactant),
-                    products=products,
-                    reactant_coefficient_symbols=dict(contribution.exponent_symbols),
                     source_complex=registry.register(contribution.reactant),
                     target_complex=registry.register(products),
                     rate_constant=contribution.rate_constant,

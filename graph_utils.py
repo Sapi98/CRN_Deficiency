@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Dict, List, Mapping, Tuple
 
-from crn_models import Complex, GraphEdge, Reaction, ReactionGraph, Scalar
+from crn_models import AdjacencyCell, Complex, Reaction, ReactionGraph, Scalar, Weight
 
 
 class ComplexRegistry:
@@ -54,20 +54,22 @@ class ReactionGraphBuilder:
 
     def build(
         self, complexes: List[Complex], reactions: List[Reaction]
-    ) -> Tuple[ReactionGraph, List[List[int]]]:
+    ) -> Tuple[ReactionGraph, List[List[AdjacencyCell]]]:
         size = len(complexes)
         adjacency = [[0 for _ in range(size)] for _ in range(size)]
-        edges = []
         for reaction in reactions:
-            adjacency[reaction.source_complex][reaction.target_complex] = 1
-            adjacency[reaction.target_complex][reaction.source_complex] = 1
-            edges.append(
-                GraphEdge(
-                    source=reaction.source_complex,
-                    target=reaction.target_complex,
-                    rate_constant=reaction.rate_constant,
-                    rate_value=reaction.rate,
-                    reaction=reaction.index,
-                )
-            )
-        return ReactionGraph(complexes, edges), adjacency
+            source, target, weight = reaction.source, reaction.target, reaction.weight
+            updated = self._add_weight(adjacency[source][target], weight)
+            adjacency[source][target] = updated
+            if source != target:
+                # Both cells share an immutable scalar or a copied list of weights.
+                adjacency[target][source] = updated[:] if isinstance(updated, list) else updated
+        return ReactionGraph(complexes, reactions), adjacency
+
+    @staticmethod
+    def _add_weight(cell: AdjacencyCell, weight: Weight) -> AdjacencyCell:
+        if cell == 0:
+            return weight
+        if isinstance(cell, list):
+            return [*cell, weight]
+        return [cell, weight]

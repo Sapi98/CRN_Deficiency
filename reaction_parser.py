@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Dict, Mapping, Optional, Tuple, Union
+from typing import Dict, Mapping, Optional, Union
 
 from crn_models import Reaction, ReactionNetwork, Scalar
 from graph_utils import ComplexRegistry, ReactionGraphBuilder
@@ -46,15 +46,14 @@ class ComplexParser:
         expression: str,
         coefficient_values: Mapping[str, float],
         line_number: int,
-    ) -> Tuple[Dict[str, Scalar], Dict[str, str]]:
+    ) -> Dict[str, Scalar]:
         expression = expression.strip()
         if expression == "0":
-            return {}, {}
+            return {}
         if not expression:
             raise ReactionParseError(f"Empty complex on line {line_number}")
 
         species: Dict[str, Scalar] = {}
-        symbols: Dict[str, str] = {}
         for raw_term in expression.split("+"):
             match = self.term_pattern.match(raw_term)
             if not match:
@@ -67,7 +66,6 @@ class ComplexParser:
                 try:
                     coefficient = float(token)
                 except ValueError:
-                    symbols[species_name] = token
                     try:
                         coefficient = self.policy.coefficient(token, coefficient_values)
                     except UnresolvedValueError as error:
@@ -92,7 +90,8 @@ class ComplexParser:
             if isinstance(value, float) and value.is_integer()
             else value
             for name, value in species.items()
-        }, symbols
+            if value != 0
+        }
 
 
 class ReactionFileParser(BaseFileParser[ReactionNetwork]):
@@ -180,10 +179,10 @@ class ReactionFileParser(BaseFileParser[ReactionNetwork]):
                 f"Invalid reaction on line {line_number}: {reaction_string!r}"
             )
         reactant_text, rate_name, product_text = match.groups()
-        reactants, reactant_symbols = self.complex_parser.parse(
+        reactants = self.complex_parser.parse(
             reactant_text, coefficients, line_number
         )
-        products, product_symbols = self.complex_parser.parse(
+        products = self.complex_parser.parse(
             product_text, coefficients, line_number
         )
         try:
@@ -193,10 +192,6 @@ class ReactionFileParser(BaseFileParser[ReactionNetwork]):
 
         return Reaction(
             index=index,
-            reactants=reactants,
-            products=products,
-            reactant_coefficient_symbols=reactant_symbols,
-            product_coefficient_symbols=product_symbols,
             source_complex=registry.register(reactants),
             target_complex=registry.register(products),
             rate_constant=rate_name,

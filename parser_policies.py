@@ -10,6 +10,12 @@ class UnresolvedValueError(ValueError):
     """Raised by a policy that requires every referenced value to be defined."""
 
 
+def _positive_rate(symbol: str, value: Optional[float]) -> Optional[float]:
+    if value is not None and value <= 0:
+        raise UnresolvedValueError(f"Rate constant {symbol!r} must be positive")
+    return value
+
+
 class UnresolvedValuePolicy(ABC):
     """Strategy interface for resolving missing model parameters."""
 
@@ -31,7 +37,7 @@ class SymbolicValuePolicy(UnresolvedValuePolicy):
         return values.get(symbol, symbol)
 
     def rate(self, symbol: str, values: Mapping[str, float]):
-        return values.get(symbol)
+        return _positive_rate(symbol, values.get(symbol))
 
 
 class StrictValuePolicy(UnresolvedValuePolicy):
@@ -40,7 +46,7 @@ class StrictValuePolicy(UnresolvedValuePolicy):
     def coefficient(self, symbol: str, values: Mapping[str, float]):
         if symbol not in values:
             raise UnresolvedValueError(f"Undefined stoichiometric coefficient {symbol!r}")
-        return values[symbol]
+        return _positive_rate(symbol, values[symbol])
 
     def rate(self, symbol: str, values: Mapping[str, float]):
         if symbol not in values:
@@ -55,7 +61,7 @@ class UnitValuePolicy(UnresolvedValuePolicy):
         return values.get(symbol, 1.0)
 
     def rate(self, symbol: str, values: Mapping[str, float]):
-        return values.get(symbol, 1.0)
+        return _positive_rate(symbol, values.get(symbol, 1.0))
 
 
 class UnresolvedValuePolicyFactory:

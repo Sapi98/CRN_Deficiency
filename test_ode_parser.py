@@ -17,10 +17,11 @@ class ODEParserTests(unittest.TestCase):
     def test_builds_canonical_reactions(self):
         result = parse_ode_text(VALID_ODE)
         self.assertEqual(len(result["reactions"]), 2)
-        self.assertEqual(result["reactions"][0]["reactants"], {"X": 2, "Y": 1})
-        self.assertEqual(result["reactions"][0]["products"], {"X": 4})
+        reaction = result["reactions"][0]
+        self.assertEqual(result["complexes"][reaction["source_complex"]]["species"], {"X": 2, "Y": 1})
+        self.assertEqual(result["complexes"][reaction["target_complex"]]["species"], {"X": 4})
         self.assertEqual(result["reactions"][0]["rate"], 0.5)
-        self.assertEqual(result["adjacency_matrix"][0][1], 1)
+        self.assertEqual(result["adjacency_matrix"][0][1], 0.5)
 
     def test_object_api(self):
         parsed = ODEFileParser().parse_text(VALID_ODE)
@@ -30,7 +31,8 @@ class ODEParserTests(unittest.TestCase):
     def test_symbolic_missing_rate(self):
         result = parse_ode_text("ODE Model:\ndx/dt = k * X")
         self.assertIsNone(result["reactions"][0]["rate"])
-        self.assertEqual(result["reaction_graph"]["edges"][0]["weight"], "k")
+        self.assertEqual(result["reactions"][0]["weight"], "k")
+        self.assertEqual(result["adjacency_matrix"], [[0, "k"], ["k", 0]])
 
     def test_rejects_non_mass_action_ode_in_example(self):
         with self.assertRaisesRegex(ODEParseError, "consumes 'X'"):

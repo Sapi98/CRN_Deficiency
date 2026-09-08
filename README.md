@@ -4,8 +4,7 @@
 from reaction_parser import parse_reaction_file
 
 network = parse_reaction_file("Example_Data/crn1.react")
-print(network["reactants"])
-print(network["products"])
+print(network["reactions"])
 print(network["complexes"])
 print(network["reaction_graph"])
 print(network["adjacency_matrix"])
@@ -14,8 +13,11 @@ print(network["adjacency_matrix"])
 Complexes are indexed from zero in first-appearance order. The same index is
 used in `complexes`, every reaction's `source_complex` and `target_complex`, the
 directed `reaction_graph`, and the rows and columns of `adjacency_matrix`.
-Graph edges use the numerical rate constant as `weight`; the adjacency matrix
-is binary, symmetric, and ignores reaction direction.
+Complex data is stored once in `complexes`; reactions refer to their source and
+target by index. Graph edges use the numerical rate constant as `weight`. The
+undirected adjacency matrix contains `0` for no path, a numerical or symbolic
+weight for one path, and a list of weights when parallel or reverse reactions
+connect the same pair of complexes.
 
 Missing rate constants and stoichiometric coefficient values are symbolic by
 default. An undefined rate such as `k1` is stored with `rate=None` and used as
