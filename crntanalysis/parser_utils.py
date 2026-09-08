@@ -7,8 +7,8 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Dict, Generic, Iterable, List, Optional, Tuple, Type, TypeVar, Union
 
-from graph_utils import ReactionGraphBuilder
-from parser_policies import UnresolvedValuePolicy, UnresolvedValuePolicyFactory
+from crntanalysis.graph_utils import ReactionGraphBuilder
+from crntanalysis.parser_policies import UnresolvedValuePolicy, UnresolvedValuePolicyFactory
 
 
 ParsedResult = TypeVar("ParsedResult")

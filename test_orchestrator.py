@@ -5,7 +5,7 @@ from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
 
-from orchestrator import AnalysisReportWriter, CRNAnalysisService, main
+from crntanalysis.orchestrator import AnalysisReportWriter, CRNAnalysisService, main
 
 
 REACTION_TEXT = """Reactions:

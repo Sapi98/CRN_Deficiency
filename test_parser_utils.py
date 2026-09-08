@@ -1,8 +1,8 @@
 import unittest
 from pprint import pprint
 
-from crn_models import ReactionNetwork
-from reaction_parser import (
+from crntanalysis.crn_models import ReactionNetwork
+from crntanalysis.reaction_parser import (
     ReactionFileParser,
     ReactionParseError,
     parse_reaction_file,

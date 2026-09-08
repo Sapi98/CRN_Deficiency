@@ -1,8 +1,8 @@
 import unittest
 
-from crn_models import Complex, Reaction, ReactionGraph, ReactionNetwork
-from deficiency_utils import DeficiencyCalculator, DeficiencyError, calculate_deficiency
-from reaction_parser import ReactionFileParser
+from crntanalysis.crn_models import Complex, Reaction, ReactionGraph, ReactionNetwork
+from crntanalysis.deficiency_utils import DeficiencyCalculator, DeficiencyError, calculate_deficiency
+from crntanalysis.reaction_parser import ReactionFileParser
 
 
 def network_from(complexes, reactions):

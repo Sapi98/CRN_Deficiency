@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Dict, List, Mapping, Tuple
 
-from crn_models import AdjacencyCell, Complex, Reaction, ReactionGraph, Scalar, Weight
+from crntanalysis.crn_models import AdjacencyCell, Complex, Reaction, ReactionGraph, Scalar, Weight
 
 
 class ComplexRegistry:

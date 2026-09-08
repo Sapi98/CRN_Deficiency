@@ -14,11 +14,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional, Sequence, Union
 
-from crn_models import ReactionNetwork
-from deficiency_utils import DeficiencyResult, calculate_deficiency
-from ode_parser import ODEFileParser, ODEParseResult
-from parser_utils import ParserError
-from reaction_parser import ReactionFileParser
+from crntanalysis.crn_models import ReactionNetwork
+from crntanalysis.deficiency_utils import DeficiencyResult, calculate_deficiency
+from crntanalysis.ode_parser import ODEFileParser, ODEParseResult
+from crntanalysis.parser_utils import ParserError
+from crntanalysis.reaction_parser import ReactionFileParser
 
 __all__ = [
     "AnalysisOutcome",

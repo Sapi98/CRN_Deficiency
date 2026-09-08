@@ -1,7 +1,7 @@
 import unittest
 
-from crn_models import ReactionNetwork
-from ode_parser import ODEFileParser, ODEParseError, parse_ode_text
+from crntanalysis.crn_models import ReactionNetwork
+from crntanalysis.ode_parser import ODEFileParser, ODEParseError, parse_ode_text
 
 
 VALID_ODE = """ODE Model:

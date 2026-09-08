@@ -10,10 +10,10 @@ import re
 from pathlib import Path
 from typing import Dict, Mapping, Optional, Union
 
-from crn_models import Reaction, ReactionNetwork, Scalar
-from graph_utils import ComplexRegistry, ReactionGraphBuilder
-from parser_utils import AssignmentParser, BaseFileParser, ParserError, SectionParser
-from parser_policies import (
+from crntanalysis.crn_models import Reaction, ReactionNetwork, Scalar
+from crntanalysis.graph_utils import ComplexRegistry, ReactionGraphBuilder
+from crntanalysis.parser_utils import AssignmentParser, BaseFileParser, ParserError, SectionParser
+from crntanalysis.parser_policies import (
     UnresolvedValueError,
     UnresolvedValuePolicy,
 )

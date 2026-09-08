@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Dict, Iterable, List, Mapping, Sequence, Set
 from sympy import Add, Expr, Matrix, Mul, Rational, Symbol
 
-from crn_models import Complex, Reaction, ReactionNetwork, Scalar
+from crntanalysis.crn_models import Complex, Reaction, ReactionNetwork, Scalar
 
 __all__ = [
     "DeficiencyCalculator",
