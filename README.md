@@ -28,7 +28,43 @@ The project is currently an alpha release (`0.1.0`).
 
 Pip installs SymPy automatically. Setuptools 61+ and wheel are declared as
 isolated build requirements in `pyproject.toml`. No NumPy, SciPy, or graph
-library is required.
+library is required for parsing and deficiency analysis. Optional visualization
+uses NetworkX and Matplotlib (which also installs NumPy).
+
+## Visualization
+
+Install the optional dependencies from the repository root:
+
+```bash
+python -m pip install '.[visualization]'
+```
+
+```python
+from crntanalysis import ReactionFileParser
+from crntanalysis.visualization import NetworkVisualizer
+
+network = ReactionFileParser().parse_file("Example_Data/crn1.react")
+visualizer = NetworkVisualizer()
+figure, axes = visualizer.draw_reaction_network(network, show_deficiency=True)
+visualizer.save(figure, "output/reactions.svg")
+figure, axes = visualizer.draw_linkage_graph(network, show_deficiency=True)
+visualizer.save(figure, "output/linkages.png")
+```
+
+Nodes represent complexes, with the same indices used by the parser. Reactions
+have directed arrows and numerical or symbolic rate labels. The linkage view
+is undirected; connected components are colored and indexed as linkage classes.
+Parallel reactions and self-loops are preserved. Deficiency labels involving
+unresolved stoichiometry use the calculator's generic symbolic rank.
+
+Both draw methods accept an existing Matplotlib `ax` for GUI embedding and a
+`positions` mapping from complex index to `(x, y)` for custom layouts. They
+return `(figure, axes)` without opening a window. To display interactively,
+create axes with `matplotlib.pyplot.subplots()`, pass `ax=axes`, then call
+`matplotlib.pyplot.show()`. PNG, SVG, and PDF export are supported.
+
+`NetworkGraphAdapter` exposes NetworkX graphs for further customization.
+The linkage graph retains all reactions on each undirected connection.
 
 ## Installation
 

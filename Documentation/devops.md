@@ -36,7 +36,7 @@ CRN_Deficiency/
 │   ├── parser_policies.py              # Strategies for unresolved parameter values
 │   ├── parser_utils.py                 # Shared section, assignment, and base parser logic
 │   ├── reaction_parser.py              # Explicit reaction-file parsing
-│   └── visualiztion.py                 # Reserved for future visualization support
+│   └── visualization.py               # Optional graph adapters, plotting, and figure export
 ├── Documentation/
 │   ├── devops.md                       # Architecture, APIs, development, and release guide
 │   └── scientific_methods.md           # CRNT mathematics and scientific methodology
@@ -1561,11 +1561,174 @@ def main(argv: Optional[Sequence[str]] = None) -> int
 - `SystemExit`: Argparse handles invalid CLI syntax or help.
 
 
-### Other package modules
+### `visualization.py`
 
-`visualiztion.py` currently defines no methods. It is not re-exported as public
-API. Add its method contracts here when visualization functionality is
-implemented.
+The adapter creates graph views referencing existing domain objects. The renderer
+accepts caller-owned axes and never opens a window or selects a GUI backend.
+Optional imports are deferred until needed; install `.[visualization]` to use
+NetworkX and Matplotlib. NumPy is installed transitively by Matplotlib.
+
+```mermaid
+classDiagram
+    NetworkVisualizer --> NetworkGraphAdapter : uses
+    NetworkGraphAdapter --> ReactionNetwork : reads
+    NetworkVisualizer --> Figure : returns and saves
+    class NetworkGraphAdapter {
+        +reaction_graph(network)
+        +linkage_graph(network)
+    }
+    class NetworkVisualizer {
+        +draw_reaction_network(network)
+        +draw_linkage_graph(network)
+        +save(figure, path)
+        -_draw(network, graph, ax, positions, seed, show_rates, show_deficiency)
+    }
+```
+
+#### `NetworkGraphAdapter.reaction_graph` and `.linkage_graph` — public
+
+```python
+def reaction_graph(self, network)
+def linkage_graph(self, network)
+```
+
+Convert a network to a directed multigraph or an undirected complex graph.
+Isolated complexes and self-loops are retained. Multigraph edge keys are reaction
+indices; undirected edges retain a list of every reaction on that connection.
+
+##### Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `network` | `ReactionNetwork` | required | Parsed or constructed network. |
+
+##### Returns
+
+- `graph` (`MultiDiGraph` or `Graph`): Graph with original complex indices and references to domain objects.
+
+##### Raises
+
+- `ValueError`: Complex/reaction indices are duplicated or an endpoint is unknown.
+- `ImportError`: NetworkX is unavailable.
+
+#### `NetworkVisualizer.__init__` — public
+
+```python
+def __init__(self, adapter=None)
+```
+
+Configure the graph conversion dependency.
+
+##### Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `adapter` | `NetworkGraphAdapter` or `None` | `None` | Custom adapter; otherwise create the standard adapter. |
+
+#### `NetworkVisualizer.draw_reaction_network` and `.draw_linkage_graph` — public
+
+```python
+def draw_reaction_network(self, network, *, ax=None, positions=None, seed=42,
+                          show_rates=True, show_deficiency=False)
+def draw_linkage_graph(self, network, *, ax=None, positions=None, seed=42,
+                       show_rates=False, show_deficiency=False)
+```
+
+Render directed reactions or undirected connections, colored by linkage class.
+Layouts use topology only: numerical and symbolic rates are labels, not layout
+forces. Parallel/reverse reactions use separate curves; custom positions can
+improve readability for dense networks. The palette repeats after 20 classes.
+
+##### Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `network` | `ReactionNetwork` | required | Network to display. |
+| `ax` | `Axes` or `None` | `None` | Existing axes; otherwise create a standalone figure. |
+| `positions` | mapping or `None` | `None` | Complex index to 2D coordinates; must cover every node. |
+| `seed` | `int` | `42` | Random seed for automatic layout. |
+| `show_rates` | `bool` | `True` / `False` | Show reaction IDs and numerical/symbolic rates. |
+| `show_deficiency` | `bool` | `False` | Include per-class deficiency in the legend. |
+
+##### Returns
+
+- `figure` (`Figure`): Figure containing the plot.
+- `axes` (`Axes`): Axes for customization or GUI embedding.
+
+##### Raises
+
+- `ImportError`: Optional rendering dependencies are unavailable.
+- `ValueError`: Graph indices or supplied positions are invalid.
+- `DeficiencyError`: Requested deficiency calculation rejects the network.
+
+#### `NetworkVisualizer._draw` — private
+
+```python
+def _draw(self, network, graph, ax, positions, seed, show_rates, show_deficiency)
+```
+
+Shared renderer used by both public draw methods. Parameters, returns, and
+exceptions follow the draw methods above, with one additional required input.
+
+##### Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `network`, `ax`, `positions`, `seed`, `show_rates`, `show_deficiency` | as above | required | Rendering inputs forwarded by the public method. |
+| `graph` | `Graph` or `MultiDiGraph` | required | Validated adapter output. |
+
+##### Returns
+
+- `figure` (`Figure`): Rendered figure.
+- `axes` (`Axes`): Rendered axes.
+
+##### Raises
+
+- `ImportError`: Optional dependencies are unavailable.
+- `ValueError`: Positions are invalid.
+- `DeficiencyError`: Deficiency analysis rejects the network.
+
+#### `NetworkVisualizer.save` — public static method
+
+```python
+@staticmethod
+def save(figure, path, *, dpi=150)
+```
+
+Save a figure, creating parent directories. An existing destination is overwritten.
+
+##### Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `figure` | `Figure` | required | Figure to export. |
+| `path` | `str` or `Path` | required | PNG, SVG, or PDF destination. |
+| `dpi` | `int` | `150` | Raster export resolution. |
+
+##### Returns
+
+- `path` (`Path`): Saved file location.
+
+##### Raises
+
+- `ValueError`: Unsupported extension or invalid rendering settings.
+- `OSError`: Directory creation or file writing fails.
+
+#### `_networkx` — private
+
+```python
+def _networkx()
+```
+
+Load the optional graph dependency on demand.
+
+##### Returns
+
+- `networkx` (`module`): Imported NetworkX module.
+
+##### Raises
+
+- `ImportError`: NetworkX is unavailable; includes installation instructions.
 
 ## Public API policy
 
