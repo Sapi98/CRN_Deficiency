@@ -17,6 +17,7 @@ setup(
     packages=find_packages(include=["crntanalysis", "crntanalysis.*"]),
     python_requires=">=3.9",
     install_requires=["sympy>=1.13,<2"],
+    extras_require={"visualization": ["networkx>=3.2,<4", "matplotlib>=3.8,<4"]},
     entry_points={
         "console_scripts": [
             "crntanalysis=crntanalysis.orchestrator:main",

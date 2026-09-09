@@ -7,6 +7,7 @@ belongs in `scientific_methods.md`.
 
 ## Contents
 
+- [Project structure](#project-structure)
 - [Architecture](#architecture)
 - [Processing flows](#processing-flows)
 - [Class diagram](#class-diagram)
@@ -20,6 +21,42 @@ belongs in `scientific_methods.md`.
 - [Local development](#local-development)
 - [Packaging](#packaging)
 - [Version and release checklist](#version-and-release-checklist)
+
+## Project structure
+
+```text
+CRN_Deficiency/
+├── crntanalysis/                       # Installable Python package
+│   ├── __init__.py                     # Package version and public API exports
+│   ├── crn_models.py                   # Complex, reaction, graph, and network models
+│   ├── deficiency_utils.py             # Global and linkage-class deficiency calculation
+│   ├── graph_utils.py                  # Complex registry and weighted graph construction
+│   ├── ode_parser.py                   # Mass-action ODE parsing and CRN realization
+│   ├── orchestrator.py                 # Analysis service, reporting, persistence, and CLI
+│   ├── parser_policies.py              # Strategies for unresolved parameter values
+│   ├── parser_utils.py                 # Shared section, assignment, and base parser logic
+│   ├── reaction_parser.py              # Explicit reaction-file parsing
+│   └── visualization.py               # Optional graph adapters, plotting, and figure export
+├── Documentation/
+│   ├── devops.md                       # Architecture, APIs, development, and release guide
+│   └── scientific_methods.md           # CRNT mathematics and scientific methodology
+├── Example_Data/
+│   ├── crn1.react                      # Example explicit reaction-network input
+│   └── crn2.ode                        # Example containing a non-mass-action ODE term
+├── test_deficiency_utils.py            # Deficiency and symbolic-rank unit tests
+├── test_ode_parser.py                  # ODE parsing and validation unit tests
+├── test_orchestrator.py                # Service, CLI, and report-writing unit tests
+├── test_parser_utils.py                # Reaction parsing, policies, and graph unit tests
+├── README.md                           # Project overview, installation, and user guide
+├── requirements.txt                    # Runtime dependency constraints
+├── pyproject.toml                      # PEP 517 build-system requirements
+├── setup.py                            # Distribution metadata and console entry point
+└── .gitignore                          # Cache, build, environment, and output exclusions
+```
+
+The `output/` directory is created at runtime when the CLI or
+`AnalysisReportWriter` writes a report. It contains generated data and is not
+part of the source tree.
 
 ## Architecture
 
@@ -193,10 +230,10 @@ Contains application-level coordination:
 ## Method reference
 
 The signatures below reflect the current source. `self` and `cls` are omitted
-from parameter tables. “None directly” means the method performs no explicit
-validation, although built-in exceptions may still surface from invalid Python
-objects. Methods beginning with `_` are internal and may change without a
-compatibility guarantee.
+from parameter tables. Each callable documents applicable `Parameters`,
+`Returns`, and `Raises` separately; an inapplicable subsection is omitted.
+Methods beginning with `_` are internal and may change without a compatibility
+guarantee.
 
 ### `crntanalysis.__init__`
 
@@ -213,10 +250,10 @@ def to_dict(self) -> dict
 
 Serializes an indexed complex.
 
-| Element | Type | Default | Description |
-|---|---|---:|---|
-| Return | `dict` | — | Index, label, and a copy of the species mapping. |
-| Raises | — | — | None directly. |
+##### Returns
+
+- `return_value` (`dict`): Index, label, and a copy of the species mapping.
+
 
 #### `Reaction.source`, `Reaction.target`, and `Reaction.weight` — public properties
 
@@ -231,12 +268,12 @@ def target(self) -> int
 def weight(self) -> Weight
 ```
 
-| Element | Type | Default | Description |
-|---|---|---:|---|
-| `source` return | `int` | — | Source-complex index. |
-| `target` return | `int` | — | Target-complex index. |
-| `weight` return | `float \| str` | — | Numerical rate when resolved; otherwise the rate symbol. |
-| Raises | — | — | None. |
+##### Returns
+
+- `source` (`int`): Source-complex index.
+- `target` (`int`): Target-complex index.
+- `weight` (`float \| str`): Numerical rate when resolved; otherwise the rate symbol.
+
 
 #### `Reaction.to_dict` — public
 
@@ -244,10 +281,10 @@ def weight(self) -> Weight
 def to_dict(self) -> dict
 ```
 
-| Element | Type | Default | Description |
-|---|---|---:|---|
-| Return | `dict` | — | Normalized reaction edge, rate metadata, and weight. |
-| Raises | — | — | None. |
+##### Returns
+
+- `return_value` (`dict`): Normalized reaction edge, rate metadata, and weight.
+
 
 #### `ReactionGraph.to_dict` — public
 
@@ -255,10 +292,10 @@ def to_dict(self) -> dict
 def to_dict(self) -> dict
 ```
 
-| Element | Type | Default | Description |
-|---|---|---:|---|
-| Return | `dict` | — | Node indices and reaction indices without duplicating domain data. |
-| Raises | — | — | None directly. |
+##### Returns
+
+- `return_value` (`dict`): Node indices and reaction indices without duplicating domain data.
+
 
 #### `ReactionNetwork.complex_index` — public property
 
@@ -267,10 +304,10 @@ def to_dict(self) -> dict
 def complex_index(self) -> Dict[str, int]
 ```
 
-| Element | Type | Default | Description |
-|---|---|---:|---|
-| Return | `dict[str, int]` | — | Complex label-to-index lookup. |
-| Raises | — | — | None directly. |
+##### Returns
+
+- `return_value` (`dict[str, int]`): Complex label-to-index lookup.
+
 
 #### `ReactionNetwork.reactant_complex` — public
 
@@ -278,11 +315,20 @@ def complex_index(self) -> Dict[str, int]
 def reactant_complex(self, reaction: Reaction) -> Complex
 ```
 
-| Element | Type | Default | Description |
+##### Parameters
+
+| Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `reaction` | `Reaction` | required | Reaction whose source is requested. |
-| Return | `Complex` | — | Indexed source complex. |
-| Raises | `IndexError` | — | Source index is outside the complex list. |
+
+##### Returns
+
+- `return_value` (`Complex`): Indexed source complex.
+
+##### Raises
+
+- `IndexError`: Source index is outside the complex list.
+
 
 #### `ReactionNetwork.product_complex` — public
 
@@ -290,11 +336,20 @@ def reactant_complex(self, reaction: Reaction) -> Complex
 def product_complex(self, reaction: Reaction) -> Complex
 ```
 
-| Element | Type | Default | Description |
+##### Parameters
+
+| Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `reaction` | `Reaction` | required | Reaction whose target is requested. |
-| Return | `Complex` | — | Indexed target complex. |
-| Raises | `IndexError` | — | Target index is outside the complex list. |
+
+##### Returns
+
+- `return_value` (`Complex`): Indexed target complex.
+
+##### Raises
+
+- `IndexError`: Target index is outside the complex list.
+
 
 #### `ReactionNetwork.to_dict` — public
 
@@ -302,10 +357,10 @@ def product_complex(self, reaction: Reaction) -> Complex
 def to_dict(self) -> dict
 ```
 
-| Element | Type | Default | Description |
-|---|---|---:|---|
-| Return | `dict` | — | Complete normalized, serializable network representation. |
-| Raises | — | — | None directly. |
+##### Returns
+
+- `return_value` (`dict`): Complete normalized, serializable network representation.
+
 
 ### `parser_utils.py`
 
@@ -315,11 +370,16 @@ def to_dict(self) -> dict
 def parse(self, text: str) -> Sections
 ```
 
-| Element | Type | Default | Description |
+##### Parameters
+
+| Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `text` | `str` | required | Complete labeled input document. |
-| Return | `dict[str, list[tuple[int, str]]]` | — | Lowercase section names mapped to numbered content rows. |
-| Raises | — | — | None directly; unsectioned content is ignored. |
+
+##### Returns
+
+- `return_value` (`dict[str, list[tuple[int, str]]]`): Lowercase section names mapped to numbered content rows.
+
 
 #### `AssignmentParser.parse` — public
 
@@ -332,13 +392,22 @@ def parse(
 ) -> Dict[str, float]
 ```
 
-| Element | Type | Default | Description |
+##### Parameters
+
+| Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `rows` | `Iterable[tuple[int, str]]` | required | Numbered assignment rows. |
 | `section_name` | `str` | required | Human-readable name used in diagnostics. |
 | `error_type` | `Type[ParserError]` | `ParserError` | Format-specific exception class. |
-| Return | `dict[str, float]` | — | Parsed numeric assignments. |
-| Raises | `error_type` | — | A row is not a valid `name = number` assignment. |
+
+##### Returns
+
+- `return_value` (`dict[str, float]`): Parsed numeric assignments.
+
+##### Raises
+
+- `ParserError` subclass: The configured `error_type` reports a row that is not a valid `name = number` assignment.
+
 
 #### `BaseFileParser.__init__` — public constructor
 
@@ -354,6 +423,8 @@ def __init__(
 ) -> None
 ```
 
+##### Parameters
+
 | Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `unresolved` | `str` | `"symbolic"` | Policy name used when no policy object is injected. |
@@ -361,8 +432,11 @@ def __init__(
 | `section_parser` | `SectionParser \| None` | `None` | Custom section parser. |
 | `assignment_parser` | `AssignmentParser \| None` | `None` | Custom assignment parser. |
 | `graph_builder` | `ReactionGraphBuilder \| None` | `None` | Custom graph builder. |
-| Return | `None` | — | Initializes shared dependencies. |
-| Raises | `ValueError` | — | `unresolved` is not a registered policy. |
+
+##### Raises
+
+- `ValueError`: `unresolved` is not a registered policy.
+
 
 #### `BaseFileParser.parse_file` — public
 
@@ -370,11 +444,22 @@ def __init__(
 def parse_file(self, path: Union[str, Path]) -> ParsedResult
 ```
 
-| Element | Type | Default | Description |
+##### Parameters
+
+| Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `path` | `str \| Path` | required | UTF-8 input file. |
-| Return | `ParsedResult` | — | Concrete parser result. |
-| Raises | `OSError`, `UnicodeError`, `ParserError` | — | File access, decoding, or parsing fails. |
+
+##### Returns
+
+- `return_value` (`ParsedResult`): Concrete parser result.
+
+##### Raises
+
+- `OSError`: The input file cannot be opened or read.
+- `UnicodeError`: The input file is not valid UTF-8.
+- `ParserError`: The input content is malformed.
+
 
 #### `BaseFileParser.parse_sections` — public extension point
 
@@ -382,11 +467,16 @@ def parse_file(self, path: Union[str, Path]) -> ParsedResult
 def parse_sections(self, text: str) -> Sections
 ```
 
-| Element | Type | Default | Description |
+##### Parameters
+
+| Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `text` | `str` | required | Complete source text. |
-| Return | `Sections` | — | Parsed labeled sections. |
-| Raises | — | — | None directly. |
+
+##### Returns
+
+- `return_value` (`Sections`): Parsed labeled sections.
+
 
 #### `BaseFileParser.parse_assignments` — public extension point
 
@@ -396,13 +486,22 @@ def parse_assignments(
 ) -> Dict[str, float]
 ```
 
-| Element | Type | Default | Description |
+##### Parameters
+
+| Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `sections` | `Sections` | required | Parsed document sections. |
 | `section_key` | `str` | required | Normalized lookup key. |
 | `display_name` | `str` | required | Diagnostic section label. |
-| Return | `dict[str, float]` | — | Parsed assignments, or an empty mapping for a missing section. |
-| Raises | parser-specific `ParserError` | — | An assignment is malformed. |
+
+##### Returns
+
+- `return_value` (`dict[str, float]`): Parsed assignments, or an empty mapping for a missing section.
+
+##### Raises
+
+- `ParserError` subclass: The concrete parser's exception type reports a malformed assignment.
+
 
 #### `BaseFileParser.parse_text` — public abstract method
 
@@ -411,11 +510,20 @@ def parse_assignments(
 def parse_text(self, text: str) -> ParsedResult
 ```
 
-| Element | Type | Default | Description |
+##### Parameters
+
+| Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `text` | `str` | required | Complete input document. |
-| Return | `ParsedResult` | — | Concrete format result. |
-| Raises | `NotImplementedError` | — | Called on a subclass without an implementation. |
+
+##### Returns
+
+- `return_value` (`ParsedResult`): Concrete format result.
+
+##### Raises
+
+- `NotImplementedError`: Called on a subclass without an implementation.
+
 
 ### `parser_policies.py`
 
@@ -425,12 +533,21 @@ def parse_text(self, text: str) -> ParsedResult
 def _positive_rate(symbol: str, value: Optional[float]) -> Optional[float]
 ```
 
-| Element | Type | Default | Description |
+##### Parameters
+
+| Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `symbol` | `str` | required | Rate-constant name for diagnostics. |
 | `value` | `float \| None` | required | Resolved value or missing marker. |
-| Return | `float \| None` | — | The validated input value. |
-| Raises | `UnresolvedValueError` | — | A defined rate is zero or negative. |
+
+##### Returns
+
+- `return_value` (`float \| None`): The validated input value.
+
+##### Raises
+
+- `UnresolvedValueError`: A defined rate is zero or negative.
+
 
 #### `UnresolvedValuePolicy.coefficient` and `.rate` — public abstract methods
 
@@ -442,13 +559,22 @@ def coefficient(self, symbol: str, values: Mapping[str, float]) -> Union[float, 
 def rate(self, symbol: str, values: Mapping[str, float]) -> Optional[float]
 ```
 
-| Element | Type | Default | Description |
+##### Parameters
+
+| Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `symbol` | `str` | required | Referenced parameter name. |
 | `values` | `Mapping[str, float]` | required | Defined values. |
-| `coefficient` return | `float \| str` | — | Resolved value or retained symbol. |
-| `rate` return | `float \| None` | — | Resolved rate or missing marker. |
-| Raises | `NotImplementedError` | — | Invoked without a concrete strategy. |
+
+##### Returns
+
+- `coefficient` (`float \| str`): Resolved value or retained symbol.
+- `rate` (`float \| None`): Resolved rate or missing marker.
+
+##### Raises
+
+- `NotImplementedError`: Invoked without a concrete strategy.
+
 
 #### Concrete policy `.coefficient` and `.rate` — public
 
@@ -460,11 +586,21 @@ def rate(self, symbol: str, values: Mapping[str, float])
 These signatures apply to `SymbolicValuePolicy`, `StrictValuePolicy`, and
 `UnitValuePolicy`.
 
-| Policy | Missing coefficient | Missing rate | Exceptions |
-|---|---|---|---|
-| `SymbolicValuePolicy` | Returns `symbol`. | Returns `None`. | Nonpositive defined rate raises `UnresolvedValueError`. |
-| `StrictValuePolicy` | Raises. | Raises. | `UnresolvedValueError` for missing required values. |
-| `UnitValuePolicy` | Returns `1.0`. | Returns `1.0`. | Nonpositive defined rate raises `UnresolvedValueError`. |
+##### Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---:|---|
+| `symbol` | `str` | required | Coefficient or rate-constant symbol to resolve. |
+| `values` | `Mapping[str, float]` | required | Available symbol-to-value definitions. |
+
+##### Returns
+
+- `coefficient` (`float \| str`): The resolved coefficient, retained symbol, or unit value according to the selected policy.
+- `rate` (`float \| None`): The resolved rate, unresolved marker, or unit value according to the selected policy.
+
+##### Raises
+
+- `UnresolvedValueError`: A strict-policy value is missing, or a defined rate is not positive.
 
 #### `UnresolvedValuePolicyFactory.create` — public
 
@@ -473,11 +609,20 @@ These signatures apply to `SymbolicValuePolicy`, `StrictValuePolicy`, and
 def create(cls, name: str) -> UnresolvedValuePolicy
 ```
 
-| Element | Type | Default | Description |
+##### Parameters
+
+| Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `name` | `str` | required | `symbolic`, `error`, or `one`. |
-| Return | `UnresolvedValuePolicy` | — | New concrete policy instance. |
-| Raises | `ValueError` | — | Policy name is unknown. |
+
+##### Returns
+
+- `return_value` (`UnresolvedValuePolicy`): New concrete policy instance.
+
+##### Raises
+
+- `ValueError`: Policy name is unknown.
+
 
 ### `graph_utils.py`
 
@@ -487,11 +632,6 @@ def create(cls, name: str) -> UnresolvedValuePolicy
 def __init__(self) -> None
 ```
 
-| Element | Type | Default | Description |
-|---|---|---:|---|
-| Return | `None` | — | Creates an empty identity map. |
-| Raises | — | — | None. |
-
 #### `ComplexRegistry._key` — private
 
 ```python
@@ -499,11 +639,16 @@ def __init__(self) -> None
 def _key(species: Mapping[str, Scalar]) -> tuple
 ```
 
-| Element | Type | Default | Description |
+##### Parameters
+
+| Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `species` | `Mapping[str, Scalar]` | required | Complex composition. |
-| Return | `tuple` | — | Order-independent canonical identity key. |
-| Raises | — | — | None for supported scalar values. |
+
+##### Returns
+
+- `return_value` (`tuple`): Order-independent canonical identity key.
+
 
 #### `ComplexRegistry._label` — private
 
@@ -512,11 +657,16 @@ def _key(species: Mapping[str, Scalar]) -> tuple
 def _label(species: Mapping[str, Scalar]) -> str
 ```
 
-| Element | Type | Default | Description |
+##### Parameters
+
+| Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `species` | `Mapping[str, Scalar]` | required | Complex composition. |
-| Return | `str` | — | Human-readable complex label; `0` for an empty complex. |
-| Raises | — | — | None for supported scalar values. |
+
+##### Returns
+
+- `return_value` (`str`): Human-readable complex label; `0` for an empty complex.
+
 
 #### `ComplexRegistry.register` — public
 
@@ -524,11 +674,16 @@ def _label(species: Mapping[str, Scalar]) -> str
 def register(self, species: Mapping[str, Scalar]) -> int
 ```
 
-| Element | Type | Default | Description |
+##### Parameters
+
+| Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `species` | `Mapping[str, Scalar]` | required | Complex to register. |
-| Return | `int` | — | Existing or newly assigned stable index. |
-| Raises | — | — | None for supported scalar values. |
+
+##### Returns
+
+- `return_value` (`int`): Existing or newly assigned stable index.
+
 
 #### `ComplexRegistry.complexes` — public property
 
@@ -537,10 +692,10 @@ def register(self, species: Mapping[str, Scalar]) -> int
 def complexes(self) -> List[Complex]
 ```
 
-| Element | Type | Default | Description |
-|---|---|---:|---|
-| Return | `list[Complex]` | — | Shallow copy of registered complexes. |
-| Raises | — | — | None. |
+##### Returns
+
+- `return_value` (`list[Complex]`): Shallow copy of registered complexes.
+
 
 #### `ReactionGraphBuilder.build` — public
 
@@ -550,13 +705,22 @@ def build(
 ) -> Tuple[ReactionGraph, List[List[AdjacencyCell]]]
 ```
 
-| Element | Type | Default | Description |
+##### Parameters
+
+| Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `complexes` | `list[Complex]` | required | Indexed graph nodes. |
 | `reactions` | `list[Reaction]` | required | Directed weighted edges. |
-| Return 1 | `ReactionGraph` | — | Graph view reusing supplied objects. |
-| Return 2 | `list[list[AdjacencyCell]]` | — | Symmetric weighted adjacency matrix. |
-| Raises | `IndexError` | — | A reaction contains an invalid complex index. |
+
+##### Returns
+
+- `return_1` (`ReactionGraph`): Graph view reusing supplied objects.
+- `return_2` (`list[list[AdjacencyCell]]`): Symmetric weighted adjacency matrix.
+
+##### Raises
+
+- `IndexError`: A reaction contains an invalid complex index.
+
 
 #### `ReactionGraphBuilder._add_weight` — private
 
@@ -565,12 +729,17 @@ def build(
 def _add_weight(cell: AdjacencyCell, weight: Weight) -> AdjacencyCell
 ```
 
-| Element | Type | Default | Description |
+##### Parameters
+
+| Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `cell` | `AdjacencyCell` | required | Existing zero, scalar, symbol, or list. |
 | `weight` | `float \| str` | required | New path weight. |
-| Return | `AdjacencyCell` | — | Scalar first weight or accumulated weight list. |
-| Raises | — | — | None. |
+
+##### Returns
+
+- `return_value` (`AdjacencyCell`): Scalar first weight or accumulated weight list.
+
 
 ### `reaction_parser.py`
 
@@ -580,11 +749,11 @@ def _add_weight(cell: AdjacencyCell, weight: Weight) -> AdjacencyCell
 def __init__(self, policy: UnresolvedValuePolicy) -> None
 ```
 
-| Element | Type | Default | Description |
+##### Parameters
+
+| Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `policy` | `UnresolvedValuePolicy` | required | Coefficient-resolution strategy. |
-| Return | `None` | — | Initializes the complex parser. |
-| Raises | — | — | None. |
 
 #### `ComplexParser.parse` — public within the parser layer
 
@@ -597,13 +766,22 @@ def parse(
 ) -> Dict[str, Scalar]
 ```
 
-| Element | Type | Default | Description |
+##### Parameters
+
+| Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `expression` | `str` | required | One complex expression. |
 | `coefficient_values` | `Mapping[str, float]` | required | Defined symbolic coefficients. |
 | `line_number` | `int` | required | Source location for diagnostics. |
-| Return | `dict[str, Scalar]` | — | Normalized species-to-coefficient mapping. |
-| Raises | `ReactionParseError` | — | Complex is empty/malformed, negative, or has uncombinable symbolic duplicates. |
+
+##### Returns
+
+- `return_value` (`dict[str, Scalar]`): Normalized species-to-coefficient mapping.
+
+##### Raises
+
+- `ReactionParseError`: Complex is empty/malformed, negative, or has uncombinable symbolic duplicates.
+
 
 #### `ReactionFileParser.__init__` — public constructor
 
@@ -619,6 +797,8 @@ def __init__(
 ) -> None
 ```
 
+##### Parameters
+
 | Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `unresolved` | `str` | `"symbolic"` | Missing-value policy name. |
@@ -626,8 +806,11 @@ def __init__(
 | `section_parser` | `SectionParser \| None` | `None` | Injected section parser. |
 | `assignment_parser` | `AssignmentParser \| None` | `None` | Injected assignment parser. |
 | `graph_builder` | `ReactionGraphBuilder \| None` | `None` | Injected graph builder. |
-| Return | `None` | — | Initializes the parser. |
-| Raises | `ValueError` | — | Policy name is unknown. |
+
+##### Raises
+
+- `ValueError`: Policy name is unknown.
+
 
 #### `ReactionFileParser.parse_text` — public
 
@@ -635,11 +818,20 @@ def __init__(
 def parse_text(self, text: str) -> ReactionNetwork
 ```
 
-| Element | Type | Default | Description |
+##### Parameters
+
+| Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `text` | `str` | required | Complete `.react` document. |
-| Return | `ReactionNetwork` | — | Parsed and indexed network. |
-| Raises | `ReactionParseError` | — | Required reactions are absent or content is malformed. |
+
+##### Returns
+
+- `return_value` (`ReactionNetwork`): Parsed and indexed network.
+
+##### Raises
+
+- `ReactionParseError`: Required reactions are absent or content is malformed.
+
 
 #### `ReactionFileParser.parse_reaction` — public
 
@@ -656,6 +848,8 @@ def parse_reaction(
 ) -> Reaction
 ```
 
+##### Parameters
+
 | Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `reaction_string` | `str` | required | One `reactants rate-> products` line. |
@@ -664,8 +858,15 @@ def parse_reaction(
 | `index` | `int` | `0` | Reaction index. |
 | `line_number` | `int` | `1` | Diagnostic line number. |
 | `registry` | `ComplexRegistry \| None` | `None` | Shared registry; a private one is created if absent. |
-| Return | `Reaction` | — | Indexed reaction referencing registered complexes. |
-| Raises | `ReactionParseError` | — | Syntax, coefficient, or rate validation fails. |
+
+##### Returns
+
+- `return_value` (`Reaction`): Indexed reaction referencing registered complexes.
+
+##### Raises
+
+- `ReactionParseError`: Syntax, coefficient, or rate validation fails.
+
 
 #### `parse_reaction_text` and `parse_reaction_file` — public functions
 
@@ -674,13 +875,25 @@ def parse_reaction_text(text: str, unresolved: str = "symbolic") -> dict
 def parse_reaction_file(path: Union[str, Path], unresolved: str = "symbolic") -> dict
 ```
 
-| Element | Type | Default | Description |
+##### Parameters
+
+| Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `text` | `str` | required | Complete reaction document for the text function. |
 | `path` | `str \| Path` | required | Reaction file for the file function. |
 | `unresolved` | `str` | `"symbolic"` | Missing-value policy. |
-| Return | `dict` | — | Normalized serialized network. |
-| Raises | `OSError`, `UnicodeError`, `ReactionParseError`, `ValueError` | — | I/O, decoding, parsing, or policy selection fails. |
+
+##### Returns
+
+- `return_value` (`dict`): Normalized serialized network.
+
+##### Raises
+
+- `OSError`: The reaction file cannot be opened or read.
+- `UnicodeError`: The reaction file is not valid UTF-8.
+- `ReactionParseError`: Reaction content is malformed.
+- `ValueError`: The unresolved-value policy is unknown.
+
 
 ### `ode_parser.py`
 
@@ -690,10 +903,10 @@ def parse_reaction_file(path: Union[str, Path], unresolved: str = "symbolic") ->
 def to_dict(self) -> dict
 ```
 
-| Element | Type | Default | Description |
-|---|---|---:|---|
-| Return | `dict` | — | Equation source, affected species, and parsed terms. |
-| Raises | — | — | None directly. |
+##### Returns
+
+- `return_value` (`dict`): Equation source, affected species, and parsed terms.
+
 
 #### `ODEParseResult.to_dict` — public
 
@@ -701,10 +914,10 @@ def to_dict(self) -> dict
 def to_dict(self) -> dict
 ```
 
-| Element | Type | Default | Description |
-|---|---|---:|---|
-| Return | `dict` | — | Network data augmented with ODE equations and warnings. |
-| Raises | — | — | None directly. |
+##### Returns
+
+- `return_value` (`dict`): Network data augmented with ODE equations and warnings.
+
 
 #### `ODEFileParser.__init__` — public constructor
 
@@ -729,11 +942,20 @@ Parameters, defaults, return, and policy-selection exceptions match
 def parse_text(self, text: str) -> ODEParseResult
 ```
 
-| Element | Type | Default | Description |
+##### Parameters
+
+| Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `text` | `str` | required | Complete `.ode` document. |
-| Return | `ODEParseResult` | — | Equations, canonical network, and warnings. |
-| Raises | `ODEParseError` | — | Equations are absent, malformed, or not ordinary mass action. |
+
+##### Returns
+
+- `return_value` (`ODEParseResult`): Equations, canonical network, and warnings.
+
+##### Raises
+
+- `ODEParseError`: Equations are absent, malformed, or not ordinary mass action.
+
 
 #### `ODEFileParser._split_equation` — private
 
@@ -741,12 +963,21 @@ def parse_text(self, text: str) -> ODEParseResult
 def _split_equation(self, line_number: int, line: str) -> tuple
 ```
 
-| Element | Type | Default | Description |
+##### Parameters
+
+| Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `line_number` | `int` | required | Source line number. |
 | `line` | `str` | required | ODE assignment. |
-| Return | `tuple` | — | Line number, source, derivative variable, and RHS. |
-| Raises | `ODEParseError` | — | Derivative syntax is invalid. |
+
+##### Returns
+
+- `return_value` (`tuple`): Line number, source, derivative variable, and RHS.
+
+##### Raises
+
+- `ODEParseError`: Derivative syntax is invalid.
+
 
 #### `ODEFileParser._species_names` — private
 
@@ -755,11 +986,16 @@ def _split_equation(self, line_number: int, line: str) -> tuple
 def _species_names(equation_specs) -> Dict[str, str]
 ```
 
-| Element | Type | Default | Description |
+##### Parameters
+
+| Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `equation_specs` | iterable of equation tuples | required | Split equations. |
-| Return | `dict[str, str]` | — | Case-folded derivative names to canonical species names. |
-| Raises | — | — | None directly. |
+
+##### Returns
+
+- `return_value` (`dict[str, str]`): Case-folded derivative names to canonical species names.
+
 
 #### `ODEFileParser._parse_equation` — private
 
@@ -770,6 +1006,8 @@ def _parse_equation(
 ) -> ODEEquation
 ```
 
+##### Parameters
+
 | Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `line_number` | `int` | required | Diagnostic location. |
@@ -777,8 +1015,15 @@ def _parse_equation(
 | `lhs`, `rhs` | `str` | required | Derivative name and expression. |
 | `species_names` | `Mapping[str, str]` | required | Canonical name map. |
 | `values` | `Mapping[str, float]` | required | Coefficient definitions. |
-| Return | `ODEEquation` | — | Parsed equation and terms. |
-| Raises | `ODEParseError` | — | RHS expression or a term is malformed. |
+
+##### Returns
+
+- `return_value` (`ODEEquation`): Parsed equation and terms.
+
+##### Raises
+
+- `ODEParseError`: RHS expression or a term is malformed.
+
 
 #### `ODEFileParser._parse_term` — private
 
@@ -790,6 +1035,8 @@ def _parse_term(
 ) -> ODETerm
 ```
 
+##### Parameters
+
 | Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `expression` | `str` | required | Unsigned multiplicative term. |
@@ -798,8 +1045,15 @@ def _parse_term(
 | `species_names` | `Mapping[str, str]` | required | Canonical name map. |
 | `values` | `Mapping[str, float]` | required | Defined coefficients. |
 | `line_number` | `int` | required | Diagnostic location. |
-| Return | `ODETerm` | — | Parsed kinetic contribution. |
-| Raises | `ODEParseError` | — | Factor, exponent, or rate structure is invalid. |
+
+##### Returns
+
+- `return_value` (`ODETerm`): Parsed kinetic contribution.
+
+##### Raises
+
+- `ODEParseError`: Factor, exponent, or rate structure is invalid.
+
 
 #### `ODEFileParser._normalize_exponent` — private
 
@@ -808,12 +1062,21 @@ def _parse_term(
 def _normalize_exponent(exponent: Scalar, line_number: int) -> Scalar
 ```
 
-| Element | Type | Default | Description |
+##### Parameters
+
+| Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `exponent` | `Scalar` | required | Numeric or symbolic exponent. |
 | `line_number` | `int` | required | Diagnostic location. |
-| Return | `int \| str` | — | Symbol or normalized integer exponent. |
-| Raises | `ODEParseError` | — | A numerical exponent is negative or nonintegral. |
+
+##### Returns
+
+- `return_value` (`int \| str`): Symbol or normalized integer exponent.
+
+##### Raises
+
+- `ODEParseError`: A numerical exponent is negative or nonintegral.
+
 
 #### `ODEFileParser._build_network` — private
 
@@ -823,12 +1086,21 @@ def _build_network(
 ) -> tuple
 ```
 
-| Element | Type | Default | Description |
+##### Parameters
+
+| Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `equations` | `list[ODEEquation]` | required | Parsed coupled ODEs. |
 | `values` | `Mapping[str, float]` | required | Coefficient definitions. |
-| Return | `tuple[ReactionNetwork, set[str], set[str]]` | — | Network, used rates, and used exponent symbols. |
-| Raises | `ODEParseError` | — | Rate resolution or product construction fails. |
+
+##### Returns
+
+- `return_value` (`tuple[ReactionNetwork, set[str], set[str]]`): Network, used rates, and used exponent symbols.
+
+##### Raises
+
+- `ODEParseError`: Rate resolution or product construction fails.
+
 
 #### `ODEFileParser._monomial_key` — private
 
@@ -837,11 +1109,16 @@ def _build_network(
 def _monomial_key(reactant: Mapping[str, Scalar]) -> tuple
 ```
 
-| Element | Type | Default | Description |
+##### Parameters
+
+| Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `reactant` | `Mapping[str, Scalar]` | required | Reactant monomial. |
-| Return | `tuple` | — | Canonical grouping key. |
-| Raises | — | — | None for supported scalar values. |
+
+##### Returns
+
+- `return_value` (`tuple`): Canonical grouping key.
+
 
 #### `ODEFileParser._products` — private
 
@@ -850,11 +1127,20 @@ def _monomial_key(reactant: Mapping[str, Scalar]) -> tuple
 def _products(contribution: _ReactionContribution) -> Dict[str, Scalar]
 ```
 
-| Element | Type | Default | Description |
+##### Parameters
+
+| Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `contribution` | `_ReactionContribution` | required | Grouped reaction vector and reactant. |
-| Return | `dict[str, Scalar]` | — | Reconstructed product complex. |
-| Raises | `ODEParseError` | — | Symbolic arithmetic is indeterminate or product stoichiometry is negative. |
+
+##### Returns
+
+- `return_value` (`dict[str, Scalar]`): Reconstructed product complex.
+
+##### Raises
+
+- `ODEParseError`: Symbolic arithmetic is indeterminate or product stoichiometry is negative.
+
 
 #### `parse_ode_text` and `parse_ode_file` — public functions
 
@@ -863,13 +1149,25 @@ def parse_ode_text(text: str, unresolved: str = "symbolic") -> dict
 def parse_ode_file(path: Union[str, Path], unresolved: str = "symbolic") -> dict
 ```
 
-| Element | Type | Default | Description |
+##### Parameters
+
+| Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `text` | `str` | required | Complete ODE document for the text function. |
 | `path` | `str \| Path` | required | ODE file for the file function. |
 | `unresolved` | `str` | `"symbolic"` | Missing-value policy. |
-| Return | `dict` | — | Serialized ODE result and network. |
-| Raises | `OSError`, `UnicodeError`, `ODEParseError`, `ValueError` | — | I/O, decoding, parsing, or policy selection fails. |
+
+##### Returns
+
+- `return_value` (`dict`): Serialized ODE result and network.
+
+##### Raises
+
+- `OSError`: The ODE file cannot be opened or read.
+- `UnicodeError`: The ODE file is not valid UTF-8.
+- `ODEParseError`: ODE content is malformed or cannot be realized as a CRN.
+- `ValueError`: The unresolved-value policy is unknown.
+
 
 ### `deficiency_utils.py`
 
@@ -880,11 +1178,11 @@ def LinkageClassDeficiency.to_dict(self) -> dict
 def DeficiencyResult.to_dict(self) -> dict
 ```
 
-| Element | Type | Default | Description |
-|---|---|---:|---|
-| First return | `dict` | — | One class's indices, `n`, `s`, `l`, and deficiency. |
-| Second return | `dict` | — | Global values, species, symbolic flag, and all class results. |
-| Raises | — | — | None directly. |
+##### Returns
+
+- `linkage_class_data` (`dict`): One class's indices, `n`, `s`, `l`, and deficiency.
+- `deficiency_data` (`dict`): Global values, species, symbolic flag, and all class results.
+
 
 #### `_DisjointSet.__init__`, `.find`, and `.union` — private
 
@@ -894,14 +1192,22 @@ def find(self, item: int) -> int
 def union(self, first: int, second: int) -> None
 ```
 
-| Element | Type | Default | Description |
+##### Parameters
+
+| Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `items` | `Iterable[int]` | required | Initial complex indices. |
 | `item` | `int` | required | Index whose representative is requested. |
 | `first`, `second` | `int` | required | Indices to connect. |
-| `find` return | `int` | — | Component representative with path compression. |
-| Other return | `None` | — | Initialization or union side effect. |
-| Raises | `KeyError` | — | An unknown index is requested. |
+
+##### Returns
+
+- `representative` (`int`): Component representative returned by `find` with path compression.
+
+##### Raises
+
+- `KeyError`: An unknown index is requested.
+
 
 #### `DeficiencyCalculator.calculate` — public
 
@@ -909,11 +1215,20 @@ def union(self, first: int, second: int) -> None
 def calculate(self, network: ReactionNetwork) -> DeficiencyResult
 ```
 
-| Element | Type | Default | Description |
+##### Parameters
+
+| Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `network` | `ReactionNetwork` | required | Network to analyze. |
-| Return | `DeficiencyResult` | — | Global and per-linkage-class deficiencies. |
-| Raises | `DeficiencyError` | — | Complex indices or reaction references are invalid. |
+
+##### Returns
+
+- `return_value` (`DeficiencyResult`): Global and per-linkage-class deficiencies.
+
+##### Raises
+
+- `DeficiencyError`: Complex indices or reaction references are invalid.
+
 
 #### Deficiency validation helpers — private
 
@@ -927,13 +1242,21 @@ def _validate_reactions(
 ) -> None
 ```
 
-| Element | Type | Default | Description |
+##### Parameters
+
+| Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `complexes` | sequence or mapping | required | Indexed complex collection. |
 | `reactions` | `Sequence[Reaction]` | required | Reactions to validate. |
-| `_complex_map` return | `dict[int, Complex]` | — | Unique index lookup. |
-| `_validate_reactions` return | `None` | — | Validation only. |
-| Raises | `DeficiencyError` | — | Duplicate index or missing source/target. |
+
+##### Returns
+
+- `complex_map` (`dict[int, Complex]`): Unique index lookup returned by `_complex_map`.
+
+##### Raises
+
+- `DeficiencyError`: Duplicate index or missing source/target.
+
 
 #### `DeficiencyCalculator._linkage_classes` — private
 
@@ -944,12 +1267,21 @@ def _linkage_classes(
 ) -> List[Set[int]]
 ```
 
-| Element | Type | Default | Description |
+##### Parameters
+
+| Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `network` | `ReactionNetwork` | required | Network providing edges. |
 | `complexes` | `Mapping[int, Complex]` | required | Validated index map. |
-| Return | `list[set[int]]` | — | Components ordered by their smallest index. |
-| Raises | `KeyError` | — | Called without prior reference validation. |
+
+##### Returns
+
+- `return_value` (`list[set[int]]`): Components ordered by their smallest index.
+
+##### Raises
+
+- `KeyError`: Called without prior reference validation.
+
 
 #### Rank and vector helpers — private
 
@@ -971,18 +1303,28 @@ def _sympy_scalar(value: Scalar) -> Expr
 def _contains_symbols(complexes: Sequence[Complex]) -> bool
 ```
 
-| Element | Type | Default | Description |
+##### Parameters
+
+| Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `reactions` | `Sequence[Reaction]` | required | Rank/vector edge set. |
 | `complexes` | `Mapping[int, Complex]` or sequence | required | Complex data. |
 | `species` | `Sequence[str]` | required | Consistent vector coordinate order. |
 | `reaction` | `Reaction` | required | Edge for one vector. |
 | `value` | `Scalar` | required | Numeric or symbolic coefficient. |
-| `_rank` return | `int` | — | Exact or generic symbolic matrix rank. |
-| `_reaction_vector` return | `list[Expr]` | — | Product-minus-reactant vector. |
-| `_sympy_scalar` return | `Expr` | — | SymPy rational or symbol. |
-| `_contains_symbols` return | `bool` | — | Whether any complex coefficient is symbolic. |
-| Raises | `KeyError`, SymPy exceptions | — | Invalid references or unsupported symbolic expressions. |
+
+##### Returns
+
+- `rank` (`int`): Exact or generic symbolic matrix rank.
+- `reaction_vector` (`list[Expr]`): Product-minus-reactant vector.
+- `scalar_expression` (`Expr`): SymPy rational or symbol.
+- `contains_symbols` (`bool`): Whether any complex coefficient is symbolic.
+
+##### Raises
+
+- `KeyError`: A reaction references an unknown complex.
+- `SympifyError`: A symbolic coefficient cannot be converted into a SymPy expression.
+
 
 #### `calculate_deficiency` — public function
 
@@ -990,11 +1332,20 @@ def _contains_symbols(complexes: Sequence[Complex]) -> bool
 def calculate_deficiency(network: ReactionNetwork) -> DeficiencyResult
 ```
 
-| Element | Type | Default | Description |
+##### Parameters
+
+| Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `network` | `ReactionNetwork` | required | Network to analyze. |
-| Return | `DeficiencyResult` | — | Result from a new `DeficiencyCalculator`. |
-| Raises | `DeficiencyError` | — | Network validation fails. |
+
+##### Returns
+
+- `return_value` (`DeficiencyResult`): Result from a new `DeficiencyCalculator`.
+
+##### Raises
+
+- `DeficiencyError`: Network validation fails.
+
 
 ### `orchestrator.py`
 
@@ -1004,10 +1355,10 @@ def calculate_deficiency(network: ReactionNetwork) -> DeficiencyResult
 def to_dict(self) -> dict
 ```
 
-| Element | Type | Default | Description |
-|---|---|---:|---|
-| Return | `dict` | — | Input metadata, network, deficiency, and warnings. |
-| Raises | — | — | None directly. |
+##### Returns
+
+- `return_value` (`dict`): Input metadata, network, deficiency, and warnings.
+
 
 #### `CRNAnalysisService.analyze_file` — public
 
@@ -1018,13 +1369,26 @@ def analyze_file(
 ) -> AnalysisOutcome
 ```
 
+##### Parameters
+
 | Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `path` | `str \| Path` | required | `.react` or `.ode` input path. |
 | `input_format` | `str` | `"auto"` | Explicit format or suffix detection. |
 | `unresolved` | `str` | `"symbolic"` | Missing-value policy. |
-| Return | `AnalysisOutcome` | — | Parsed and analyzed outcome. |
-| Raises | `OSError`, `UnicodeError`, `InputFormatError`, `ParserError`, `DeficiencyError` | — | Input, format, parsing, or analysis fails. |
+
+##### Returns
+
+- `return_value` (`AnalysisOutcome`): Parsed and analyzed outcome.
+
+##### Raises
+
+- `OSError`: The input file cannot be opened or read.
+- `UnicodeError`: The input file is not valid UTF-8.
+- `InputFormatError`: The input format is unsupported or cannot be inferred.
+- `ParserError`: The selected parser rejects the input content.
+- `DeficiencyError`: The resulting network is invalid for deficiency analysis.
+
 
 #### `CRNAnalysisService.analyze_text` — public
 
@@ -1035,14 +1399,25 @@ def analyze_text(
 ) -> AnalysisOutcome
 ```
 
+##### Parameters
+
 | Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `text` | `str` | required | Complete input document. |
 | `input_format` | `str` | `"auto"` | Explicit format or heading detection. |
 | `unresolved` | `str` | `"symbolic"` | Missing-value policy. |
 | `source` | `str \| None` | `None` | Optional display/source identifier. |
-| Return | `AnalysisOutcome` | — | Parsed network, deficiency, and warnings. |
-| Raises | `InputFormatError`, `ParserError`, `DeficiencyError` | — | Detection, parsing, or analysis fails. |
+
+##### Returns
+
+- `return_value` (`AnalysisOutcome`): Parsed network, deficiency, and warnings.
+
+##### Raises
+
+- `InputFormatError`: The input format is unsupported or cannot be inferred.
+- `ParserError`: The selected parser rejects the input content.
+- `DeficiencyError`: The resulting network is invalid for deficiency analysis.
+
 
 #### `CRNAnalysisService._resolve_format` — private
 
@@ -1053,13 +1428,22 @@ def _resolve_format(
 ) -> str
 ```
 
+##### Parameters
+
 | Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `requested` | `str` | required | `auto`, `react`, or `ode`. |
 | `path` | `Path \| None` | `None` | Optional suffix source. |
 | `text` | `str \| None` | `None` | Optional heading source. |
-| Return | `str` | — | `react` or `ode`. |
-| Raises | `InputFormatError` | — | Format is unsupported or cannot be inferred. |
+
+##### Returns
+
+- `return_value` (`str`): `react` or `ode`.
+
+##### Raises
+
+- `InputFormatError`: Format is unsupported or cannot be inferred.
+
 
 #### `ConsoleReportFormatter.format` — public
 
@@ -1067,11 +1451,20 @@ def _resolve_format(
 def format(self, outcome: AnalysisOutcome) -> str
 ```
 
-| Element | Type | Default | Description |
+##### Parameters
+
+| Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `outcome` | `AnalysisOutcome` | required | Complete analysis result. |
-| Return | `str` | — | Human-readable multiline report. |
-| Raises | `KeyError` | — | Outcome contains inconsistent complex indices. |
+
+##### Returns
+
+- `return_value` (`str`): Human-readable multiline report.
+
+##### Raises
+
+- `KeyError`: Outcome contains inconsistent complex indices.
+
 
 #### `AnalysisReportWriter.write` — public
 
@@ -1083,15 +1476,25 @@ def write(
 ) -> Path
 ```
 
+##### Parameters
+
 | Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `outcome` | `AnalysisOutcome` | required | Result to serialize. |
 | `output_directory` | `str \| Path` | `"output"` | Destination directory. |
 | `filename` | `str \| None` | `None` | Optional stem; source-derived when absent. |
 | `extension` | `str` | `"analysis"` | `analysis` or `output`. |
-| Return | `Path` | — | Written report path. |
-| Raises | `ValueError` | — | Extension is unsupported. |
-| Raises | `OSError`, `TypeError` | — | Directory/write or JSON serialization fails. |
+
+##### Returns
+
+- `return_value` (`Path`): Written report path.
+
+##### Raises
+
+- `ValueError`: Extension is unsupported.
+- `OSError`: The output directory or report file cannot be created or written.
+- `TypeError`: The outcome contains a value that cannot be serialized as JSON.
+
 
 #### `AnalysisReportWriter._default_stem` — private
 
@@ -1100,11 +1503,16 @@ def write(
 def _default_stem(source: Optional[str]) -> str
 ```
 
-| Element | Type | Default | Description |
+##### Parameters
+
+| Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `source` | `str \| None` | required | Optional source path. |
-| Return | `str` | — | Source-derived or generic report stem. |
-| Raises | — | — | None directly. |
+
+##### Returns
+
+- `return_value` (`str`): Source-derived or generic report stem.
+
 
 #### `_argument_parser` — private
 
@@ -1112,10 +1520,10 @@ def _default_stem(source: Optional[str]) -> str
 def _argument_parser() -> argparse.ArgumentParser
 ```
 
-| Element | Type | Default | Description |
-|---|---|---:|---|
-| Return | `argparse.ArgumentParser` | — | Configured CLI parser. |
-| Raises | — | — | None directly. |
+##### Returns
+
+- `return_value` (`argparse.ArgumentParser`): Configured CLI parser.
+
 
 #### `_interactive_input` — private
 
@@ -1123,10 +1531,14 @@ def _argument_parser() -> argparse.ArgumentParser
 def _interactive_input() -> tuple[str, str]
 ```
 
-| Element | Type | Default | Description |
-|---|---|---:|---|
-| Return | `tuple[str, str]` | — | Source type (`file`/`text`) and entered value. |
-| Raises | `InputFormatError` | — | No file or pasted content is supplied. |
+##### Returns
+
+- `return_value` (`tuple[str, str]`): Source type (`file`/`text`) and entered value.
+
+##### Raises
+
+- `InputFormatError`: No file or pasted content is supplied.
+
 
 #### `main` — public console entry point
 
@@ -1134,17 +1546,189 @@ def _interactive_input() -> tuple[str, str]
 def main(argv: Optional[Sequence[str]] = None) -> int
 ```
 
-| Element | Type | Default | Description |
+##### Parameters
+
+| Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `argv` | `Sequence[str] \| None` | `None` | Explicit arguments or process arguments. |
-| Return | `int` | — | `0` on success; `1` for handled input/analysis errors. |
-| Raises | `SystemExit` | — | Argparse handles invalid CLI syntax or help. |
 
-### Other package modules
+##### Returns
 
-`visualiztion.py` currently defines no methods. It is not re-exported as public
-API. Add its method contracts here when visualization functionality is
-implemented.
+- `return_value` (`int`): `0` on success; `1` for handled input/analysis errors.
+
+##### Raises
+
+- `SystemExit`: Argparse handles invalid CLI syntax or help.
+
+
+### `visualization.py`
+
+The adapter creates graph views referencing existing domain objects. The renderer
+accepts caller-owned axes and never opens a window or selects a GUI backend.
+Optional imports are deferred until needed; install `.[visualization]` to use
+NetworkX and Matplotlib. NumPy is installed transitively by Matplotlib.
+
+```mermaid
+classDiagram
+    NetworkVisualizer --> NetworkGraphAdapter : uses
+    NetworkGraphAdapter --> ReactionNetwork : reads
+    NetworkVisualizer --> Figure : returns and saves
+    class NetworkGraphAdapter {
+        +reaction_graph(network)
+        +linkage_graph(network)
+    }
+    class NetworkVisualizer {
+        +draw_reaction_network(network)
+        +draw_linkage_graph(network)
+        +save(figure, path)
+        -_draw(network, graph, ax, positions, seed, show_rates, show_deficiency)
+    }
+```
+
+#### `NetworkGraphAdapter.reaction_graph` and `.linkage_graph` — public
+
+```python
+def reaction_graph(self, network)
+def linkage_graph(self, network)
+```
+
+Convert a network to a directed multigraph or an undirected complex graph.
+Isolated complexes and self-loops are retained. Multigraph edge keys are reaction
+indices; undirected edges retain a list of every reaction on that connection.
+
+##### Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `network` | `ReactionNetwork` | required | Parsed or constructed network. |
+
+##### Returns
+
+- `graph` (`MultiDiGraph` or `Graph`): Graph with original complex indices and references to domain objects.
+
+##### Raises
+
+- `ValueError`: Complex/reaction indices are duplicated or an endpoint is unknown.
+- `ImportError`: NetworkX is unavailable.
+
+#### `NetworkVisualizer.__init__` — public
+
+```python
+def __init__(self, adapter=None)
+```
+
+Configure the graph conversion dependency.
+
+##### Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `adapter` | `NetworkGraphAdapter` or `None` | `None` | Custom adapter; otherwise create the standard adapter. |
+
+#### `NetworkVisualizer.draw_reaction_network` and `.draw_linkage_graph` — public
+
+```python
+def draw_reaction_network(self, network, *, ax=None, positions=None, seed=42,
+                          show_rates=True, show_deficiency=False)
+def draw_linkage_graph(self, network, *, ax=None, positions=None, seed=42,
+                       show_rates=False, show_deficiency=False)
+```
+
+Render directed reactions or undirected connections, colored by linkage class.
+Layouts use topology only: numerical and symbolic rates are labels, not layout
+forces. Parallel/reverse reactions use separate curves; custom positions can
+improve readability for dense networks. The palette repeats after 20 classes.
+
+##### Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `network` | `ReactionNetwork` | required | Network to display. |
+| `ax` | `Axes` or `None` | `None` | Existing axes; otherwise create a standalone figure. |
+| `positions` | mapping or `None` | `None` | Complex index to 2D coordinates; must cover every node. |
+| `seed` | `int` | `42` | Random seed for automatic layout. |
+| `show_rates` | `bool` | `True` / `False` | Show reaction IDs and numerical/symbolic rates. |
+| `show_deficiency` | `bool` | `False` | Include per-class deficiency in the legend. |
+
+##### Returns
+
+- `figure` (`Figure`): Figure containing the plot.
+- `axes` (`Axes`): Axes for customization or GUI embedding.
+
+##### Raises
+
+- `ImportError`: Optional rendering dependencies are unavailable.
+- `ValueError`: Graph indices or supplied positions are invalid.
+- `DeficiencyError`: Requested deficiency calculation rejects the network.
+
+#### `NetworkVisualizer._draw` — private
+
+```python
+def _draw(self, network, graph, ax, positions, seed, show_rates, show_deficiency)
+```
+
+Shared renderer used by both public draw methods. Parameters, returns, and
+exceptions follow the draw methods above, with one additional required input.
+
+##### Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `network`, `ax`, `positions`, `seed`, `show_rates`, `show_deficiency` | as above | required | Rendering inputs forwarded by the public method. |
+| `graph` | `Graph` or `MultiDiGraph` | required | Validated adapter output. |
+
+##### Returns
+
+- `figure` (`Figure`): Rendered figure.
+- `axes` (`Axes`): Rendered axes.
+
+##### Raises
+
+- `ImportError`: Optional dependencies are unavailable.
+- `ValueError`: Positions are invalid.
+- `DeficiencyError`: Deficiency analysis rejects the network.
+
+#### `NetworkVisualizer.save` — public static method
+
+```python
+@staticmethod
+def save(figure, path, *, dpi=150)
+```
+
+Save a figure, creating parent directories. An existing destination is overwritten.
+
+##### Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `figure` | `Figure` | required | Figure to export. |
+| `path` | `str` or `Path` | required | PNG, SVG, or PDF destination. |
+| `dpi` | `int` | `150` | Raster export resolution. |
+
+##### Returns
+
+- `path` (`Path`): Saved file location.
+
+##### Raises
+
+- `ValueError`: Unsupported extension or invalid rendering settings.
+- `OSError`: Directory creation or file writing fails.
+
+#### `_networkx` — private
+
+```python
+def _networkx()
+```
+
+Load the optional graph dependency on demand.
+
+##### Returns
+
+- `networkx` (`module`): Imported NetworkX module.
+
+##### Raises
+
+- `ImportError`: NetworkX is unavailable; includes installation instructions.
 
 ## Public API policy
 
