@@ -203,16 +203,152 @@ def _argument_parser() -> argparse.ArgumentParser:
     )
     source = parser.add_mutually_exclusive_group()
     source.add_argument("input_file", nargs="?", help="Path to a .react or .ode file")
-    source.add_argument("--text", help="Raw reaction or ODE document text")
-    parser.add_argument("--format", choices=["auto", "react", "ode"], default="auto")
-    parser.add_argument(
-        "--unresolved", choices=["symbolic", "error", "one"], default="symbolic"
+    source.add_argument(
+        "--file",
+        dest="input_file_option",
+        metavar="PATH",
+        help="Path to a .react or .ode file (explicit form)",
     )
-    parser.add_argument("--output-dir", default="output")
-    parser.add_argument("--output-name", help="Report filename without extension")
-    parser.add_argument("--extension", choices=["analysis", "output"], default="analysis")
-    parser.add_argument("--no-file", action="store_true", help="Only print the report")
+    source.add_argument("--text", help="Raw reaction or ODE document text")
+    source.add_argument(
+        "--stdin",
+        action="store_true",
+        help="Read the complete reaction or ODE document from standard input",
+    )
+    parser.add_argument(
+        "--format",
+        choices=["auto", "react", "ode"],
+        default="auto",
+        help="Input format; auto detects it from the suffix or section heading",
+    )
+    parser.add_argument(
+        "--unresolved",
+        choices=["symbolic", "error", "one"],
+        default="symbolic",
+        help="How to handle missing rate constants and stoichiometric coefficients",
+    )
+    parser.add_argument("--output-dir", default="output", help="Report/figure directory")
+    parser.add_argument(
+        "--output-name", help="Report and automatic-graph filename prefix"
+    )
+    parser.add_argument(
+        "--extension",
+        choices=["analysis", "output"],
+        default="analysis",
+        help="Structured JSON report extension",
+    )
+    parser.add_argument(
+        "--no-file", action="store_true", help="Do not write the structured report"
+    )
+    parser.add_argument(
+        "--no-console", action="store_true", help="Do not print the analysis summary"
+    )
+    parser.add_argument(
+        "--reaction-graph",
+        nargs="?",
+        const="auto",
+        metavar="PATH",
+        help="Save the directed reaction graph; optionally specify its path",
+    )
+    parser.add_argument(
+        "--linkage-graph",
+        nargs="?",
+        const="auto",
+        metavar="PATH",
+        help="Save the undirected linkage graph; optionally specify its path",
+    )
+    parser.add_argument(
+        "--graph-format",
+        choices=["png", "svg", "pdf"],
+        default="png",
+        help="Format for graph paths generated automatically",
+    )
+    parser.add_argument(
+        "--graph-dpi", type=int, default=150, help="DPI for exported graph figures"
+    )
+    parser.add_argument(
+        "--layout-seed", type=int, default=42, help="Seed for reproducible graph layouts"
+    )
+    parser.add_argument(
+        "--no-rate-labels",
+        action="store_true",
+        help="Hide reaction identifiers and rates on the directed graph",
+    )
+    parser.add_argument(
+        "--show-linkage-rates",
+        action="store_true",
+        help="Show reactions and rates on the undirected linkage graph",
+    )
+    parser.add_argument(
+        "--show-linkage-deficiency",
+        action="store_true",
+        help="Include each linkage-class deficiency in graph legends",
+    )
     return parser
+
+
+def _graph_path(
+    requested: str,
+    outcome: AnalysisOutcome,
+    output_directory: str,
+    output_name: Optional[str],
+    graph_name: str,
+    extension: str,
+) -> Path:
+    """Resolve either an explicit graph path or a generated output path."""
+    if requested != "auto":
+        return Path(requested)
+    stem = Path(output_name).stem if output_name else AnalysisReportWriter._default_stem(
+        outcome.source
+    )
+    return Path(output_directory) / f"{stem}_{graph_name}.{extension}"
+
+
+def _write_visualizations(
+    args: argparse.Namespace, outcome: AnalysisOutcome
+) -> List[Path]:
+    """Render the graph outputs requested by command-line arguments."""
+    if args.graph_dpi <= 0:
+        raise ValueError("--graph-dpi must be greater than zero")
+    if args.reaction_graph is None and args.linkage_graph is None:
+        return []
+    from crntanalysis.visualization import NetworkVisualizer
+
+    visualizer = NetworkVisualizer()
+    written = []
+    if args.reaction_graph is not None:
+        figure, _ = visualizer.draw_reaction_network(
+            outcome.network,
+            seed=args.layout_seed,
+            show_rates=not args.no_rate_labels,
+            show_deficiency=args.show_linkage_deficiency,
+        )
+        target = _graph_path(
+            args.reaction_graph,
+            outcome,
+            args.output_dir,
+            args.output_name,
+            "reaction_graph",
+            args.graph_format,
+        )
+        written.append(visualizer.save(figure, target, dpi=args.graph_dpi))
+    if args.linkage_graph is not None:
+        figure, _ = visualizer.draw_linkage_graph(
+            outcome.network,
+            seed=args.layout_seed,
+            show_rates=args.show_linkage_rates,
+            show_deficiency=args.show_linkage_deficiency,
+        )
+        target = _graph_path(
+            args.linkage_graph,
+            outcome,
+            args.output_dir,
+            args.output_name,
+            "linkage_graph",
+            args.graph_format,
+        )
+        written.append(visualizer.save(figure, target, dpi=args.graph_dpi))
+    return written
 
 
 def _interactive_input() -> tuple[str, str]:
@@ -239,13 +375,23 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     args = _argument_parser().parse_args(argv)
     service = CRNAnalysisService()
     try:
-        if args.input_file:
+        input_file = args.input_file_option or args.input_file
+        if input_file:
             outcome = service.analyze_file(
-                args.input_file, input_format=args.format, unresolved=args.unresolved
+                input_file, input_format=args.format, unresolved=args.unresolved
             )
         elif args.text is not None:
             outcome = service.analyze_text(
                 args.text, input_format=args.format, unresolved=args.unresolved
+            )
+        elif args.stdin:
+            text = sys.stdin.read()
+            if not text.strip():
+                raise InputFormatError("No input was provided on standard input")
+            outcome = service.analyze_text(
+                text,
+                input_format=args.format,
+                unresolved=args.unresolved,
             )
         else:
             source_type, source = _interactive_input()
@@ -258,7 +404,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                     source, input_format=args.format, unresolved=args.unresolved
                 )
 
-        print(ConsoleReportFormatter().format(outcome))
+        if not args.no_console:
+            print(ConsoleReportFormatter().format(outcome))
         if not args.no_file:
             output_path = AnalysisReportWriter().write(
                 outcome,
@@ -266,9 +413,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 filename=args.output_name,
                 extension=args.extension,
             )
-            print(f"\nAnalysis file: {output_path}")
+            print(f"Analysis file: {output_path}")
+        for graph_path in _write_visualizations(args, outcome):
+            print(f"Graph file: {graph_path}")
         return 0
-    except (OSError, ParserError, InputFormatError, ValueError) as error:
+    except (OSError, ImportError, ParserError, InputFormatError, ValueError) as error:
         print(f"Error: {error}", file=sys.stderr)
         return 1
 
