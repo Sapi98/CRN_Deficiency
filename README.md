@@ -215,25 +215,184 @@ rank limitations.
 
 ## Command-line usage
 
-Analyze a file using its `.react` or `.ode` suffix:
+Installing the package creates the `crntanalysis` command. Display every
+available argument with:
+
+```bash
+crntanalysis --help
+```
+
+The general form is:
+
+```text
+crntanalysis [INPUT_FILE | --file PATH | --text MODEL | --stdin] [OPTIONS]
+```
+
+Exactly one input source may be supplied. When no input source is given, the
+application starts its interactive prompt.
+
+### Analyze reaction and ODE files
+
+The input format is inferred from a `.react` or `.ode` filename:
 
 ```bash
 crntanalysis Example_Data/crn1.react
+crntanalysis Example_Data/crn2.ode
+crntanalysis --file Example_Data/crn1.react
 ```
 
 By default, this prints a summary and creates
-`output/crn1_analysis.analysis`. Useful options include:
+`output/crn1_analysis.analysis`. Use `--format` when the filename does not have
+a recognized extension:
 
 ```bash
-crntanalysis model.react --extension output
-crntanalysis model.react --output-dir reports
-crntanalysis model.react --unresolved error
-crntanalysis model.react --no-file
+crntanalysis model.txt --format react
+crntanalysis equations.txt --format ode
+```
+
+### Analyze raw text or piped input
+
+Pass a complete model directly. ANSI-C quoting (`$'...'`) is supported by Bash
+and Zsh:
+
+```bash
 crntanalysis --format react --text $'Reactions:\nA k1-> B'
 ```
 
-Run `crntanalysis` without arguments for interactive input. Enter `END` on a
-line by itself after pasting a model.
+Pipe a document through standard input with `--stdin`:
+
+```bash
+crntanalysis --stdin < Example_Data/crn1.react
+printf 'Reactions:\nA k1-> B\n' | crntanalysis --stdin --format react
+```
+
+PowerShell users can pipe a here-string:
+
+```powershell
+@"
+Reactions:
+A k1-> B
+"@ | crntanalysis --stdin --format react
+```
+
+### Select how unresolved values are handled
+
+Missing rate constants and stoichiometric coefficients remain symbolic by
+default. The other policies either reject them or substitute `1.0`:
+
+```bash
+crntanalysis model.react --unresolved symbolic
+crntanalysis model.react --unresolved error
+crntanalysis model.react --unresolved one
+```
+
+### Control console and analysis-file output
+
+Choose the output folder, basename, and `.analysis` or `.output` extension:
+
+```bash
+crntanalysis model.react \
+  --output-dir reports \
+  --output-name experiment_01 \
+  --extension output
+```
+
+Both extensions contain structured JSON. Use `--no-file` for console output
+only, or `--no-console` for a file-oriented batch run:
+
+```bash
+crntanalysis model.react --no-file
+crntanalysis model.react --no-console
+```
+
+### Generate reaction-network and linkage-graph figures
+
+Install visualization support first:
+
+```bash
+python -m pip install '.[visualization]'
+```
+
+Generate both figures using automatic filenames under `output/`:
+
+```bash
+crntanalysis model.react --reaction-graph --linkage-graph
+```
+
+For `model.react`, this creates
+`output/model_analysis_reaction_graph.png` and
+`output/model_analysis_linkage_graph.png`, along with the analysis report.
+Choose SVG or PDF for generated paths and include per-linkage deficiencies:
+
+```bash
+crntanalysis model.react \
+  --reaction-graph \
+  --linkage-graph \
+  --graph-format svg \
+  --show-linkage-deficiency
+```
+
+An explicit path after either graph argument overrides the generated path and
+determines that figure's format:
+
+```bash
+crntanalysis model.react \
+  --reaction-graph figures/reactions.pdf \
+  --linkage-graph figures/linkages.svg \
+  --graph-dpi 300 \
+  --layout-seed 7
+```
+
+Reaction labels are displayed on the directed graph by default. They can be
+hidden there or enabled on the undirected linkage graph:
+
+```bash
+crntanalysis model.react --reaction-graph --no-rate-labels
+crntanalysis model.react --linkage-graph --show-linkage-rates
+```
+
+For a figure-only batch operation:
+
+```bash
+crntanalysis model.react \
+  --reaction-graph \
+  --linkage-graph \
+  --no-file \
+  --no-console
+```
+
+### Interactive input
+
+Run `crntanalysis` without an input argument to enter a file path or paste a
+complete model. When pasting, enter `END` on a line by itself:
+
+```bash
+crntanalysis --format react --unresolved symbolic
+```
+
+### Argument reference
+
+| Argument | Purpose | Default |
+|---|---|---|
+| `INPUT_FILE` | Read a `.react` or `.ode` document from a file. | Interactive input |
+| `--file PATH` | Read a file using an explicit named argument. | — |
+| `--text MODEL` | Read the complete model from one command-line string. | — |
+| `--stdin` | Read the complete model from standard input. | — |
+| `--format {auto,react,ode}` | Select or infer the input format. | `auto` |
+| `--unresolved {symbolic,error,one}` | Handle missing parameter values. | `symbolic` |
+| `--output-dir DIRECTORY` | Set the report and automatic-figure directory. | `output` |
+| `--output-name NAME` | Set the report and automatic-graph basename. | Source-derived |
+| `--extension {analysis,output}` | Select the JSON report extension. | `analysis` |
+| `--no-file` | Skip the structured analysis file. | File enabled |
+| `--no-console` | Skip the human-readable analysis summary. | Summary enabled |
+| `--reaction-graph [PATH]` | Generate a directed reaction graph. | Disabled |
+| `--linkage-graph [PATH]` | Generate an undirected linkage graph. | Disabled |
+| `--graph-format {png,svg,pdf}` | Format automatic graph filenames. | `png` |
+| `--graph-dpi DPI` | Set raster export resolution; must be positive. | `150` |
+| `--layout-seed SEED` | Make automatic graph placement reproducible. | `42` |
+| `--no-rate-labels` | Hide labels on the directed reaction graph. | Labels enabled |
+| `--show-linkage-rates` | Show reaction/rate labels on the linkage graph. | Labels disabled |
+| `--show-linkage-deficiency` | Add per-class deficiencies to graph legends. | Disabled |
 
 For GUI or application integration, use the console-independent service:
 

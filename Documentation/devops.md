@@ -1525,6 +1525,67 @@ def _argument_parser() -> argparse.ArgumentParser
 - `return_value` (`argparse.ArgumentParser`): Configured CLI parser.
 
 
+#### `_graph_path` — private
+
+```python
+def _graph_path(
+    requested: str,
+    outcome: AnalysisOutcome,
+    output_directory: str,
+    output_name: Optional[str],
+    graph_name: str,
+    extension: str,
+) -> Path
+```
+
+Resolve an explicitly supplied graph destination or construct one from the
+input source, output directory, graph kind, and selected automatic format.
+
+##### Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---:|---|
+| `requested` | `str` | required | Explicit destination or the internal `auto` marker. |
+| `outcome` | `AnalysisOutcome` | required | Supplies source metadata for an automatic basename. |
+| `output_directory` | `str` | required | Parent directory for an automatic path. |
+| `output_name` | `str \| None` | required | Optional shared basename for reports and automatic graph paths. |
+| `graph_name` | `str` | required | Graph-kind filename suffix. |
+| `extension` | `str` | required | Automatic PNG, SVG, or PDF extension. |
+
+##### Returns
+
+- `graph_path` (`Path`): Explicit or generated graph destination.
+
+
+#### `_write_visualizations` — private
+
+```python
+def _write_visualizations(
+    args: argparse.Namespace, outcome: AnalysisOutcome
+) -> List[Path]
+```
+
+Render only the graph files requested by the CLI. Visualization dependencies
+remain optional when neither graph flag is supplied.
+
+##### Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---:|---|
+| `args` | `argparse.Namespace` | required | Validated CLI output and rendering choices. |
+| `outcome` | `AnalysisOutcome` | required | Parsed and analyzed network. |
+
+##### Returns
+
+- `graph_paths` (`list[Path]`): Destinations written in reaction/linkage order.
+
+##### Raises
+
+- `ValueError`: DPI is nonpositive or a graph destination is invalid.
+- `ImportError`: Optional visualization dependencies are unavailable.
+- `OSError`: A graph destination cannot be created or written.
+
+
 #### `_interactive_input` — private
 
 ```python
