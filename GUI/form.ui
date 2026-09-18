@@ -49,17 +49,20 @@ QPlainTextEdit:focus { border: 1px solid #246dce; }
 QComboBox { background: white; border: 1px solid #d6deea; border-radius: 6px; padding: 7px 12px; min-width: 145px; }
 QComboBox QAbstractItemView { background: white; selection-background-color: #deebff; }
 QFrame#dropZone { background: #fafcff; border: 2px dashed #bccce2; border-radius: 12px; }
-QFrame#dropZone[active="true"] { background: #edf4ff; border-color: #246dce; }
+QFrame#dropZone[active=&quot;true&quot;] { background: #edf4ff; border-color: #246dce; }
 QScrollArea { border: none; }
 
-QLabel[role="muted"] { color: #69788d; }
-QLabel[role="section"] { font-size: 17px; font-weight: 600; }
+QLabel[role=&quot;muted&quot;] { color: #69788d; }
+QLabel[role=&quot;section&quot;] { font-size: 17px; font-weight: 600; }
 QLabel#taglineLabel, QLabel#formatLabel, QLabel#editorHint, QLabel#characterCount, QLabel#dropHint, QLabel#supportedFormats, QLabel#fileLabel, QLabel#analysisHint, QLabel#reactionHelp, QLabel#odeHelp, QLabel#fileHelp, QLabel#resultsMetrics, QLabel#resultsHint, QLabel#statusLabel { color: #69788d; }
 QLabel#inputHeading, QLabel#dropHeading, QLabel#guideHeading, QLabel#reactionHeading, QLabel#odeHeading, QLabel#fileHeading, QLabel#resultsHeading, QLabel#resultsEmptyTitle { font-size: 17px; font-weight: 600; }
 QLabel#subtitleLabel { color: #69788d; }</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="rootLayout">
+    <property name="spacing">
+     <number>0</number>
+    </property>
     <property name="leftMargin">
      <number>0</number>
     </property>
@@ -72,12 +75,12 @@ QLabel#subtitleLabel { color: #69788d; }</string>
     <property name="bottomMargin">
      <number>0</number>
     </property>
-    <property name="spacing">
-     <number>0</number>
-    </property>
     <item>
      <widget class="QFrame" name="header">
       <layout class="QHBoxLayout" name="headerLayout">
+       <property name="spacing">
+        <number>16</number>
+       </property>
        <property name="leftMargin">
         <number>32</number>
        </property>
@@ -89,9 +92,6 @@ QLabel#subtitleLabel { color: #69788d; }</string>
        </property>
        <property name="bottomMargin">
         <number>18</number>
-       </property>
-       <property name="spacing">
-        <number>16</number>
        </property>
        <item>
         <widget class="QLabel" name="brandLabel">
@@ -119,9 +119,9 @@ QLabel#subtitleLabel { color: #69788d; }</string>
        <item>
         <spacer name="headerSpacer">
          <property name="orientation">
-          <enum>Qt::Horizontal</enum>
+          <enum>Qt::Orientation::Horizontal</enum>
          </property>
-         <property name="sizeHint">
+         <property name="sizeHint" stdset="0">
           <size>
            <width>20</width>
            <height>20</height>
@@ -152,11 +152,14 @@ QLabel#subtitleLabel { color: #69788d; }</string>
         <rect>
          <x>0</x>
          <y>0</y>
-         <width>1100</width>
-         <height>800</height>
+         <width>1103</width>
+         <height>921</height>
         </rect>
        </property>
        <layout class="QVBoxLayout" name="workspaceLayout">
+        <property name="spacing">
+         <number>20</number>
+        </property>
         <property name="leftMargin">
          <number>32</number>
         </property>
@@ -168,9 +171,6 @@ QLabel#subtitleLabel { color: #69788d; }</string>
         </property>
         <property name="bottomMargin">
          <number>24</number>
-        </property>
-        <property name="spacing">
-         <number>20</number>
         </property>
         <item>
          <widget class="QLabel" name="titleLabel">
@@ -200,6 +200,9 @@ QLabel#subtitleLabel { color: #69788d; }</string>
           <item>
            <widget class="QFrame" name="inputCard">
             <layout class="QVBoxLayout" name="inputLayout">
+             <property name="spacing">
+              <number>16</number>
+             </property>
              <property name="leftMargin">
               <number>22</number>
              </property>
@@ -211,9 +214,6 @@ QLabel#subtitleLabel { color: #69788d; }</string>
              </property>
              <property name="bottomMargin">
               <number>22</number>
-             </property>
-             <property name="spacing">
-              <number>16</number>
              </property>
              <item>
               <layout class="QHBoxLayout" name="formatLayout">
@@ -236,9 +236,9 @@ QLabel#subtitleLabel { color: #69788d; }</string>
                <item>
                 <spacer name="formatSpacer">
                  <property name="orientation">
-                  <enum>Qt::Horizontal</enum>
+                  <enum>Qt::Orientation::Horizontal</enum>
                  </property>
-                 <property name="sizeHint">
+                 <property name="sizeHint" stdset="0">
                   <size>
                    <width>20</width>
                    <height>20</height>
@@ -281,13 +281,16 @@ QLabel#subtitleLabel { color: #69788d; }</string>
              <item>
               <widget class="QTabWidget" name="inputTabs">
                <property name="currentIndex">
-                <number>0</number>
+                <number>1</number>
                </property>
                <widget class="QWidget" name="textPage">
                 <attribute name="title">
                  <string>Paste text</string>
                 </attribute>
                 <layout class="QVBoxLayout" name="textLayout">
+                 <property name="spacing">
+                  <number>6</number>
+                 </property>
                  <property name="leftMargin">
                   <number>0</number>
                  </property>
@@ -299,9 +302,6 @@ QLabel#subtitleLabel { color: #69788d; }</string>
                  </property>
                  <property name="bottomMargin">
                   <number>0</number>
-                 </property>
-                 <property name="spacing">
-                  <number>6</number>
                  </property>
                  <item>
                   <widget class="QLabel" name="editorHint">
@@ -364,9 +364,9 @@ Y = 0.0
                    <item>
                     <spacer name="editorSpacer">
                      <property name="orientation">
-                      <enum>Qt::Horizontal</enum>
+                      <enum>Qt::Orientation::Horizontal</enum>
                      </property>
-                     <property name="sizeHint">
+                     <property name="sizeHint" stdset="0">
                       <size>
                        <width>20</width>
                        <height>20</height>
@@ -397,6 +397,9 @@ Y = 0.0
                  <string>Upload file</string>
                 </attribute>
                 <layout class="QVBoxLayout" name="uploadLayout">
+                 <property name="spacing">
+                  <number>6</number>
+                 </property>
                  <property name="leftMargin">
                   <number>0</number>
                  </property>
@@ -409,21 +412,21 @@ Y = 0.0
                  <property name="bottomMargin">
                   <number>0</number>
                  </property>
-                 <property name="spacing">
-                  <number>6</number>
-                 </property>
                  <item>
                   <widget class="QFrame" name="dropZone">
-                   <property name="acceptDrops">
-                    <bool>true</bool>
-                   </property>
                    <property name="minimumSize">
                     <size>
                      <width>0</width>
                      <height>260</height>
                     </size>
                    </property>
+                   <property name="acceptDrops">
+                    <bool>true</bool>
+                   </property>
                    <layout class="QVBoxLayout" name="dropLayout">
+                    <property name="spacing">
+                     <number>6</number>
+                    </property>
                     <property name="leftMargin">
                      <number>28</number>
                     </property>
@@ -436,15 +439,12 @@ Y = 0.0
                     <property name="bottomMargin">
                      <number>30</number>
                     </property>
-                    <property name="spacing">
-                     <number>6</number>
-                    </property>
                     <item>
                      <spacer name="dropTopSpacer">
                       <property name="orientation">
-                       <enum>Qt::Vertical</enum>
+                       <enum>Qt::Orientation::Vertical</enum>
                       </property>
-                      <property name="sizeHint">
+                      <property name="sizeHint" stdset="0">
                        <size>
                         <width>20</width>
                         <height>20</height>
@@ -452,16 +452,16 @@ Y = 0.0
                       </property>
                      </spacer>
                     </item>
-                    <item alignment="Qt::AlignHCenter">
+                    <item alignment="Qt::AlignmentFlag::AlignHCenter">
                      <widget class="QLabel" name="uploadSymbol">
                       <property name="text">
                        <string>↑</string>
                       </property>
+                      <property name="alignment">
+                       <set>Qt::AlignmentFlag::AlignCenter</set>
+                      </property>
                       <property name="wordWrap">
                        <bool>true</bool>
-                      </property>
-                      <property name="alignment">
-                       <set>Qt::AlignCenter</set>
                       </property>
                      </widget>
                     </item>
@@ -470,14 +470,14 @@ Y = 0.0
                       <property name="text">
                        <string>Drop your model file here</string>
                       </property>
+                      <property name="alignment">
+                       <set>Qt::AlignmentFlag::AlignCenter</set>
+                      </property>
                       <property name="wordWrap">
                        <bool>true</bool>
                       </property>
                       <property name="role" stdset="0">
                        <string>section</string>
-                      </property>
-                      <property name="alignment">
-                       <set>Qt::AlignCenter</set>
                       </property>
                      </widget>
                     </item>
@@ -486,18 +486,18 @@ Y = 0.0
                       <property name="text">
                        <string>or choose a file from your computer</string>
                       </property>
+                      <property name="alignment">
+                       <set>Qt::AlignmentFlag::AlignCenter</set>
+                      </property>
                       <property name="wordWrap">
                        <bool>true</bool>
                       </property>
                       <property name="role" stdset="0">
                        <string>muted</string>
                       </property>
-                      <property name="alignment">
-                       <set>Qt::AlignCenter</set>
-                      </property>
                      </widget>
                     </item>
-                    <item alignment="Qt::AlignHCenter">
+                    <item alignment="Qt::AlignmentFlag::AlignHCenter">
                      <widget class="QPushButton" name="browseButton">
                       <property name="text">
                        <string>Browse files…</string>
@@ -509,23 +509,23 @@ Y = 0.0
                       <property name="text">
                        <string>Supported formats: .react, .ode, .txt</string>
                       </property>
+                      <property name="alignment">
+                       <set>Qt::AlignmentFlag::AlignCenter</set>
+                      </property>
                       <property name="wordWrap">
                        <bool>true</bool>
                       </property>
                       <property name="role" stdset="0">
                        <string>muted</string>
                       </property>
-                      <property name="alignment">
-                       <set>Qt::AlignCenter</set>
-                      </property>
                      </widget>
                     </item>
                     <item>
                      <spacer name="dropBottomSpacer">
                       <property name="orientation">
-                       <enum>Qt::Vertical</enum>
+                       <enum>Qt::Orientation::Vertical</enum>
                       </property>
-                      <property name="sizeHint">
+                      <property name="sizeHint" stdset="0">
                        <size>
                         <width>20</width>
                         <height>20</height>
@@ -556,11 +556,11 @@ Y = 0.0
                    </item>
                    <item>
                     <widget class="QPushButton" name="removeButton">
-                     <property name="text">
-                      <string>Remove</string>
-                     </property>
                      <property name="enabled">
                       <bool>false</bool>
+                     </property>
+                     <property name="text">
+                      <string>Remove</string>
                      </property>
                     </widget>
                    </item>
@@ -590,14 +590,14 @@ Y = 0.0
                </item>
                <item>
                 <widget class="QPushButton" name="analyzeButton">
-                 <property name="text">
-                  <string>Analyze model  →</string>
-                 </property>
                  <property name="enabled">
                   <bool>false</bool>
                  </property>
                  <property name="toolTip">
                   <string>Design preview: analysis is not connected yet.</string>
+                 </property>
+                 <property name="text">
+                  <string>Analyze model  →</string>
                  </property>
                 </widget>
                </item>
@@ -615,6 +615,9 @@ Y = 0.0
              </size>
             </property>
             <layout class="QVBoxLayout" name="guideLayout">
+             <property name="spacing">
+              <number>16</number>
+             </property>
              <property name="leftMargin">
               <number>22</number>
              </property>
@@ -626,9 +629,6 @@ Y = 0.0
              </property>
              <property name="bottomMargin">
               <number>22</number>
-             </property>
-             <property name="spacing">
-              <number>16</number>
              </property>
              <item>
               <widget class="QLabel" name="guideHeading">
@@ -724,9 +724,9 @@ Y = 0.0
              <item>
               <spacer name="guideSpacer">
                <property name="orientation">
-                <enum>Qt::Vertical</enum>
+                <enum>Qt::Orientation::Vertical</enum>
                </property>
-               <property name="sizeHint">
+               <property name="sizeHint" stdset="0">
                 <size>
                  <width>20</width>
                  <height>20</height>
@@ -742,6 +742,9 @@ Y = 0.0
         <item>
          <widget class="QFrame" name="resultsCard">
           <layout class="QVBoxLayout" name="resultsLayout">
+           <property name="spacing">
+            <number>6</number>
+           </property>
            <property name="leftMargin">
             <number>22</number>
            </property>
@@ -753,9 +756,6 @@ Y = 0.0
            </property>
            <property name="bottomMargin">
             <number>20</number>
-           </property>
-           <property name="spacing">
-            <number>6</number>
            </property>
            <item>
             <widget class="QLabel" name="resultsHeading">
@@ -775,14 +775,14 @@ Y = 0.0
              <property name="text">
               <string>Your network insights will appear here</string>
              </property>
+             <property name="alignment">
+              <set>Qt::AlignmentFlag::AlignCenter</set>
+             </property>
              <property name="wordWrap">
               <bool>true</bool>
              </property>
              <property name="role" stdset="0">
               <string>section</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignCenter</set>
              </property>
             </widget>
            </item>
@@ -791,14 +791,14 @@ Y = 0.0
              <property name="text">
               <string>Complexes   ·   Linkage classes   ·   Stoichiometric rank   ·   Deficiency</string>
              </property>
+             <property name="alignment">
+              <set>Qt::AlignmentFlag::AlignCenter</set>
+             </property>
              <property name="wordWrap">
               <bool>true</bool>
              </property>
              <property name="role" stdset="0">
               <string>muted</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignCenter</set>
              </property>
             </widget>
            </item>
@@ -807,14 +807,14 @@ Y = 0.0
              <property name="text">
               <string>Awaiting analysis integration</string>
              </property>
+             <property name="alignment">
+              <set>Qt::AlignmentFlag::AlignCenter</set>
+             </property>
              <property name="wordWrap">
               <bool>true</bool>
              </property>
              <property name="role" stdset="0">
               <string>muted</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignCenter</set>
              </property>
             </widget>
            </item>
@@ -837,9 +837,9 @@ Y = 0.0
         <item>
          <spacer name="bodySpacer">
           <property name="orientation">
-           <enum>Qt::Vertical</enum>
+           <enum>Qt::Orientation::Vertical</enum>
           </property>
-          <property name="sizeHint">
+          <property name="sizeHint" stdset="0">
            <size>
             <width>20</width>
             <height>20</height>
@@ -864,13 +864,23 @@ Y = 0.0
   <tabstop>removeButton</tabstop>
   <tabstop>analyzeButton</tabstop>
  </tabstops>
- <resources />
+ <resources/>
  <connections>
   <connection>
    <sender>clearButton</sender>
    <signal>clicked()</signal>
    <receiver>modelEditor</receiver>
    <slot>clear()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
   </connection>
  </connections>
 </ui>
