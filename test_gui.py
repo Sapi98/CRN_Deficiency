@@ -28,6 +28,7 @@ class DesktopAnalysisTests(unittest.TestCase):
 
     def setUp(self):
         self.window = gui.MainWindow()
+        self.window.ui.inputTabs.setCurrentIndex(0)
 
     def wait_for_analysis(self):
         deadline = time.monotonic() + 15
@@ -71,20 +72,22 @@ class DesktopAnalysisTests(unittest.TestCase):
         self.assertEqual(self.window.outcome.deficiency.deficiency, 2)
 
     def test_dropped_ode_file_uses_backend(self):
-        path = ROOT / 'Example_Data/crn2.ode'
-        mime = QMimeData()
-        mime.setUrls([QUrl.fromLocalFile(str(path))])
-        frame = self.window.ui.dropZone
-        enter = QDragEnterEvent(QPoint(5, 5), Qt.CopyAction, mime, Qt.LeftButton, Qt.NoModifier)
-        QApplication.sendEvent(frame, enter)
-        self.assertTrue(enter.isAccepted())
-        drop = QDropEvent(QPointF(5, 5), Qt.CopyAction, mime, Qt.LeftButton, Qt.NoModifier)
-        QApplication.sendEvent(frame, drop)
-        self.assertTrue(drop.isAccepted())
-        self.assertEqual(self.window.ui.formatCombo.currentIndex(), 1)
-        self.window.ui.analyzeButton.click()
-        self.wait_for_analysis()
-        self.assertEqual(self.window.outcome.to_dict(), CRNAnalysisService().analyze_file(path).to_dict())
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'model.ode'
+            path.write_text('ODE Model:\ndx/dt = -k1 * X\ndy/dt = k1 * X\n\nCoefficients:\nk1 = 0.5\n')
+            mime = QMimeData()
+            mime.setUrls([QUrl.fromLocalFile(str(path))])
+            frame = self.window.ui.dropZone
+            enter = QDragEnterEvent(QPoint(5, 5), Qt.CopyAction, mime, Qt.LeftButton, Qt.NoModifier)
+            QApplication.sendEvent(frame, enter)
+            self.assertTrue(enter.isAccepted())
+            drop = QDropEvent(QPointF(5, 5), Qt.CopyAction, mime, Qt.LeftButton, Qt.NoModifier)
+            QApplication.sendEvent(frame, drop)
+            self.assertTrue(drop.isAccepted())
+            self.assertEqual(self.window.ui.formatCombo.currentIndex(), 1)
+            self.window.ui.analyzeButton.click()
+            self.wait_for_analysis()
+            self.assertEqual(self.window.outcome.to_dict(), CRNAnalysisService().analyze_file(path).to_dict())
 
     def test_raw_ode_and_text_file_explicit_format(self):
         self.window.ui.formatCombo.setCurrentIndex(1)
