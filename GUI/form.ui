@@ -56,7 +56,9 @@ QLabel[role="muted"] { color: #69788d; }
 QLabel[role="section"] { font-size: 17px; font-weight: 600; }
 QLabel#taglineLabel, QLabel#formatLabel, QLabel#editorHint, QLabel#characterCount, QLabel#dropHint, QLabel#supportedFormats, QLabel#fileLabel, QLabel#analysisHint, QLabel#reactionHelp, QLabel#odeHelp, QLabel#fileHelp, QLabel#resultsMetrics, QLabel#resultsHint, QLabel#statusLabel { color: #69788d; }
 QLabel#inputHeading, QLabel#dropHeading, QLabel#guideHeading, QLabel#reactionHeading, QLabel#odeHeading, QLabel#fileHeading, QLabel#resultsHeading, QLabel#resultsEmptyTitle { font-size: 17px; font-weight: 600; }
-QLabel#subtitleLabel { color: #69788d; }</string>
+QLabel#subtitleLabel { color: #69788d; }
+QTabBar::tab:hover { background: #eaf4ff; color: #176cd3; border-bottom: 2px solid #72b7ff; }
+QPushButton:hover { color: #176cd3; }</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="rootLayout">
@@ -279,7 +281,7 @@ QLabel#subtitleLabel { color: #69788d; }</string>
               </layout>
              </item>
              <item>
-              <widget class="QTabWidget" name="inputTabs">
+              <widget class="GlowTabWidget" name="inputTabs">
                <property name="currentIndex">
                 <number>1</number>
                </property>
@@ -819,7 +821,7 @@ Y = 0.0
             </widget>
            </item>
            <item>
-            <widget class="QTabWidget" name="analysisTabs">
+            <widget class="GlowTabWidget" name="analysisTabs">
              <property name="currentIndex">
               <number>0</number>
              </property>
@@ -953,4 +955,12 @@ Y = 0.0
    </hints>
   </connection>
  </connections>
+ <customwidgets>
+  <customwidget>
+   <class>GlowTabWidget</class>
+   <extends>QTabWidget</extends>
+   <header>GUI.widgets</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
 </ui>

@@ -17,8 +17,10 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QComboBox, QFrame, QHBoxLayout,
     QLabel, QMainWindow, QPlainTextEdit, QPushButton,
-    QScrollArea, QSizePolicy, QSpacerItem, QTabWidget,
-    QVBoxLayout, QWidget)
+    QScrollArea, QSizePolicy, QSpacerItem, QVBoxLayout,
+    QWidget)
+
+from GUI.widgets import GlowTabWidget
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -123,7 +125,7 @@ class Ui_MainWindow(object):
 
         self.inputLayout.addLayout(self.formatLayout)
 
-        self.inputTabs = QTabWidget(self.inputCard)
+        self.inputTabs = GlowTabWidget(self.inputCard)
         self.inputTabs.setObjectName(u"inputTabs")
         self.textPage = QWidget()
         self.textPage.setObjectName(u"textPage")
@@ -367,7 +369,7 @@ class Ui_MainWindow(object):
 
         self.resultsLayout.addWidget(self.resultsHint)
 
-        self.analysisTabs = QTabWidget(self.resultsCard)
+        self.analysisTabs = GlowTabWidget(self.resultsCard)
         self.analysisTabs.setObjectName(u"analysisTabs")
         self.analysisTabs.setMinimumSize(QSize(0, 600))
         self.reportPage = QWidget()
@@ -484,7 +486,9 @@ class Ui_MainWindow(object):
 "QLabel#taglineLabel, QLabel#formatLabel, QLabel#editorHint, QLabel#characterCount, QLabel#dropHint, QLabel#supportedFormats, QLabel#fileLabel, QLabel#analysisHint, QLabel#reactionHelp, QLabel#odeHelp, QLabel#fileHelp, QLabel#resultsMetrics, QLabel#resultsHint, QLabel#statusLabel { color: #69788d; }\n"
 "QLabel#inputHeading, QLabel#dropHeading, QLabel#guideHeading, QLabel#reactionHeading, QLabel#odeHeading, QLabel#fileHeading, QLabel#resultsH"
                         "eading, QLabel#resultsEmptyTitle { font-size: 17px; font-weight: 600; }\n"
-"QLabel#subtitleLabel { color: #69788d; }", None))
+"QLabel#subtitleLabel { color: #69788d; }\n"
+"QTabBar::tab:hover { background: #eaf4ff; color: #176cd3; border-bottom: 2px solid #72b7ff; }\n"
+"QPushButton:hover { color: #176cd3; }", None))
         self.brandLabel.setText(QCoreApplication.translate("MainWindow", u"CRNTAnalysis", None))
         self.taglineLabel.setText(QCoreApplication.translate("MainWindow", u"Chemical Reaction Network Theory", None))
         self.taglineLabel.setProperty(u"role", QCoreApplication.translate("MainWindow", u"muted", None))

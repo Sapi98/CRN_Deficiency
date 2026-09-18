@@ -1,6 +1,7 @@
 """Embed the backend's complex graphs in Designer-provided graph containers."""
 
 from crntanalysis.visualization import NetworkVisualizer
+from GUI.graph_interaction import GraphInteraction
 
 
 class GraphView:
@@ -12,8 +13,12 @@ class GraphView:
         self.toolbar = None
         self.outcome = None
         self.rendered = False
+        self.interaction = None
 
     def clear(self):
+        if self.interaction is not None:
+            self.interaction.dispose()
+            self.interaction = None
         self.outcome = None
         self.rendered = False
         if self.canvas is not None:
@@ -52,13 +57,14 @@ class GraphView:
             self.canvas.show()
             self.toolbar.show()
             self.canvas.draw()
+            self.interaction = GraphInteraction(self.canvas, self.toolbar, axes, self.outcome)
             self.rendered = True
             self.hint.setText(
                 'Nodes are complexes (C index: composition). Colors identify linkage classes; '
                 'the legend shows each class’s deficiency. '
                 + ('Arrows show reactions; labels show reaction indices and rates.'
                    if self.kind == 'reaction' else 'Undirected edges connect complexes in the same linkage class.')
-                + ' Use the toolbar to pan, zoom, reset, or save the figure.'
+                + ' Hover for details; click to pin a node, or press Esc to clear. Use the toolbar to pan, zoom, reset, or save.'
             )
         except Exception as error:
             if self.canvas is not None:

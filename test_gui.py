@@ -202,6 +202,60 @@ class DesktopAnalysisTests(unittest.TestCase):
         self.assertEqual(self.window.ui.resultReport.toPlainText(), report)
         self.assertIn('Could not draw graph', self.window.ui.reactionGraphHint.text())
 
+    @unittest.skipUnless(importlib.util.find_spec('matplotlib') and importlib.util.find_spec('networkx'),
+                         'Graph dependencies not installed')
+    def test_node_hover_selection_details_and_cleanup(self):
+        from matplotlib.backend_bases import MouseEvent
+        self.window.show()
+        self.window.ui.exampleButton.click()
+        self.window.ui.analyzeButton.click()
+        self.wait_for_analysis()
+        self.window.ui.analysisTabs.setCurrentIndex(1)
+        QTest.qWait(50)
+        view = self.window.graph_views[1]
+        interaction = view.interaction
+        x, y = interaction.axes.transData.transform(interaction.artist.get_offsets()[0])
+        motion = MouseEvent('motion_notify_event', view.canvas, x, y)
+        view.canvas.callbacks.process('motion_notify_event', motion)
+        self.assertEqual(interaction.hovered, 0)
+        self.assertTrue(interaction.timer.isActive())
+        self.assertFalse(interaction.panel.isHidden())
+        self.assertIn('C0 · X', interaction.details.text())
+        self.assertIn('Incoming: 1 · Outgoing: 1', interaction.details.text())
+        self.assertIn('rate 0.5', interaction.details.text())
+        click = MouseEvent('button_press_event', view.canvas, x, y, button=1)
+        view.canvas.callbacks.process('button_press_event', click)
+        self.assertEqual(interaction.selected, 0)
+        interaction.on_leave()
+        self.assertIsNone(interaction.hovered)
+        self.assertEqual(interaction.selected, 0)
+        self.assertFalse(interaction.panel.isHidden())
+        QTest.keyClick(view.canvas, Qt.Key_Escape)
+        self.assertIsNone(interaction.selected)
+        self.assertTrue(interaction.panel.isHidden())
+        self.assertFalse(interaction.timer.isActive())
+        # Pan/zoom must keep owning mouse gestures instead of selecting nodes.
+        view.toolbar.pan()
+        interaction.on_click(click)
+        self.assertIsNone(interaction.selected)
+        view.toolbar.pan()
+        interaction.on_motion(motion)
+        self.window.ui.analysisTabs.setCurrentIndex(0)
+        self.app.processEvents()
+        self.assertFalse(interaction.timer.isActive())
+        self.window.ui.clearButton.click()
+        self.assertIsNone(view.interaction)
+
+    def test_tab_hover_glow(self):
+        self.window.show()
+        bar = self.window.ui.inputTabs.tabBar()
+        self.assertEqual(type(bar).__name__, 'GlowTabBar')
+        QTest.mouseMove(bar, bar.tabRect(0).center())
+        QTest.qWait(100)
+        self.assertEqual(bar.hovered, 0)
+        self.assertGreater(bar.intensity, 0)
+        self.window.ui.inputTabs.hide()
+
 
 if __name__ == '__main__':
     unittest.main()
