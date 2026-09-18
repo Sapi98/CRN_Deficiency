@@ -856,14 +856,27 @@ Y = 0.0
                <item>
                 <widget class="QLabel" name="reactionGraphHint">
                  <property name="text">
-                  <string>Analyze a model to see this graph.</string>
+                  <string>Nodes are complexes (C index: composition). Colors identify linkage classes; the legend shows each class’s deficiency. Arrows show reactions; bold labels show reaction indices and rates. Hover to highlight; click a node for details. Click empty space or press Esc to close. Use the toolbar to pan, zoom, reset, or save.</string>
                  </property>
                  <property name="wordWrap">
                   <bool>true</bool>
                  </property>
+                 <property name="font">
+                  <font>
+                   <bold>false</bold>
+                  </font>
+                 </property>
                 </widget>
                </item>
               </layout>
+              <property name="font">
+               <font>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="toolTip">
+               <string>Hover a node to animate its highlight. Click a node to open details; click empty space or press Esc to close.</string>
+              </property>
              </widget>
              <widget class="QWidget" name="linkageGraphPage">
               <attribute name="title">
@@ -873,14 +886,27 @@ Y = 0.0
                <item>
                 <widget class="QLabel" name="linkageGraphHint">
                  <property name="text">
-                  <string>Analyze a model to see this graph.</string>
+                  <string>Nodes are complexes (C index: composition). Colors identify linkage classes; the legend shows each class’s deficiency. Undirected edges connect complexes in the same linkage class. Hover to highlight; click a node for details. Click empty space or press Esc to close. Use the toolbar to pan, zoom, reset, or save.</string>
                  </property>
                  <property name="wordWrap">
                   <bool>true</bool>
                  </property>
+                 <property name="font">
+                  <font>
+                   <bold>false</bold>
+                  </font>
+                 </property>
                 </widget>
                </item>
               </layout>
+              <property name="font">
+               <font>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="toolTip">
+               <string>Hover a node to animate its highlight. Click a node to open details; click empty space or press Esc to close.</string>
+              </property>
              </widget>
              <property name="minimumSize">
               <size>

@@ -188,7 +188,9 @@ Keep the existing interactive widgets' object names when editing the design:
 `statusLabel`, `analyzeButton`, `resultsEmptyTitle`, `resultsMetrics`,
 `resultsHint`, `resultReport`, `analysisTabs`, `reactionGraphLayout`,
 `linkageGraphLayout`, `reactionGraphHint`, and `linkageGraphHint`. Layout, text, size, color, and position changes
-need no Python edits.
+need no Python edits. The graph pages’ **font → bold** property controls the
+rendered graph text weight, and the graph hint labels hold the interaction
+guidance displayed in the app.
 New controls that need application behavior require signal connections in Python
 or Designer. The Clear connection is already stored in `form.ui`.
 

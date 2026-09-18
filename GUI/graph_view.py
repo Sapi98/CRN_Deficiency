@@ -9,6 +9,7 @@ class GraphView:
         self.layout = layout
         self.hint = hint
         self.kind = kind
+        self.description = hint.text()
         self.canvas = None
         self.toolbar = None
         self.outcome = None
@@ -26,7 +27,7 @@ class GraphView:
             self.toolbar.update()
             self.canvas.hide()
             self.toolbar.hide()
-        self.hint.setText('Analyze a model to see this graph.')
+        self.hint.setText(self.description)
 
     def set_outcome(self, outcome):
         self.clear()
@@ -52,20 +53,15 @@ class GraphView:
             visualizer = NetworkVisualizer()
             draw = (visualizer.draw_reaction_network if self.kind == 'reaction'
                     else visualizer.draw_linkage_graph)
-            draw(self.outcome.network, ax=axes, show_deficiency=True)
+            draw(self.outcome.network, ax=axes, show_deficiency=True,
+                 font_weight='bold' if self.layout.parentWidget().font().bold() else 'normal')
             self.toolbar.update()
             self.canvas.show()
             self.toolbar.show()
             self.canvas.draw()
             self.interaction = GraphInteraction(self.canvas, self.toolbar, axes, self.outcome)
             self.rendered = True
-            self.hint.setText(
-                'Nodes are complexes (C index: composition). Colors identify linkage classes; '
-                'the legend shows each class’s deficiency. '
-                + ('Arrows show reactions; labels show reaction indices and rates.'
-                   if self.kind == 'reaction' else 'Undirected edges connect complexes in the same linkage class.')
-                + ' Hover to highlight; click a node for details. Press Esc to close. Use the toolbar to pan, zoom, reset, or save.'
-            )
+            self.hint.setText(self.description)
         except Exception as error:
             if self.canvas is not None:
                 self.canvas.hide()
