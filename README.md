@@ -453,8 +453,8 @@ and report writing.
 - ODEs that cannot represent an ordinary mass-action CRN are rejected.
 - Symbolic rank is generic. Special parameter values may change the rank and
   deficiency.
-- A graphical interface is not included yet; the service layer is designed for
-  future GUI integration.
+- A desktop GUI design preview is available in [GUI](GUI/README.md); analysis
+  integration is planned for a future update.
 
 ## Detailed Documentation
 
