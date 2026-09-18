@@ -153,10 +153,11 @@ The **Reaction graph** tab shows complexes as labeled nodes with directed
 reaction arrows and rate labels. The **Linkage graph** tab shows undirected
 connections between complexes. Both views color complexes by linkage class
 and show each class’s deficiency in the legend. Graphs render when selected;
-hovering a node adds an animated glow and a floating panel with its composition,
-linkage class, deficiency, and connected reactions. Click a node to pin the
-selection; click empty space or press Esc to clear it. The result and input
-tabs also glow on hover. The toolbar supports pan, zoom, reset, and saving figures (including PNG, SVG,
+hovering a node adds an animated glow. Click a node to open a floating panel
+with its composition, linkage class, deficiency, and connected reactions. The
+panel stays on the clicked node when hovering others; click empty space or
+press Esc to close it. The result and input
+tabs use a light background and crisp blue text on hover. The toolbar supports pan, zoom, reset, and saving figures (including PNG, SVG,
 and PDF). Editing the input clears the previous graphs along with the report.
 
 Analysis runs in a background thread; input controls are disabled until it

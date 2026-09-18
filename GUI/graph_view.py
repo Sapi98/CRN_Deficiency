@@ -64,7 +64,7 @@ class GraphView:
                 'the legend shows each class’s deficiency. '
                 + ('Arrows show reactions; labels show reaction indices and rates.'
                    if self.kind == 'reaction' else 'Undirected edges connect complexes in the same linkage class.')
-                + ' Hover for details; click to pin a node, or press Esc to clear. Use the toolbar to pan, zoom, reset, or save.'
+                + ' Hover to highlight; click a node for details. Press Esc to close. Use the toolbar to pan, zoom, reset, or save.'
             )
         except Exception as error:
             if self.canvas is not None:

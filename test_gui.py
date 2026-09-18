@@ -219,13 +219,18 @@ class DesktopAnalysisTests(unittest.TestCase):
         view.canvas.callbacks.process('motion_notify_event', motion)
         self.assertEqual(interaction.hovered, 0)
         self.assertTrue(interaction.timer.isActive())
+        self.assertTrue(interaction.panel.isHidden())
+        click = MouseEvent('button_press_event', view.canvas, x, y, button=1)
+        view.canvas.callbacks.process('button_press_event', click)
+        self.assertEqual(interaction.selected, 0)
         self.assertFalse(interaction.panel.isHidden())
         self.assertIn('C0 · X', interaction.details.text())
         self.assertIn('Incoming: 1 · Outgoing: 1', interaction.details.text())
         self.assertIn('rate 0.5', interaction.details.text())
-        click = MouseEvent('button_press_event', view.canvas, x, y, button=1)
-        view.canvas.callbacks.process('button_press_event', click)
-        self.assertEqual(interaction.selected, 0)
+        other_x, other_y = interaction.axes.transData.transform(interaction.artist.get_offsets()[1])
+        interaction.on_motion(MouseEvent('motion_notify_event', view.canvas, other_x, other_y))
+        self.assertEqual(interaction.hovered, 1)
+        self.assertIn('C0 · X', interaction.details.text())
         interaction.on_leave()
         self.assertIsNone(interaction.hovered)
         self.assertEqual(interaction.selected, 0)
@@ -246,15 +251,6 @@ class DesktopAnalysisTests(unittest.TestCase):
         self.window.ui.clearButton.click()
         self.assertIsNone(view.interaction)
 
-    def test_tab_hover_glow(self):
-        self.window.show()
-        bar = self.window.ui.inputTabs.tabBar()
-        self.assertEqual(type(bar).__name__, 'GlowTabBar')
-        QTest.mouseMove(bar, bar.tabRect(0).center())
-        QTest.qWait(100)
-        self.assertEqual(bar.hovered, 0)
-        self.assertGreater(bar.intensity, 0)
-        self.window.ui.inputTabs.hide()
 
 
 if __name__ == '__main__':

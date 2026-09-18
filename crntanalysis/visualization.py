@@ -102,7 +102,7 @@ class NetworkVisualizer:
                                node_size=1800, ax=ax)
         nx.draw_networkx_labels(graph, positions,
                                 labels={n: f"C{n}: {data['label']}" for n, data in graph.nodes(data=True)},
-                                font_size=9, ax=ax)
+                                font_size=9, font_weight="bold", ax=ax)
         groups = {}
         for source, target, data in graph.edges(data=True):
             groups.setdefault(tuple(sorted((source, target))), []).append((source, target, data))
@@ -136,7 +136,7 @@ class NetworkVisualizer:
                 if show_rates:
                     reactions = [data["reaction"]] if graph.is_directed() else data["reactions"]
                     label = ", ".join(f"r{r.index}: {r.weight}" for r in reactions)
-                    ax.text(*label_position, label, fontsize=8, ha="center", va="center",
+                    ax.text(*label_position, label, fontsize=8, fontweight="bold", ha="center", va="center",
                             bbox=dict(facecolor="white", edgecolor="none", alpha=.85))
         results = calculate_deficiency(network).linkage_classes if show_deficiency else None
         handles = []
@@ -146,8 +146,11 @@ class NetworkVisualizer:
                 label += f": δ={results[i].deficiency}"
             handles.append(Line2D([], [], marker="o", linestyle="", color=colors[min(nodes)], label=label))
         if handles:
-            ax.legend(handles=handles, title="Linkage classes", loc="best")
-        ax.set_title("Reaction network" if graph.is_directed() else "Linkage graph")
+            legend = ax.legend(handles=handles, title="Linkage classes", loc="best",
+                               prop={"weight": "bold"})
+            legend.get_title().set_fontweight("bold")
+        ax.set_title("Reaction network" if graph.is_directed() else "Linkage graph",
+                     fontweight="bold")
         ax.margins(.25)
         ax.set_axis_off()
         return ax.figure, ax

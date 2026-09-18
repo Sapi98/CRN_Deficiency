@@ -121,13 +121,18 @@ class GraphInteraction(QObject):
         self.refresh()
 
     def refresh(self):
-        active = self.hovered if self.hovered is not None else self.selected
-        if active is None or not self.canvas.isVisible():
-            self.timer.stop()
-            self.panel.hide()
-        else:
+        visible = self.canvas.isVisible()
+        highlighted = self.hovered is not None or self.selected is not None
+        if visible and highlighted:
             if not self.timer.isActive():
                 self.timer.start()
+        else:
+            self.timer.stop()
+        # Hover animates the node only; details always belong to the clicked node.
+        active = self.selected
+        if active is None or not visible:
+            self.panel.hide()
+        else:
             self.details.setText(self.detail_text(active))
             self.panel.adjustSize()
             point = self.node_point(active)
@@ -157,7 +162,7 @@ class GraphInteraction(QObject):
             lines.append(f'… and {len(incident) - 6} more')
         if not incident:
             lines.append('None (isolated complex)')
-        lines.extend(['', 'Click a node to pin · Click empty space or Esc to clear'])
+        lines.extend(['', 'Click another node for details · Click empty space or Esc to close'])
         return '\n'.join(lines)
 
     def eventFilter(self, watched, event):
