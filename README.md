@@ -25,15 +25,18 @@ The project is currently an alpha release (`0.1.0`).
 
 - Python 3.9 or newer
 - SymPy 1.13 or newer and below version 2
+- PySide6 6.5 or newer and below version 7 for the desktop GUI
 
-Pip installs SymPy automatically. Setuptools 61+ and wheel are declared as
-isolated build requirements in `pyproject.toml`. No NumPy, SciPy, or graph
-library is required for parsing and deficiency analysis. Optional visualization
-uses NetworkX and Matplotlib (which also installs NumPy).
+Installing the project installs SymPy, PySide6, NetworkX, and Matplotlib
+(which also installs NumPy). The root `requirements.txt` provides the same
+application dependencies. Setuptools 61+ and wheel are declared as isolated
+build requirements in `pyproject.toml`. Parsing and deficiency analysis use
+SymPy; graph rendering uses NetworkX and Matplotlib.
 
 ## Visualization
 
-Install the optional dependencies from the repository root:
+Graph dependencies are included in the standard installation. The existing
+visualization extra remains supported:
 
 ```bash
 python -m pip install '.[visualization]'
@@ -75,6 +78,10 @@ Install from the repository root into the active Python environment:
 ```bash
 python3 -m pip install .
 ```
+
+After installation, launch the desktop interface with `crntanalysis-gui` or use
+`crntanalysis` for the command-line interface. The GUI layout is included in
+the installed package, so launching does not require the repository directory.
 
 For editable development:
 
@@ -132,6 +139,65 @@ After installation, verify the package:
 ```bash
 python3 -c "import crntanalysis; print(crntanalysis.__version__)"
 ```
+
+## Desktop GUI
+
+The PySide6 desktop interface accepts pasted reaction/ODE text and model files
+through drag and drop or a native file browser. Select the matching format and
+click **Analyze model** to run the backend analysis service. The overview shows
+network deficiency, complexes, linkage classes, stoichiometric rank, species,
+and reactions. A read-only report includes per-linkage-class results, parser
+warnings, and symbolic-rank notes. Missing parameter values remain symbolic.
+
+The **Reaction graph** tab shows complexes as labeled nodes with directed
+reaction arrows and rate labels. The **Linkage graph** tab shows undirected
+connections between complexes. Both views color complexes by linkage class
+and show each class’s deficiency in the legend. Graphs render when selected;
+hovering a node adds an animated glow. Click a node to open a floating panel
+with its composition, linkage class, deficiency, and connected reactions. The
+panel stays on the clicked node when hovering others; click empty space or
+press Esc to close it. The result and input
+tabs use a light background and crisp blue text on hover. The toolbar supports pan, zoom, reset, and saving figures (including PNG, SVG,
+and PDF). Editing the input clears the previous graphs along with the report.
+
+Analysis runs in a background thread; input controls are disabled until it
+finishes. Errors appear in the results area, and changing the input clears the
+previous results. No report files are written automatically.
+
+From the repository root:
+
+```bash
+python3 -m pip install -r requirements.txt
+python3 GUI/mainwindow.py
+```
+
+### Editing the interface
+
+`form.ui` is the single source for the layout, styling, labels, and widgets.
+Edit it in Qt Creator / Qt Designer, save, then launch `mainwindow.py` again.
+At startup, the app automatically regenerates `ui_form.py` using the active
+Python environment's PySide6 compiler and calls `Ui_MainWindow.setupUi()`.
+No manual generation command is required. Changes appear on the next launch;
+an already open window does not reload automatically.
+
+`ui_form.py` is generated code; do not edit it by hand. `mainwindow.py` contains
+startup and behavior (examples, file input, background analysis, and results).
+Keep the existing interactive widgets' object names when editing the design:
+`formatCombo`, `modelEditor`, `inputTabs`, `characterCount`, `exampleButton`,
+`clearButton`, `browseButton`, `removeButton`, `fileLabel`, `dropZone`, and
+`statusLabel`, `analyzeButton`, `resultsEmptyTitle`, `resultsMetrics`,
+`resultsHint`, `resultReport`, `analysisTabs`, `reactionGraphLayout`,
+`linkageGraphLayout`, `reactionGraphHint`, and `linkageGraphHint`. Layout, text, size, color, and position changes
+need no Python edits. The graph pages’ **font → bold** property controls the
+rendered graph text weight, and the graph hint labels hold the interaction
+guidance displayed in the app.
+New controls that need application behavior require signal connections in Python
+or Designer. The Clear connection is already stored in `form.ui`.
+
+Both `python GUI/mainwindow.py` from the repository root and
+`python mainwindow.py` from inside `GUI` work. For an installed version, use
+`crntanalysis-gui`. If the installed GUI directory is read-only, the generated
+interface is loaded in memory instead of writing `ui_form.py`.
 
 ## Quick start
 
@@ -424,10 +490,11 @@ paths.
 crntanalysis/              Installable Python package
 Documentation/             Engineering and scientific documentation
 Example_Data/              Example reaction and ODE inputs
+GUI/                       Desktop GUI and Qt Designer layout
 test_*.py                  Unit tests
 README.md                  User overview and usage guide
 requirements.txt           Runtime dependency list
-pyproject.toml             Build-system configuration
+pyproject.toml             Build-system and Qt project configuration
 setup.py                   Package metadata and console entry point
 ```
 
@@ -453,8 +520,9 @@ and report writing.
 - ODEs that cannot represent an ordinary mass-action CRN are rejected.
 - Symbolic rank is generic. Special parameter values may change the rank and
   deficiency.
-- A graphical interface is not included yet; the service layer is designed for
-  future GUI integration.
+- The [desktop GUI](#desktop-gui) supports analysis, text reports, and graph
+  visualization. Structured report export is available through the Python API
+  or command line.
 
 ## Detailed Documentation
 

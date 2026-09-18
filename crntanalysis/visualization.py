@@ -61,18 +61,18 @@ class NetworkVisualizer:
         self.adapter = adapter if adapter is not None else NetworkGraphAdapter()
 
     def draw_reaction_network(self, network, *, ax=None, positions=None, seed=42,
-                              show_rates=True, show_deficiency=False):
+                              show_rates=True, show_deficiency=False, font_weight="bold"):
         """Draw directed reactions with separate curves for parallel/reverse edges."""
         graph = self.adapter.reaction_graph(network)
-        return self._draw(network, graph, ax, positions, seed, show_rates, show_deficiency)
+        return self._draw(network, graph, ax, positions, seed, show_rates, show_deficiency, font_weight)
 
     def draw_linkage_graph(self, network, *, ax=None, positions=None, seed=42,
-                           show_rates=False, show_deficiency=False):
+                           show_rates=False, show_deficiency=False, font_weight="bold"):
         """Draw undirected complex connections colored by linkage class."""
         graph = self.adapter.linkage_graph(network)
-        return self._draw(network, graph, ax, positions, seed, show_rates, show_deficiency)
+        return self._draw(network, graph, ax, positions, seed, show_rates, show_deficiency, font_weight)
 
-    def _draw(self, network, graph, ax, positions, seed, show_rates, show_deficiency):
+    def _draw(self, network, graph, ax, positions, seed, show_rates, show_deficiency, font_weight):
         nx = _networkx()
         try:
             from matplotlib.figure import Figure
@@ -102,7 +102,7 @@ class NetworkVisualizer:
                                node_size=1800, ax=ax)
         nx.draw_networkx_labels(graph, positions,
                                 labels={n: f"C{n}: {data['label']}" for n, data in graph.nodes(data=True)},
-                                font_size=9, ax=ax)
+                                font_size=9, font_weight=font_weight, ax=ax)
         groups = {}
         for source, target, data in graph.edges(data=True):
             groups.setdefault(tuple(sorted((source, target))), []).append((source, target, data))
@@ -136,7 +136,7 @@ class NetworkVisualizer:
                 if show_rates:
                     reactions = [data["reaction"]] if graph.is_directed() else data["reactions"]
                     label = ", ".join(f"r{r.index}: {r.weight}" for r in reactions)
-                    ax.text(*label_position, label, fontsize=8, ha="center", va="center",
+                    ax.text(*label_position, label, fontsize=8, fontweight=font_weight, ha="center", va="center",
                             bbox=dict(facecolor="white", edgecolor="none", alpha=.85))
         results = calculate_deficiency(network).linkage_classes if show_deficiency else None
         handles = []
@@ -146,8 +146,11 @@ class NetworkVisualizer:
                 label += f": δ={results[i].deficiency}"
             handles.append(Line2D([], [], marker="o", linestyle="", color=colors[min(nodes)], label=label))
         if handles:
-            ax.legend(handles=handles, title="Linkage classes", loc="best")
-        ax.set_title("Reaction network" if graph.is_directed() else "Linkage graph")
+            legend = ax.legend(handles=handles, title="Linkage classes", loc="best",
+                               prop={"weight": font_weight})
+            legend.get_title().set_fontweight(font_weight)
+        ax.set_title("Reaction network" if graph.is_directed() else "Linkage graph",
+                     fontweight=font_weight)
         ax.margins(.25)
         ax.set_axis_off()
         return ax.figure, ax

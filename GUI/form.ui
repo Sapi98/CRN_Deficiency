@@ -1,0 +1,992 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1120</width>
+    <height>850</height>
+   </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>780</width>
+    <height>640</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>CRNTAnalysis • Model workspace</string>
+  </property>
+  <property name="styleSheet">
+   <string>
+QWidget { font-family: 'Segoe UI', 'Helvetica Neue', sans-serif; font-size: 14px;
+          color: #22334a; background: #f4f6fa; }
+QFrame#header, QFrame#inputCard, QFrame#guideCard, QFrame#resultsCard { background: white; border: 1px solid #e0e6ef; border-radius: 12px; }
+QFrame#header { border-radius: 0; border: none; border-bottom: 1px solid #e0e6ef; }
+QWidget#textPage, QWidget#uploadPage { background: white; }
+QLabel { background: transparent; }
+QLabel#brandLabel { font-size: 19px; font-weight: 700; }
+QLabel#titleLabel { font-size: 29px; font-weight: 700; }
+QLabel#subtitle, QLabel#unusedMuted { color: #69788d; }
+QLabel#unusedSection { font-size: 17px; font-weight: 600; }
+QLabel#previewBadge { color: #397d74; background: #eaf5f1; border-radius: 10px; padding: 6px 12px; }
+QLabel#uploadSymbol { color: #246dce; background: #edf4ff; border-radius: 12px; font-size: 25px; padding: 10px; }
+QPushButton { background: white; border: 1px solid #d6deea; border-radius: 7px; padding: 9px 16px; font-weight: 600; }
+QPushButton:hover { background: #edf4ff; border-color: #a6c4ef; }
+QPushButton:pressed { background: #deebff; }
+QPushButton#analyzeButton { background: #246dce; color: white; border: none; }
+QPushButton#analyzeButton:disabled { background: #e9edf3; color: #8b97a7; }
+QPushButton#analyzeButton:hover { background: #1b5ab0; }
+QPushButton:disabled { background: #e9edf3; color: #8b97a7; border-color: #e1e6ee; }
+QPushButton:focus, QComboBox:focus { border: 2px solid #246dce; }
+QTabWidget::pane { background: white; border: none; }
+QTabBar::tab { background: white; color: #718097; padding: 12px 20px; border-bottom: 2px solid #e5eaf1; }
+QTabBar::tab:selected { color: #246dce; border-bottom: 2px solid #246dce; font-weight: 600; }
+QPlainTextEdit { font-family: 'Menlo', 'Consolas', monospace; background: #fafbfd; border: 1px solid #dfe6f0; border-radius: 8px; padding: 12px; selection-background-color: #c6ddff; }
+QPlainTextEdit:focus { border: 1px solid #246dce; }
+QComboBox { background: white; border: 1px solid #d6deea; border-radius: 6px; padding: 7px 12px; min-width: 145px; }
+QComboBox QAbstractItemView { background: white; selection-background-color: #deebff; }
+QFrame#dropZone { background: #fafcff; border: 2px dashed #bccce2; border-radius: 12px; }
+QFrame#dropZone[active="true"] { background: #edf4ff; border-color: #246dce; }
+QScrollArea { border: none; }
+
+QLabel[role="muted"] { color: #69788d; }
+QLabel[role="section"] { font-size: 17px; font-weight: 600; }
+QLabel#taglineLabel, QLabel#formatLabel, QLabel#editorHint, QLabel#characterCount, QLabel#dropHint, QLabel#supportedFormats, QLabel#fileLabel, QLabel#analysisHint, QLabel#reactionHelp, QLabel#odeHelp, QLabel#fileHelp, QLabel#resultsMetrics, QLabel#resultsHint, QLabel#statusLabel { color: #69788d; }
+QLabel#inputHeading, QLabel#dropHeading, QLabel#guideHeading, QLabel#reactionHeading, QLabel#odeHeading, QLabel#fileHeading, QLabel#resultsHeading, QLabel#resultsEmptyTitle { font-size: 17px; font-weight: 600; }
+QLabel#subtitleLabel { color: #69788d; }
+QTabBar::tab:hover { background: #eaf4ff; color: #176cd3; border-bottom: 2px solid #72b7ff; }
+QPushButton:hover { color: #176cd3; }</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="rootLayout">
+    <property name="spacing">
+     <number>0</number>
+    </property>
+    <property name="leftMargin">
+     <number>0</number>
+    </property>
+    <property name="topMargin">
+     <number>0</number>
+    </property>
+    <property name="rightMargin">
+     <number>0</number>
+    </property>
+    <property name="bottomMargin">
+     <number>0</number>
+    </property>
+    <item>
+     <widget class="QFrame" name="header">
+      <layout class="QHBoxLayout" name="headerLayout">
+       <property name="spacing">
+        <number>16</number>
+       </property>
+       <property name="leftMargin">
+        <number>32</number>
+       </property>
+       <property name="topMargin">
+        <number>18</number>
+       </property>
+       <property name="rightMargin">
+        <number>32</number>
+       </property>
+       <property name="bottomMargin">
+        <number>18</number>
+       </property>
+       <item>
+        <widget class="QLabel" name="brandLabel">
+         <property name="text">
+          <string>CRNTAnalysis</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="taglineLabel">
+         <property name="text">
+          <string>Chemical Reaction Network Theory</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+         <property name="role" stdset="0">
+          <string>muted</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="headerSpacer">
+         <property name="orientation">
+          <enum>Qt::Orientation::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QLabel" name="previewBadge">
+         <property name="text">
+          <string>Desktop App v1.0</string>
+         </property>
+         <property name="wordWrap">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QScrollArea" name="workspaceScroll">
+      <property name="widgetResizable">
+       <bool>true</bool>
+      </property>
+      <widget class="QWidget" name="workspace">
+       <property name="geometry">
+        <rect>
+         <x>0</x>
+         <y>0</y>
+         <width>1103</width>
+         <height>921</height>
+        </rect>
+       </property>
+       <layout class="QVBoxLayout" name="workspaceLayout">
+        <property name="spacing">
+         <number>20</number>
+        </property>
+        <property name="leftMargin">
+         <number>32</number>
+        </property>
+        <property name="topMargin">
+         <number>28</number>
+        </property>
+        <property name="rightMargin">
+         <number>32</number>
+        </property>
+        <property name="bottomMargin">
+         <number>24</number>
+        </property>
+        <item>
+         <widget class="QLabel" name="titleLabel">
+          <property name="text">
+           <string>Your model, ready to explore.</string>
+          </property>
+          <property name="wordWrap">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="subtitleLabel">
+          <property name="text">
+           <string>Paste a reaction network or upload a model file to get started.</string>
+          </property>
+          <property name="wordWrap">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="columnsLayout" stretch="3,1">
+          <property name="spacing">
+           <number>20</number>
+          </property>
+          <item>
+           <widget class="QFrame" name="inputCard">
+            <layout class="QVBoxLayout" name="inputLayout">
+             <property name="spacing">
+              <number>16</number>
+             </property>
+             <property name="leftMargin">
+              <number>22</number>
+             </property>
+             <property name="topMargin">
+              <number>22</number>
+             </property>
+             <property name="rightMargin">
+              <number>22</number>
+             </property>
+             <property name="bottomMargin">
+              <number>22</number>
+             </property>
+             <item>
+              <layout class="QHBoxLayout" name="formatLayout">
+               <property name="spacing">
+                <number>16</number>
+               </property>
+               <item>
+                <widget class="QLabel" name="inputHeading">
+                 <property name="text">
+                  <string>01  /  Model input</string>
+                 </property>
+                 <property name="wordWrap">
+                  <bool>true</bool>
+                 </property>
+                 <property name="role" stdset="0">
+                  <string>section</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <spacer name="formatSpacer">
+                 <property name="orientation">
+                  <enum>Qt::Orientation::Horizontal</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>20</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+               <item>
+                <widget class="QLabel" name="formatLabel">
+                 <property name="text">
+                  <string>Format</string>
+                 </property>
+                 <property name="wordWrap">
+                  <bool>true</bool>
+                 </property>
+                 <property name="role" stdset="0">
+                  <string>muted</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QComboBox" name="formatCombo">
+                 <property name="accessibleName">
+                  <string>Model input format</string>
+                 </property>
+                 <item>
+                  <property name="text">
+                   <string>Reaction network</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>ODE model</string>
+                  </property>
+                 </item>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item>
+              <widget class="GlowTabWidget" name="inputTabs">
+               <property name="currentIndex">
+                <number>1</number>
+               </property>
+               <widget class="QWidget" name="textPage">
+                <attribute name="title">
+                 <string>Paste text</string>
+                </attribute>
+                <layout class="QVBoxLayout" name="textLayout">
+                 <property name="spacing">
+                  <number>6</number>
+                 </property>
+                 <property name="leftMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>16</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>0</number>
+                 </property>
+                 <item>
+                  <widget class="QLabel" name="editorHint">
+                   <property name="text">
+                    <string>Paste or write your model below.</string>
+                   </property>
+                   <property name="wordWrap">
+                    <bool>true</bool>
+                   </property>
+                   <property name="role" stdset="0">
+                    <string>muted</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPlainTextEdit" name="modelEditor">
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>255</height>
+                    </size>
+                   </property>
+                   <property name="accessibleName">
+                    <string>Model text</string>
+                   </property>
+                   <property name="placeholderText">
+                    <string>Reactions:
+X k1-&gt; Y
+Y k2-&gt; X
+
+Rate Constants:
+k1 = 0.5
+k2 = 0.2
+
+Initial Conditions:
+X = 1.0
+Y = 0.0
+</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <layout class="QHBoxLayout" name="editorFooterLayout">
+                   <property name="spacing">
+                    <number>6</number>
+                   </property>
+                   <item>
+                    <widget class="QLabel" name="characterCount">
+                     <property name="text">
+                      <string>0 lines · 0 characters</string>
+                     </property>
+                     <property name="wordWrap">
+                      <bool>false</bool>
+                     </property>
+                     <property name="role" stdset="0">
+                      <string>muted</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <spacer name="editorSpacer">
+                     <property name="orientation">
+                      <enum>Qt::Orientation::Horizontal</enum>
+                     </property>
+                     <property name="sizeHint" stdset="0">
+                      <size>
+                       <width>20</width>
+                       <height>20</height>
+                      </size>
+                     </property>
+                    </spacer>
+                   </item>
+                   <item>
+                    <widget class="QPushButton" name="exampleButton">
+                     <property name="text">
+                      <string>Load example</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QPushButton" name="clearButton">
+                     <property name="text">
+                      <string>Clear</string>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </item>
+                </layout>
+               </widget>
+               <widget class="QWidget" name="uploadPage">
+                <attribute name="title">
+                 <string>Upload file</string>
+                </attribute>
+                <layout class="QVBoxLayout" name="uploadLayout">
+                 <property name="spacing">
+                  <number>6</number>
+                 </property>
+                 <property name="leftMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>16</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>0</number>
+                 </property>
+                 <item>
+                  <widget class="QFrame" name="dropZone">
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>260</height>
+                    </size>
+                   </property>
+                   <property name="acceptDrops">
+                    <bool>true</bool>
+                   </property>
+                   <layout class="QVBoxLayout" name="dropLayout">
+                    <property name="spacing">
+                     <number>6</number>
+                    </property>
+                    <property name="leftMargin">
+                     <number>28</number>
+                    </property>
+                    <property name="topMargin">
+                     <number>30</number>
+                    </property>
+                    <property name="rightMargin">
+                     <number>28</number>
+                    </property>
+                    <property name="bottomMargin">
+                     <number>30</number>
+                    </property>
+                    <item>
+                     <spacer name="dropTopSpacer">
+                      <property name="orientation">
+                       <enum>Qt::Orientation::Vertical</enum>
+                      </property>
+                      <property name="sizeHint" stdset="0">
+                       <size>
+                        <width>20</width>
+                        <height>20</height>
+                       </size>
+                      </property>
+                     </spacer>
+                    </item>
+                    <item alignment="Qt::AlignmentFlag::AlignHCenter">
+                     <widget class="QLabel" name="uploadSymbol">
+                      <property name="text">
+                       <string>↑</string>
+                      </property>
+                      <property name="alignment">
+                       <set>Qt::AlignmentFlag::AlignCenter</set>
+                      </property>
+                      <property name="wordWrap">
+                       <bool>true</bool>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QLabel" name="dropHeading">
+                      <property name="text">
+                       <string>Drop your model file here</string>
+                      </property>
+                      <property name="alignment">
+                       <set>Qt::AlignmentFlag::AlignCenter</set>
+                      </property>
+                      <property name="wordWrap">
+                       <bool>true</bool>
+                      </property>
+                      <property name="role" stdset="0">
+                       <string>section</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QLabel" name="dropHint">
+                      <property name="text">
+                       <string>or choose a file from your computer</string>
+                      </property>
+                      <property name="alignment">
+                       <set>Qt::AlignmentFlag::AlignCenter</set>
+                      </property>
+                      <property name="wordWrap">
+                       <bool>true</bool>
+                      </property>
+                      <property name="role" stdset="0">
+                       <string>muted</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item alignment="Qt::AlignmentFlag::AlignHCenter">
+                     <widget class="QPushButton" name="browseButton">
+                      <property name="text">
+                       <string>Browse files…</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QLabel" name="supportedFormats">
+                      <property name="text">
+                       <string>Supported formats: .react, .ode, .txt</string>
+                      </property>
+                      <property name="alignment">
+                       <set>Qt::AlignmentFlag::AlignCenter</set>
+                      </property>
+                      <property name="wordWrap">
+                       <bool>true</bool>
+                      </property>
+                      <property name="role" stdset="0">
+                       <string>muted</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <spacer name="dropBottomSpacer">
+                      <property name="orientation">
+                       <enum>Qt::Orientation::Vertical</enum>
+                      </property>
+                      <property name="sizeHint" stdset="0">
+                       <size>
+                        <width>20</width>
+                        <height>20</height>
+                       </size>
+                      </property>
+                     </spacer>
+                    </item>
+                   </layout>
+                  </widget>
+                 </item>
+                 <item>
+                  <layout class="QHBoxLayout" name="fileLayout" stretch="1,0">
+                   <property name="spacing">
+                    <number>16</number>
+                   </property>
+                   <item>
+                    <widget class="QLabel" name="fileLabel">
+                     <property name="text">
+                      <string>No file selected</string>
+                     </property>
+                     <property name="wordWrap">
+                      <bool>true</bool>
+                     </property>
+                     <property name="role" stdset="0">
+                      <string>muted</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QPushButton" name="removeButton">
+                     <property name="enabled">
+                      <bool>false</bool>
+                     </property>
+                     <property name="text">
+                      <string>Remove</string>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </item>
+                </layout>
+               </widget>
+              </widget>
+             </item>
+             <item>
+              <layout class="QHBoxLayout" name="actionLayout" stretch="1,0">
+               <property name="spacing">
+                <number>16</number>
+               </property>
+               <item>
+                <widget class="QLabel" name="analysisHint">
+                 <property name="text">
+                  <string>Missing parameter values remain symbolic.</string>
+                 </property>
+                 <property name="wordWrap">
+                  <bool>true</bool>
+                 </property>
+                 <property name="role" stdset="0">
+                  <string>muted</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QPushButton" name="analyzeButton">
+                 <property name="enabled">
+                  <bool>false</bool>
+                 </property>
+                 <property name="toolTip">
+                  <string>Parse the selected input and calculate network and linkage-class deficiency.</string>
+                 </property>
+                 <property name="text">
+                  <string>Analyze model  →</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QFrame" name="guideCard">
+            <property name="maximumSize">
+             <size>
+              <width>270</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <layout class="QVBoxLayout" name="guideLayout">
+             <property name="spacing">
+              <number>16</number>
+             </property>
+             <property name="leftMargin">
+              <number>22</number>
+             </property>
+             <property name="topMargin">
+              <number>22</number>
+             </property>
+             <property name="rightMargin">
+              <number>22</number>
+             </property>
+             <property name="bottomMargin">
+              <number>22</number>
+             </property>
+             <item>
+              <widget class="QLabel" name="guideHeading">
+               <property name="text">
+                <string>A little guidance</string>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
+               </property>
+               <property name="role" stdset="0">
+                <string>section</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="reactionHeading">
+               <property name="text">
+                <string>Reaction networks</string>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
+               </property>
+               <property name="role" stdset="0">
+                <string>section</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="reactionHelp">
+               <property name="text">
+                <string>Use a Reactions: section with one reaction per line. Add rate constants and initial conditions as needed.</string>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
+               </property>
+               <property name="role" stdset="0">
+                <string>muted</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="odeHeading">
+               <property name="text">
+                <string>ODE models</string>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
+               </property>
+               <property name="role" stdset="0">
+                <string>section</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="odeHelp">
+               <property name="text">
+                <string>Use an ODE Model: section with mass-action equations, followed by a Coefficients: section.</string>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
+               </property>
+               <property name="role" stdset="0">
+                <string>muted</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="fileHeading">
+               <property name="text">
+                <string>File input</string>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
+               </property>
+               <property name="role" stdset="0">
+                <string>section</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="fileHelp">
+               <property name="text">
+                <string>Select one .react, .ode, or .txt file. For .txt files, choose the matching format above.</string>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
+               </property>
+               <property name="role" stdset="0">
+                <string>muted</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <spacer name="guideSpacer">
+               <property name="orientation">
+                <enum>Qt::Orientation::Vertical</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>20</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+            </layout>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="QFrame" name="resultsCard">
+          <layout class="QVBoxLayout" name="resultsLayout">
+           <property name="spacing">
+            <number>6</number>
+           </property>
+           <property name="leftMargin">
+            <number>22</number>
+           </property>
+           <property name="topMargin">
+            <number>20</number>
+           </property>
+           <property name="rightMargin">
+            <number>22</number>
+           </property>
+           <property name="bottomMargin">
+            <number>20</number>
+           </property>
+           <item>
+            <widget class="QLabel" name="resultsHeading">
+             <property name="text">
+              <string>02  /  Analysis overview</string>
+             </property>
+             <property name="wordWrap">
+              <bool>true</bool>
+             </property>
+             <property name="role" stdset="0">
+              <string>section</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLabel" name="resultsEmptyTitle">
+             <property name="text">
+              <string>Your network insights will appear here</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignmentFlag::AlignCenter</set>
+             </property>
+             <property name="wordWrap">
+              <bool>true</bool>
+             </property>
+             <property name="role" stdset="0">
+              <string>section</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLabel" name="resultsMetrics">
+             <property name="text">
+              <string>Complexes   ·   Linkage classes   ·   Stoichiometric rank   ·   Deficiency</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignmentFlag::AlignCenter</set>
+             </property>
+             <property name="wordWrap">
+              <bool>true</bool>
+             </property>
+             <property name="role" stdset="0">
+              <string>muted</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLabel" name="resultsHint">
+             <property name="text">
+              <string>Select an input and click Analyze model.</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignmentFlag::AlignCenter</set>
+             </property>
+             <property name="wordWrap">
+              <bool>true</bool>
+             </property>
+             <property name="role" stdset="0">
+              <string>muted</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="GlowTabWidget" name="analysisTabs">
+             <property name="currentIndex">
+              <number>0</number>
+             </property>
+             <widget class="QWidget" name="reportPage">
+              <attribute name="title">
+               <string>Analysis report</string>
+              </attribute>
+              <layout class="QVBoxLayout" name="reportLayout">
+               <item>
+                <widget class="QPlainTextEdit" name="resultReport">
+                 <property name="readOnly">
+                  <bool>true</bool>
+                 </property>
+                 <property name="accessibleName">
+                  <string>Analysis report</string>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>0</width>
+                   <height>220</height>
+                  </size>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+             <widget class="QWidget" name="reactionGraphPage">
+              <attribute name="title">
+               <string>Reaction graph</string>
+              </attribute>
+              <layout class="QVBoxLayout" name="reactionGraphLayout">
+               <item>
+                <widget class="QLabel" name="reactionGraphHint">
+                 <property name="text">
+                  <string>Nodes are complexes (C index: composition). Colors identify linkage classes; the legend shows each class’s deficiency. Arrows show reactions; bold labels show reaction indices and rates. Hover to highlight; click a node for details. Click empty space or press Esc to close. Use the toolbar to pan, zoom, reset, or save.</string>
+                 </property>
+                 <property name="wordWrap">
+                  <bool>true</bool>
+                 </property>
+                 <property name="font">
+                  <font>
+                   <bold>false</bold>
+                  </font>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+              <property name="font">
+               <font>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="toolTip">
+               <string>Hover a node to animate its highlight. Click a node to open details; click empty space or press Esc to close.</string>
+              </property>
+             </widget>
+             <widget class="QWidget" name="linkageGraphPage">
+              <attribute name="title">
+               <string>Linkage graph</string>
+              </attribute>
+              <layout class="QVBoxLayout" name="linkageGraphLayout">
+               <item>
+                <widget class="QLabel" name="linkageGraphHint">
+                 <property name="text">
+                  <string>Nodes are complexes (C index: composition). Colors identify linkage classes; the legend shows each class’s deficiency. Undirected edges connect complexes in the same linkage class. Hover to highlight; click a node for details. Click empty space or press Esc to close. Use the toolbar to pan, zoom, reset, or save.</string>
+                 </property>
+                 <property name="wordWrap">
+                  <bool>true</bool>
+                 </property>
+                 <property name="font">
+                  <font>
+                   <bold>false</bold>
+                  </font>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+              <property name="font">
+               <font>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="toolTip">
+               <string>Hover a node to animate its highlight. Click a node to open details; click empty space or press Esc to close.</string>
+              </property>
+             </widget>
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>600</height>
+              </size>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="statusLabel">
+          <property name="text">
+           <string>Ready • Paste text or select a model file.</string>
+          </property>
+          <property name="wordWrap">
+           <bool>true</bool>
+          </property>
+          <property name="role" stdset="0">
+           <string>muted</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="bodySpacer">
+          <property name="orientation">
+           <enum>Qt::Orientation::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </widget>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <tabstops>
+  <tabstop>formatCombo</tabstop>
+  <tabstop>inputTabs</tabstop>
+  <tabstop>modelEditor</tabstop>
+  <tabstop>exampleButton</tabstop>
+  <tabstop>clearButton</tabstop>
+  <tabstop>browseButton</tabstop>
+  <tabstop>removeButton</tabstop>
+  <tabstop>analyzeButton</tabstop>
+ </tabstops>
+ <resources />
+ <connections>
+  <connection>
+   <sender>clearButton</sender>
+   <signal>clicked()</signal>
+   <receiver>modelEditor</receiver>
+   <slot>clear()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <customwidgets>
+  <customwidget>
+   <class>GlowTabWidget</class>
+   <extends>QTabWidget</extends>
+   <header>GUI.widgets</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+</ui>
