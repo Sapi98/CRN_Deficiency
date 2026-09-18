@@ -143,6 +143,18 @@ class DesktopAnalysisTests(unittest.TestCase):
                 self.assertTrue((path / 'ui_form.py').exists())
                 other.close()
 
+    def test_read_only_installation_loads_fresh_designer_form(self):
+        original = (ROOT / 'GUI/form.ui').read_text()
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder)
+            (path / 'form.ui').write_text(original.replace('Your model, ready to explore.', 'Read-only package'))
+            with patch.object(gui, '__file__', str(path / 'mainwindow.py')):
+                with patch.object(Path, 'write_text', side_effect=PermissionError('Read-only installation')):
+                    other = gui.MainWindow()
+            self.assertEqual(other.ui.titleLabel.text(), 'Read-only package')
+            self.assertFalse((path / 'ui_form.py').exists())
+            other.close()
+
 
 if __name__ == '__main__':
     unittest.main()

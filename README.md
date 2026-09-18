@@ -27,12 +27,13 @@ The project is currently an alpha release (`0.1.0`).
 - SymPy 1.13 or newer and below version 2
 - PySide6 6.5 or newer and below version 7 for the desktop GUI
 
-Pip installs SymPy automatically. Setuptools 61+ and wheel are declared as
+Installing the project installs SymPy and PySide6 automatically. Setuptools 61+ and wheel are declared as
 isolated build requirements in `pyproject.toml`. No NumPy, SciPy, or graph
 library is required for parsing and deficiency analysis. Optional visualization
 uses NetworkX and Matplotlib (which also installs NumPy). The root
 `requirements.txt` installs both backend and desktop GUI dependencies; installing
-the package with `pip install .` requires only the backend dependencies.
+the package with `pip install .` also installs both and provides CLI and GUI
+launch commands.
 
 ## Visualization
 
@@ -78,6 +79,10 @@ Install from the repository root into the active Python environment:
 ```bash
 python3 -m pip install .
 ```
+
+After installation, launch the desktop interface with `crntanalysis-gui` or use
+`crntanalysis` for the command-line interface. The GUI layout is included in
+the installed package, so launching does not require the repository directory.
 
 For editable development:
 
@@ -177,8 +182,9 @@ New controls that need application behavior require signal connections in Python
 or Designer. The Clear connection is already stored in `form.ui`.
 
 Both `python GUI/mainwindow.py` from the repository root and
-`python mainwindow.py` from inside `GUI` work. The GUI directory must be writable
-so the generated file can be updated.
+`python mainwindow.py` from inside `GUI` work. For an installed version, use
+`crntanalysis-gui`. If the installed GUI directory is read-only, the generated
+interface is loaded in memory instead of writing `ui_form.py`.
 
 ## Quick start
 

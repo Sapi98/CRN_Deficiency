@@ -31,7 +31,14 @@ def load_ui_class():
         # Compile before writing so a failed generation cannot replace the last file.
         compile(result.stdout, str(generated_path), 'exec')
         if not generated_path.exists() or generated_path.read_text(encoding='utf-8') != result.stdout:
-            generated_path.write_text(result.stdout, encoding='utf-8')
+            try:
+                generated_path.write_text(result.stdout, encoding='utf-8')
+            except PermissionError:
+                # Installed package directories can be read-only. Use the fresh
+                # generated interface in memory without changing the installation.
+                namespace = {'__file__': str(generated_path), '__name__': 'ui_form'}
+                exec(compile(result.stdout, str(generated_path), 'exec'), namespace)
+                return namespace['Ui_MainWindow']
         # Read the source afresh, avoiding cached imports when the form changes.
         return runpy.run_path(str(generated_path))['Ui_MainWindow']
     except (OSError, subprocess.TimeoutExpired, SyntaxError, KeyError) as error:
@@ -270,13 +277,18 @@ class MainWindow(QMainWindow):
             super().closeEvent(event)
 
 
-if __name__ == '__main__':
+def main():
+    """Launch the desktop interface from a script or installed GUI command."""
     app = QApplication(sys.argv)
     app.setApplicationName('CRNTAnalysis')
     try:
         window = MainWindow()
     except RuntimeError as error:
         QMessageBox.critical(None, 'Unable to start CRNTAnalysis', str(error))
-        sys.exit(1)
+        return 1
     window.show()
-    sys.exit(app.exec())
+    return app.exec()
+
+
+if __name__ == '__main__':
+    sys.exit(main())

@@ -1875,11 +1875,13 @@ generated directories such as `build/`, `dist/`, `*.egg-info/`, and
 `pyproject.toml` defines an isolated Setuptools build and the PySide6 project
 files under `GUI/`. The root `requirements.txt` includes SymPy and PySide6 for
 running the complete desktop application. `setup.py` supplies
-package metadata, discovers `crntanalysis`, installs SymPy, requires Python
+package metadata, discovers `crntanalysis` and `GUI`, bundles `GUI/form.ui`,
+installs SymPy and PySide6, requires Python
 3.9+, and registers:
 
 ```text
 crntanalysis = crntanalysis.orchestrator:main
+crntanalysis-gui = GUI.mainwindow:main
 ```
 
 Build source and wheel distributions with:

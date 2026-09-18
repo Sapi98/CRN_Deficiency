@@ -14,14 +14,18 @@ setup(
     description="Parse chemical reaction networks and calculate CRNT deficiency",
     long_description=(PROJECT_ROOT / "README.md").read_text(encoding="utf-8"),
     long_description_content_type="text/markdown",
-    packages=find_packages(include=["crntanalysis", "crntanalysis.*"]),
+    packages=find_packages(include=["crntanalysis", "crntanalysis.*", "GUI", "GUI.*"]),
+    package_data={"GUI": ["form.ui"]},
     python_requires=">=3.9",
-    install_requires=["sympy>=1.13,<2"],
+    install_requires=["sympy>=1.13,<2", "PySide6>=6.5,<7"],
     extras_require={"visualization": ["networkx>=3.2,<4", "matplotlib>=3.8,<4"]},
     entry_points={
         "console_scripts": [
             "crntanalysis=crntanalysis.orchestrator:main",
-        ]
+        ],
+        "gui_scripts": [
+            "crntanalysis-gui=GUI.mainwindow:main",
+        ],
     },
     classifiers=[
         "Development Status :: 3 - Alpha",
