@@ -367,6 +367,13 @@ class Ui_MainWindow(object):
 
         self.resultsLayout.addWidget(self.resultsHint)
 
+        self.resultReport = QPlainTextEdit(self.resultsCard)
+        self.resultReport.setObjectName(u"resultReport")
+        self.resultReport.setReadOnly(True)
+        self.resultReport.setMinimumSize(QSize(0, 220))
+
+        self.resultsLayout.addWidget(self.resultReport)
+
 
         self.workspaceLayout.addWidget(self.resultsCard)
 
@@ -447,7 +454,7 @@ class Ui_MainWindow(object):
         self.brandLabel.setText(QCoreApplication.translate("MainWindow", u"CRNTAnalysis", None))
         self.taglineLabel.setText(QCoreApplication.translate("MainWindow", u"Chemical Reaction Network Theory", None))
         self.taglineLabel.setProperty(u"role", QCoreApplication.translate("MainWindow", u"muted", None))
-        self.previewBadge.setText(QCoreApplication.translate("MainWindow", u"Design preview", None))
+        self.previewBadge.setText(QCoreApplication.translate("MainWindow", u"Desktop workspace", None))
         self.titleLabel.setText(QCoreApplication.translate("MainWindow", u"Your model, ready to explore.", None))
         self.subtitleLabel.setText(QCoreApplication.translate("MainWindow", u"Paste a reaction network or upload a model file to get started.", None))
         self.inputHeading.setText(QCoreApplication.translate("MainWindow", u"01  /  Model input", None))
@@ -494,10 +501,10 @@ class Ui_MainWindow(object):
         self.fileLabel.setProperty(u"role", QCoreApplication.translate("MainWindow", u"muted", None))
         self.removeButton.setText(QCoreApplication.translate("MainWindow", u"Remove", None))
         self.inputTabs.setTabText(self.inputTabs.indexOf(self.uploadPage), QCoreApplication.translate("MainWindow", u"Upload file", None))
-        self.analysisHint.setText(QCoreApplication.translate("MainWindow", u"Analysis will be available in a future update.", None))
+        self.analysisHint.setText(QCoreApplication.translate("MainWindow", u"Missing parameter values remain symbolic.", None))
         self.analysisHint.setProperty(u"role", QCoreApplication.translate("MainWindow", u"muted", None))
 #if QT_CONFIG(tooltip)
-        self.analyzeButton.setToolTip(QCoreApplication.translate("MainWindow", u"Design preview: analysis is not connected yet.", None))
+        self.analyzeButton.setToolTip(QCoreApplication.translate("MainWindow", u"Parse the selected input and calculate network and linkage-class deficiency.", None))
 #endif // QT_CONFIG(tooltip)
         self.analyzeButton.setText(QCoreApplication.translate("MainWindow", u"Analyze model  \u2192", None))
         self.guideHeading.setText(QCoreApplication.translate("MainWindow", u"A little guidance", None))
@@ -520,8 +527,11 @@ class Ui_MainWindow(object):
         self.resultsEmptyTitle.setProperty(u"role", QCoreApplication.translate("MainWindow", u"section", None))
         self.resultsMetrics.setText(QCoreApplication.translate("MainWindow", u"Complexes   \u00b7   Linkage classes   \u00b7   Stoichiometric rank   \u00b7   Deficiency", None))
         self.resultsMetrics.setProperty(u"role", QCoreApplication.translate("MainWindow", u"muted", None))
-        self.resultsHint.setText(QCoreApplication.translate("MainWindow", u"Awaiting analysis integration", None))
+        self.resultsHint.setText(QCoreApplication.translate("MainWindow", u"Select an input and click Analyze model.", None))
         self.resultsHint.setProperty(u"role", QCoreApplication.translate("MainWindow", u"muted", None))
+#if QT_CONFIG(accessibility)
+        self.resultReport.setAccessibleName(QCoreApplication.translate("MainWindow", u"Analysis report", None))
+#endif // QT_CONFIG(accessibility)
         self.statusLabel.setText(QCoreApplication.translate("MainWindow", u"Ready \u2022 Paste text or select a model file.", None))
         self.statusLabel.setProperty(u"role", QCoreApplication.translate("MainWindow", u"muted", None))
     # retranslateUi

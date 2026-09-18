@@ -49,11 +49,11 @@ QPlainTextEdit:focus { border: 1px solid #246dce; }
 QComboBox { background: white; border: 1px solid #d6deea; border-radius: 6px; padding: 7px 12px; min-width: 145px; }
 QComboBox QAbstractItemView { background: white; selection-background-color: #deebff; }
 QFrame#dropZone { background: #fafcff; border: 2px dashed #bccce2; border-radius: 12px; }
-QFrame#dropZone[active=&quot;true&quot;] { background: #edf4ff; border-color: #246dce; }
+QFrame#dropZone[active="true"] { background: #edf4ff; border-color: #246dce; }
 QScrollArea { border: none; }
 
-QLabel[role=&quot;muted&quot;] { color: #69788d; }
-QLabel[role=&quot;section&quot;] { font-size: 17px; font-weight: 600; }
+QLabel[role="muted"] { color: #69788d; }
+QLabel[role="section"] { font-size: 17px; font-weight: 600; }
 QLabel#taglineLabel, QLabel#formatLabel, QLabel#editorHint, QLabel#characterCount, QLabel#dropHint, QLabel#supportedFormats, QLabel#fileLabel, QLabel#analysisHint, QLabel#reactionHelp, QLabel#odeHelp, QLabel#fileHelp, QLabel#resultsMetrics, QLabel#resultsHint, QLabel#statusLabel { color: #69788d; }
 QLabel#inputHeading, QLabel#dropHeading, QLabel#guideHeading, QLabel#reactionHeading, QLabel#odeHeading, QLabel#fileHeading, QLabel#resultsHeading, QLabel#resultsEmptyTitle { font-size: 17px; font-weight: 600; }
 QLabel#subtitleLabel { color: #69788d; }</string>
@@ -132,7 +132,7 @@ QLabel#subtitleLabel { color: #69788d; }</string>
        <item>
         <widget class="QLabel" name="previewBadge">
          <property name="text">
-          <string>Design preview</string>
+          <string>Desktop workspace</string>
          </property>
          <property name="wordWrap">
           <bool>true</bool>
@@ -578,7 +578,7 @@ Y = 0.0
                <item>
                 <widget class="QLabel" name="analysisHint">
                  <property name="text">
-                  <string>Analysis will be available in a future update.</string>
+                  <string>Missing parameter values remain symbolic.</string>
                  </property>
                  <property name="wordWrap">
                   <bool>true</bool>
@@ -594,7 +594,7 @@ Y = 0.0
                   <bool>false</bool>
                  </property>
                  <property name="toolTip">
-                  <string>Design preview: analysis is not connected yet.</string>
+                  <string>Parse the selected input and calculate network and linkage-class deficiency.</string>
                  </property>
                  <property name="text">
                   <string>Analyze model  →</string>
@@ -805,7 +805,7 @@ Y = 0.0
            <item>
             <widget class="QLabel" name="resultsHint">
              <property name="text">
-              <string>Awaiting analysis integration</string>
+              <string>Select an input and click Analyze model.</string>
              </property>
              <property name="alignment">
               <set>Qt::AlignmentFlag::AlignCenter</set>
@@ -815,6 +815,22 @@ Y = 0.0
              </property>
              <property name="role" stdset="0">
               <string>muted</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPlainTextEdit" name="resultReport">
+             <property name="readOnly">
+              <bool>true</bool>
+             </property>
+             <property name="accessibleName">
+              <string>Analysis report</string>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>220</height>
+              </size>
              </property>
             </widget>
            </item>
@@ -864,7 +880,7 @@ Y = 0.0
   <tabstop>removeButton</tabstop>
   <tabstop>analyzeButton</tabstop>
  </tabstops>
- <resources/>
+ <resources />
  <connections>
   <connection>
    <sender>clearButton</sender>

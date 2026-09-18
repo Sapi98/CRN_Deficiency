@@ -135,10 +135,16 @@ python3 -c "import crntanalysis; print(crntanalysis.__version__)"
 
 ## Desktop GUI
 
-A PySide6 design preview with a text editor, reaction/ODE format selection,
-examples, and file selection through drag and drop or a native file browser.
-Selected files are displayed without reading or analyzing their contents.
-The analysis button and results area are placeholders for future integration.
+The PySide6 desktop interface accepts pasted reaction/ODE text and model files
+through drag and drop or a native file browser. Select the matching format and
+click **Analyze model** to run the backend analysis service. The overview shows
+network deficiency, complexes, linkage classes, stoichiometric rank, species,
+and reactions. A read-only report includes per-linkage-class results, parser
+warnings, and symbolic-rank notes. Missing parameter values remain symbolic.
+
+Analysis runs in a background thread; input controls are disabled until it
+finishes. Errors appear in the results area, and changing the input clears the
+previous results. No report files are written automatically.
 
 From the repository root:
 
@@ -157,11 +163,13 @@ No manual generation command is required. Changes appear on the next launch;
 an already open window does not reload automatically.
 
 `ui_form.py` is generated code; do not edit it by hand. `mainwindow.py` contains
-only startup and behavior (examples, file browsing, drag and drop, and status).
+startup and behavior (examples, file input, background analysis, and results).
 Keep the existing interactive widgets' object names when editing the design:
 `formatCombo`, `modelEditor`, `inputTabs`, `characterCount`, `exampleButton`,
 `clearButton`, `browseButton`, `removeButton`, `fileLabel`, `dropZone`, and
-`statusLabel`. Layout, text, size, color, and position changes need no Python edits.
+`statusLabel`, `analyzeButton`, `resultsEmptyTitle`, `resultsMetrics`,
+`resultsHint`, and `resultReport`. Layout, text, size, color, and position changes
+need no Python edits.
 New controls that need application behavior require signal connections in Python
 or Designer. The Clear connection is already stored in `form.ui`.
 
@@ -490,8 +498,9 @@ and report writing.
 - ODEs that cannot represent an ordinary mass-action CRN are rejected.
 - Symbolic rank is generic. Special parameter values may change the rank and
   deficiency.
-- A [desktop GUI design preview](#desktop-gui) is available; analysis
-  integration is planned for a future update.
+- The [desktop GUI](#desktop-gui) supports analysis and text reports; graph
+  visualization and report export are currently available through the Python API
+  or command line.
 
 ## Detailed Documentation
 
