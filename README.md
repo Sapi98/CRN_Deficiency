@@ -133,6 +133,42 @@ After installation, verify the package:
 python3 -c "import crntanalysis; print(crntanalysis.__version__)"
 ```
 
+## Desktop GUI
+
+A PySide6 design preview with a text editor, reaction/ODE format selection,
+examples, and file selection through drag and drop or a native file browser.
+Selected files are displayed without reading or analyzing their contents.
+The analysis button and results area are placeholders for future integration.
+
+From the repository root:
+
+```bash
+python3 -m pip install -r GUI/requirements.txt
+python3 GUI/mainwindow.py
+```
+
+### Editing the interface
+
+`form.ui` is the single source for the layout, styling, labels, and widgets.
+Edit it in Qt Creator / Qt Designer, save, then launch `mainwindow.py` again.
+At startup, the app automatically regenerates `ui_form.py` using the active
+Python environment's PySide6 compiler and calls `Ui_MainWindow.setupUi()`.
+No manual generation command is required. Changes appear on the next launch;
+an already open window does not reload automatically.
+
+`ui_form.py` is generated code; do not edit it by hand. `mainwindow.py` contains
+only startup and behavior (examples, file browsing, drag and drop, and status).
+Keep the existing interactive widgets' object names when editing the design:
+`formatCombo`, `modelEditor`, `inputTabs`, `characterCount`, `exampleButton`,
+`clearButton`, `browseButton`, `removeButton`, `fileLabel`, `dropZone`, and
+`statusLabel`. Layout, text, size, color, and position changes need no Python edits.
+New controls that need application behavior require signal connections in Python
+or Designer. The Clear connection is already stored in `form.ui`.
+
+Both `python GUI/mainwindow.py` from the repository root and
+`python mainwindow.py` from inside `GUI` work. The GUI directory must be writable
+so the generated file can be updated.
+
 ## Quick start
 
 Parse a reaction file and calculate its deficiency:
@@ -424,6 +460,7 @@ paths.
 crntanalysis/              Installable Python package
 Documentation/             Engineering and scientific documentation
 Example_Data/              Example reaction and ODE inputs
+GUI/                       Desktop GUI and Qt Designer layout
 test_*.py                  Unit tests
 README.md                  User overview and usage guide
 requirements.txt           Runtime dependency list
@@ -453,7 +490,7 @@ and report writing.
 - ODEs that cannot represent an ordinary mass-action CRN are rejected.
 - Symbolic rank is generic. Special parameter values may change the rank and
   deficiency.
-- A desktop GUI design preview is available in [GUI](GUI/README.md); analysis
+- A [desktop GUI design preview](#desktop-gui) is available; analysis
   integration is planned for a future update.
 
 ## Detailed Documentation
