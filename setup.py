@@ -17,8 +17,8 @@ setup(
     packages=find_packages(include=["crntanalysis", "crntanalysis.*", "GUI", "GUI.*"]),
     package_data={"GUI": ["form.ui"]},
     python_requires=">=3.9",
-    install_requires=["sympy>=1.13,<2", "PySide6>=6.5,<7"],
-    extras_require={"visualization": ["networkx>=3.2,<4", "matplotlib>=3.8,<4"]},
+    install_requires=["sympy>=1.13,<2", "PySide6>=6.5,<7", "networkx>=3.1,<4", "matplotlib>=3.7,<4"],
+    extras_require={"visualization": ["networkx>=3.1,<4", "matplotlib>=3.7,<4"]},
     entry_points={
         "console_scripts": [
             "crntanalysis=crntanalysis.orchestrator:main",

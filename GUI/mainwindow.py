@@ -13,6 +13,7 @@ if __package__ in (None, ''):
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from crntanalysis.orchestrator import CRNAnalysisService, ConsoleReportFormatter
+from GUI.graph_view import GraphView
 
 
 def load_ui_class():
@@ -137,7 +138,12 @@ class MainWindow(QMainWindow):
         # Clear is already connected to modelEditor.clear() in form.ui.
         self.drop_handler = FileDropHandler(self.ui.dropZone)
         self.drop_handler.file_dropped.connect(self.select_file)
-        self.ui.resultReport.hide()
+        self.graph_views = {
+            1: GraphView(self.ui.reactionGraphLayout, self.ui.reactionGraphHint, 'reaction'),
+            2: GraphView(self.ui.linkageGraphLayout, self.ui.linkageGraphHint, 'linkage'),
+        }
+        self.ui.analysisTabs.currentChanged.connect(self.render_graph)
+        self.ui.analysisTabs.hide()
         self.update_state()
 
     def update_placeholder(self):
@@ -202,7 +208,9 @@ class MainWindow(QMainWindow):
         self.ui.resultsMetrics.setText('Complexes   ·   Linkage classes   ·   Stoichiometric rank   ·   Deficiency')
         self.ui.resultsHint.setText('Select an input and click Analyze model.')
         self.ui.resultReport.clear()
-        self.ui.resultReport.hide()
+        self.ui.analysisTabs.hide()
+        for view in self.graph_views.values():
+            view.clear()
         self.update_state()
 
     def update_state(self):
@@ -254,14 +262,27 @@ class MainWindow(QMainWindow):
             + (f' · {len(outcome.warnings)} warnings (see report)' if outcome.warnings else '')
         )
         self.ui.resultReport.setPlainText(ConsoleReportFormatter().format(outcome))
-        self.ui.resultReport.show()
+        for view in self.graph_views.values():
+            view.set_outcome(outcome)
+        self.ui.analysisTabs.setTabEnabled(1, True)
+        self.ui.analysisTabs.setTabEnabled(2, True)
+        self.ui.analysisTabs.show()
+        self.render_graph(self.ui.analysisTabs.currentIndex())
+
+    def render_graph(self, index):
+        view = self.graph_views.get(index)
+        if view is not None:
+            view.render()
 
     def show_error(self, message):
         self.error_message = message
         self.ui.resultsEmptyTitle.setText('Unable to analyze this model')
         self.ui.resultsHint.setText('Check the model format and the error below, then try again.')
         self.ui.resultReport.setPlainText(message)
-        self.ui.resultReport.show()
+        self.ui.analysisTabs.setCurrentIndex(0)
+        self.ui.analysisTabs.setTabEnabled(1, False)
+        self.ui.analysisTabs.setTabEnabled(2, False)
+        self.ui.analysisTabs.show()
 
     def analysis_finished(self):
         worker = self.worker

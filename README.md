@@ -27,17 +27,16 @@ The project is currently an alpha release (`0.1.0`).
 - SymPy 1.13 or newer and below version 2
 - PySide6 6.5 or newer and below version 7 for the desktop GUI
 
-Installing the project installs SymPy and PySide6 automatically. Setuptools 61+ and wheel are declared as
-isolated build requirements in `pyproject.toml`. No NumPy, SciPy, or graph
-library is required for parsing and deficiency analysis. Optional visualization
-uses NetworkX and Matplotlib (which also installs NumPy). The root
-`requirements.txt` installs both backend and desktop GUI dependencies; installing
-the package with `pip install .` also installs both and provides CLI and GUI
-launch commands.
+Installing the project installs SymPy, PySide6, NetworkX, and Matplotlib
+(which also installs NumPy). The root `requirements.txt` provides the same
+application dependencies. Setuptools 61+ and wheel are declared as isolated
+build requirements in `pyproject.toml`. Parsing and deficiency analysis use
+SymPy; graph rendering uses NetworkX and Matplotlib.
 
 ## Visualization
 
-Install the optional dependencies from the repository root:
+Graph dependencies are included in the standard installation. The existing
+visualization extra remains supported:
 
 ```bash
 python -m pip install '.[visualization]'
@@ -150,6 +149,13 @@ network deficiency, complexes, linkage classes, stoichiometric rank, species,
 and reactions. A read-only report includes per-linkage-class results, parser
 warnings, and symbolic-rank notes. Missing parameter values remain symbolic.
 
+The **Reaction graph** tab shows complexes as labeled nodes with directed
+reaction arrows and rate labels. The **Linkage graph** tab shows undirected
+connections between complexes. Both views color complexes by linkage class
+and show each class’s deficiency in the legend. Graphs render when selected;
+the toolbar supports pan, zoom, reset, and saving figures (including PNG, SVG,
+and PDF). Editing the input clears the previous graphs along with the report.
+
 Analysis runs in a background thread; input controls are disabled until it
 finishes. Errors appear in the results area, and changing the input clears the
 previous results. No report files are written automatically.
@@ -176,7 +182,8 @@ Keep the existing interactive widgets' object names when editing the design:
 `formatCombo`, `modelEditor`, `inputTabs`, `characterCount`, `exampleButton`,
 `clearButton`, `browseButton`, `removeButton`, `fileLabel`, `dropZone`, and
 `statusLabel`, `analyzeButton`, `resultsEmptyTitle`, `resultsMetrics`,
-`resultsHint`, and `resultReport`. Layout, text, size, color, and position changes
+`resultsHint`, `resultReport`, `analysisTabs`, `reactionGraphLayout`,
+`linkageGraphLayout`, `reactionGraphHint`, and `linkageGraphHint`. Layout, text, size, color, and position changes
 need no Python edits.
 New controls that need application behavior require signal connections in Python
 or Designer. The Clear connection is already stored in `form.ui`.
@@ -507,8 +514,8 @@ and report writing.
 - ODEs that cannot represent an ordinary mass-action CRN are rejected.
 - Symbolic rank is generic. Special parameter values may change the rank and
   deficiency.
-- The [desktop GUI](#desktop-gui) supports analysis and text reports; graph
-  visualization and report export are currently available through the Python API
+- The [desktop GUI](#desktop-gui) supports analysis, text reports, and graph
+  visualization. Structured report export is available through the Python API
   or command line.
 
 ## Detailed Documentation

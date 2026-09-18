@@ -155,6 +155,53 @@ class DesktopAnalysisTests(unittest.TestCase):
             self.assertFalse((path / 'ui_form.py').exists())
             other.close()
 
+    @unittest.skipUnless(importlib.util.find_spec('matplotlib') and importlib.util.find_spec('networkx'),
+                         'Graph dependencies not installed')
+    def test_embedded_graphs_show_complexes_reactions_and_linkages(self):
+        self.window.ui.exampleButton.click()
+        self.window.ui.analyzeButton.click()
+        self.wait_for_analysis()
+        self.assertEqual(self.window.ui.previewBadge.text(), 'Desktop App v1.0')
+        self.window.ui.analysisTabs.setCurrentIndex(1)
+        reaction = self.window.graph_views[1]
+        self.assertTrue(reaction.rendered, reaction.hint.text())
+        axes = reaction.canvas.figure.axes[0]
+        labels = [text.get_text() for text in axes.texts]
+        self.assertIn('C0: X', labels)
+        self.assertIn('C1: Y', labels)
+        self.assertTrue(any('r0: 0.5' in label for label in labels))
+        self.assertEqual(len(axes.patches), 2)
+        self.assertEqual(axes.get_legend().get_texts()[0].get_text(), 'L0: δ=0')
+        self.window.ui.analysisTabs.setCurrentIndex(2)
+        linkage = self.window.graph_views[2]
+        self.assertTrue(linkage.rendered, linkage.hint.text())
+        self.assertEqual(len(linkage.canvas.figure.axes[0].patches), 1)
+        # The same plot widgets are reused, with old contents removed on input edits.
+        canvas = reaction.canvas
+        self.window.ui.clearButton.click()
+        self.assertIsNone(reaction.outcome)
+        self.assertFalse(reaction.rendered)
+        self.assertEqual(reaction.canvas.figure.axes, [])
+        self.window.ui.exampleButton.click()
+        self.window.ui.analyzeButton.click()
+        self.wait_for_analysis()
+        self.window.ui.analysisTabs.setCurrentIndex(1)
+        self.assertIs(reaction.canvas, canvas)
+        self.assertTrue(reaction.rendered, reaction.hint.text())
+
+    @unittest.skipUnless(importlib.util.find_spec('matplotlib') and importlib.util.find_spec('networkx'),
+                         'Graph dependencies not installed')
+    def test_graph_failure_preserves_analysis_report(self):
+        self.window.ui.exampleButton.click()
+        self.window.ui.analyzeButton.click()
+        self.wait_for_analysis()
+        report = self.window.ui.resultReport.toPlainText()
+        with patch('GUI.graph_view.NetworkVisualizer.draw_reaction_network', side_effect=ValueError('Graph test failure')):
+            self.window.ui.analysisTabs.setCurrentIndex(1)
+        self.assertIsNotNone(self.window.outcome)
+        self.assertEqual(self.window.ui.resultReport.toPlainText(), report)
+        self.assertIn('Could not draw graph', self.window.ui.reactionGraphHint.text())
+
 
 if __name__ == '__main__':
     unittest.main()

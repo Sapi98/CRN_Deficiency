@@ -1876,7 +1876,7 @@ generated directories such as `build/`, `dist/`, `*.egg-info/`, and
 files under `GUI/`. The root `requirements.txt` includes SymPy and PySide6 for
 running the complete desktop application. `setup.py` supplies
 package metadata, discovers `crntanalysis` and `GUI`, bundles `GUI/form.ui`,
-installs SymPy and PySide6, requires Python
+installs SymPy, PySide6, NetworkX, and Matplotlib, requires Python
 3.9+, and registers:
 
 ```text

@@ -132,10 +132,10 @@ QLabel#subtitleLabel { color: #69788d; }</string>
        <item>
         <widget class="QLabel" name="previewBadge">
          <property name="text">
-          <string>Desktop workspace</string>
+          <string>Desktop App v1.0</string>
          </property>
          <property name="wordWrap">
-          <bool>true</bool>
+          <bool>false</bool>
          </property>
         </widget>
        </item>
@@ -819,17 +819,71 @@ Y = 0.0
             </widget>
            </item>
            <item>
-            <widget class="QPlainTextEdit" name="resultReport">
-             <property name="readOnly">
-              <bool>true</bool>
+            <widget class="QTabWidget" name="analysisTabs">
+             <property name="currentIndex">
+              <number>0</number>
              </property>
-             <property name="accessibleName">
-              <string>Analysis report</string>
-             </property>
+             <widget class="QWidget" name="reportPage">
+              <attribute name="title">
+               <string>Analysis report</string>
+              </attribute>
+              <layout class="QVBoxLayout" name="reportLayout">
+               <item>
+                <widget class="QPlainTextEdit" name="resultReport">
+                 <property name="readOnly">
+                  <bool>true</bool>
+                 </property>
+                 <property name="accessibleName">
+                  <string>Analysis report</string>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>0</width>
+                   <height>220</height>
+                  </size>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+             <widget class="QWidget" name="reactionGraphPage">
+              <attribute name="title">
+               <string>Reaction graph</string>
+              </attribute>
+              <layout class="QVBoxLayout" name="reactionGraphLayout">
+               <item>
+                <widget class="QLabel" name="reactionGraphHint">
+                 <property name="text">
+                  <string>Analyze a model to see this graph.</string>
+                 </property>
+                 <property name="wordWrap">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+             <widget class="QWidget" name="linkageGraphPage">
+              <attribute name="title">
+               <string>Linkage graph</string>
+              </attribute>
+              <layout class="QVBoxLayout" name="linkageGraphLayout">
+               <item>
+                <widget class="QLabel" name="linkageGraphHint">
+                 <property name="text">
+                  <string>Analyze a model to see this graph.</string>
+                 </property>
+                 <property name="wordWrap">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
              <property name="minimumSize">
               <size>
                <width>0</width>
-               <height>220</height>
+               <height>600</height>
               </size>
              </property>
             </widget>

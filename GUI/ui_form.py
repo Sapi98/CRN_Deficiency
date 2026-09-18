@@ -56,7 +56,7 @@ class Ui_MainWindow(object):
 
         self.previewBadge = QLabel(self.header)
         self.previewBadge.setObjectName(u"previewBadge")
-        self.previewBadge.setWordWrap(True)
+        self.previewBadge.setWordWrap(False)
 
         self.headerLayout.addWidget(self.previewBadge)
 
@@ -367,12 +367,45 @@ class Ui_MainWindow(object):
 
         self.resultsLayout.addWidget(self.resultsHint)
 
-        self.resultReport = QPlainTextEdit(self.resultsCard)
+        self.analysisTabs = QTabWidget(self.resultsCard)
+        self.analysisTabs.setObjectName(u"analysisTabs")
+        self.analysisTabs.setMinimumSize(QSize(0, 600))
+        self.reportPage = QWidget()
+        self.reportPage.setObjectName(u"reportPage")
+        self.reportLayout = QVBoxLayout(self.reportPage)
+        self.reportLayout.setObjectName(u"reportLayout")
+        self.resultReport = QPlainTextEdit(self.reportPage)
         self.resultReport.setObjectName(u"resultReport")
         self.resultReport.setReadOnly(True)
         self.resultReport.setMinimumSize(QSize(0, 220))
 
-        self.resultsLayout.addWidget(self.resultReport)
+        self.reportLayout.addWidget(self.resultReport)
+
+        self.analysisTabs.addTab(self.reportPage, "")
+        self.reactionGraphPage = QWidget()
+        self.reactionGraphPage.setObjectName(u"reactionGraphPage")
+        self.reactionGraphLayout = QVBoxLayout(self.reactionGraphPage)
+        self.reactionGraphLayout.setObjectName(u"reactionGraphLayout")
+        self.reactionGraphHint = QLabel(self.reactionGraphPage)
+        self.reactionGraphHint.setObjectName(u"reactionGraphHint")
+        self.reactionGraphHint.setWordWrap(True)
+
+        self.reactionGraphLayout.addWidget(self.reactionGraphHint)
+
+        self.analysisTabs.addTab(self.reactionGraphPage, "")
+        self.linkageGraphPage = QWidget()
+        self.linkageGraphPage.setObjectName(u"linkageGraphPage")
+        self.linkageGraphLayout = QVBoxLayout(self.linkageGraphPage)
+        self.linkageGraphLayout.setObjectName(u"linkageGraphLayout")
+        self.linkageGraphHint = QLabel(self.linkageGraphPage)
+        self.linkageGraphHint.setObjectName(u"linkageGraphHint")
+        self.linkageGraphHint.setWordWrap(True)
+
+        self.linkageGraphLayout.addWidget(self.linkageGraphHint)
+
+        self.analysisTabs.addTab(self.linkageGraphPage, "")
+
+        self.resultsLayout.addWidget(self.analysisTabs)
 
 
         self.workspaceLayout.addWidget(self.resultsCard)
@@ -404,6 +437,7 @@ class Ui_MainWindow(object):
         self.clearButton.clicked.connect(self.modelEditor.clear)
 
         self.inputTabs.setCurrentIndex(1)
+        self.analysisTabs.setCurrentIndex(0)
 
 
         QMetaObject.connectSlotsByName(MainWindow)
@@ -454,7 +488,7 @@ class Ui_MainWindow(object):
         self.brandLabel.setText(QCoreApplication.translate("MainWindow", u"CRNTAnalysis", None))
         self.taglineLabel.setText(QCoreApplication.translate("MainWindow", u"Chemical Reaction Network Theory", None))
         self.taglineLabel.setProperty(u"role", QCoreApplication.translate("MainWindow", u"muted", None))
-        self.previewBadge.setText(QCoreApplication.translate("MainWindow", u"Desktop workspace", None))
+        self.previewBadge.setText(QCoreApplication.translate("MainWindow", u"Desktop App v1.0", None))
         self.titleLabel.setText(QCoreApplication.translate("MainWindow", u"Your model, ready to explore.", None))
         self.subtitleLabel.setText(QCoreApplication.translate("MainWindow", u"Paste a reaction network or upload a model file to get started.", None))
         self.inputHeading.setText(QCoreApplication.translate("MainWindow", u"01  /  Model input", None))
@@ -532,6 +566,11 @@ class Ui_MainWindow(object):
 #if QT_CONFIG(accessibility)
         self.resultReport.setAccessibleName(QCoreApplication.translate("MainWindow", u"Analysis report", None))
 #endif // QT_CONFIG(accessibility)
+        self.analysisTabs.setTabText(self.analysisTabs.indexOf(self.reportPage), QCoreApplication.translate("MainWindow", u"Analysis report", None))
+        self.reactionGraphHint.setText(QCoreApplication.translate("MainWindow", u"Analyze a model to see this graph.", None))
+        self.analysisTabs.setTabText(self.analysisTabs.indexOf(self.reactionGraphPage), QCoreApplication.translate("MainWindow", u"Reaction graph", None))
+        self.linkageGraphHint.setText(QCoreApplication.translate("MainWindow", u"Analyze a model to see this graph.", None))
+        self.analysisTabs.setTabText(self.analysisTabs.indexOf(self.linkageGraphPage), QCoreApplication.translate("MainWindow", u"Linkage graph", None))
         self.statusLabel.setText(QCoreApplication.translate("MainWindow", u"Ready \u2022 Paste text or select a model file.", None))
         self.statusLabel.setProperty(u"role", QCoreApplication.translate("MainWindow", u"muted", None))
     # retranslateUi
