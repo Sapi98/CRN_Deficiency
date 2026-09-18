@@ -25,11 +25,14 @@ The project is currently an alpha release (`0.1.0`).
 
 - Python 3.9 or newer
 - SymPy 1.13 or newer and below version 2
+- PySide6 6.5 or newer and below version 7 for the desktop GUI
 
 Pip installs SymPy automatically. Setuptools 61+ and wheel are declared as
 isolated build requirements in `pyproject.toml`. No NumPy, SciPy, or graph
 library is required for parsing and deficiency analysis. Optional visualization
-uses NetworkX and Matplotlib (which also installs NumPy).
+uses NetworkX and Matplotlib (which also installs NumPy). The root
+`requirements.txt` installs both backend and desktop GUI dependencies; installing
+the package with `pip install .` requires only the backend dependencies.
 
 ## Visualization
 
@@ -149,7 +152,7 @@ previous results. No report files are written automatically.
 From the repository root:
 
 ```bash
-python3 -m pip install -r GUI/requirements.txt
+python3 -m pip install -r requirements.txt
 python3 GUI/mainwindow.py
 ```
 
@@ -472,7 +475,7 @@ GUI/                       Desktop GUI and Qt Designer layout
 test_*.py                  Unit tests
 README.md                  User overview and usage guide
 requirements.txt           Runtime dependency list
-pyproject.toml             Build-system configuration
+pyproject.toml             Build-system and Qt project configuration
 setup.py                   Package metadata and console entry point
 ```
 

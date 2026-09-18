@@ -20,7 +20,7 @@ if HAS_QT:
 ROOT = Path(__file__).resolve().parent
 
 
-@unittest.skipUnless(HAS_QT, 'Install GUI/requirements.txt to test the desktop interface')
+@unittest.skipUnless(HAS_QT, 'Install requirements.txt to test the desktop interface')
 class DesktopAnalysisTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

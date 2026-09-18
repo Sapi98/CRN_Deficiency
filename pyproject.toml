@@ -1,3 +1,6 @@
 [build-system]
 requires = ["setuptools>=61", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.pyside6-project]
+files = ["GUI/mainwindow.py", "GUI/form.ui"]

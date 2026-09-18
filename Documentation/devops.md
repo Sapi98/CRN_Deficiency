@@ -48,8 +48,8 @@ CRN_Deficiency/
 ├── test_orchestrator.py                # Service, CLI, and report-writing unit tests
 ├── test_parser_utils.py                # Reaction parsing, policies, and graph unit tests
 ├── README.md                           # Project overview, installation, and user guide
-├── requirements.txt                    # Runtime dependency constraints
-├── pyproject.toml                      # PEP 517 build-system requirements
+├── requirements.txt                    # Backend and desktop GUI dependencies
+├── pyproject.toml                      # PEP 517 build and Qt project configuration
 ├── setup.py                            # Distribution metadata and console entry point
 └── .gitignore                          # Cache, build, environment, and output exclusions
 ```
@@ -1872,7 +1872,9 @@ generated directories such as `build/`, `dist/`, `*.egg-info/`, and
 
 ## Packaging
 
-`pyproject.toml` defines an isolated Setuptools build. `setup.py` supplies
+`pyproject.toml` defines an isolated Setuptools build and the PySide6 project
+files under `GUI/`. The root `requirements.txt` includes SymPy and PySide6 for
+running the complete desktop application. `setup.py` supplies
 package metadata, discovers `crntanalysis`, installs SymPy, requires Python
 3.9+, and registers:
 
