@@ -17,7 +17,7 @@ if HAS_QT:
     from GUI import mainwindow as gui
     from crntanalysis.orchestrator import CRNAnalysisService
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[1]
 
 
 @unittest.skipUnless(HAS_QT, 'Install requirements.txt to test the desktop interface')

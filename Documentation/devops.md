@@ -43,10 +43,13 @@ CRN_Deficiency/
 ├── Example_Data/
 │   ├── crn1.react                      # Example explicit reaction-network input
 │   └── crn2.ode                        # Example containing a non-mass-action ODE term
-├── test_deficiency_utils.py            # Deficiency and symbolic-rank unit tests
-├── test_ode_parser.py                  # ODE parsing and validation unit tests
-├── test_orchestrator.py                # Service, CLI, and report-writing unit tests
-├── test_parser_utils.py                # Reaction parsing, policies, and graph unit tests
+├── tests/
+│   ├── test_deficiency_utils.py        # Deficiency and symbolic-rank unit tests
+│   ├── test_gui.py                     # Desktop GUI integration tests
+│   ├── test_ode_parser.py              # ODE parsing and validation unit tests
+│   ├── test_orchestrator.py            # Service, CLI, and report-writing unit tests
+│   ├── test_parser_utils.py            # Reaction parsing, policies, and graph unit tests
+│   └── test_visualization.py           # Graph adapter and rendering unit tests
 ├── README.md                           # Project overview, installation, and user guide
 ├── requirements.txt                    # Backend and desktop GUI dependencies
 ├── pyproject.toml                      # PEP 517 build and Qt project configuration
@@ -1862,7 +1865,7 @@ framework.
 
 ```bash
 python3 -m pip install -e .
-python3 -m unittest -v
+python3 -m unittest discover -s tests -v
 python3 -m py_compile setup.py crntanalysis/*.py
 ```
 
