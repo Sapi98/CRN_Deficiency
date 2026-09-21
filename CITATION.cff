@@ -1,0 +1,21 @@
+cff-version: 1.2.0
+message: "If you use this software in your research, please cite it using the metadata below."
+title: "CRNTAnalysis: Chemical Reaction Network Theory Analysis"
+type: software
+authors:
+  - family-names: Biswas
+    given-names: Saptarshi
+version: 0.1.0
+license: PolyForm-Noncommercial-1.0.0
+repository-code: "https://github.com/Sapi98/CRN_Deficiency"
+url: "https://github.com/Sapi98/CRN_Deficiency"
+abstract: >-
+  A Python package for parsing chemical reaction networks, constructing their
+  complex graphs, and calculating standard Chemical Reaction Network Theory
+  deficiency.
+keywords:
+  - chemical reaction network theory
+  - deficiency theory
+  - computational chemistry
+  - systems biology
+  - Python
