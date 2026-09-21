@@ -491,7 +491,7 @@ crntanalysis/              Installable Python package
 Documentation/             Engineering and scientific documentation
 Example_Data/              Example reaction and ODE inputs
 GUI/                       Desktop GUI and Qt Designer layout
-test_*.py                  Unit tests
+tests/                     Unit and GUI integration tests
 README.md                  User overview and usage guide
 requirements.txt           Runtime dependency list
 pyproject.toml             Build-system and Qt project configuration
@@ -506,7 +506,7 @@ release workflow, see [Developer and operations guide](Documentation/devops.md).
 Run the complete test suite from the repository root:
 
 ```bash
-python3 -m unittest -v
+python3 -m unittest discover -s tests -v
 ```
 
 The tests cover reaction parsing, ODE parsing and validation, symbolic values,
