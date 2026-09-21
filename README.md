@@ -528,3 +528,13 @@ and report writing.
 
 - [Developer and operations guide](Documentation/devops.md)
 - [Scientific methods](Documentation/scientific_methods.md)
+
+## License
+
+This software is licensed under the
+[PolyForm Noncommercial License 1.0.0](LICENSE). It may be used, modified, and
+distributed for noncommercial purposes, including education and scientific
+research. Commercial use requires a separate written license; contact
+[Saptarshi Biswas](mailto:saptarshi.biswas9@gmail.com).
+
+Required Notice: Copyright 2026 Saptarshi Biswas
