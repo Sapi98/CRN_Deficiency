@@ -12,6 +12,7 @@ setup(
     name="crntanalysis",
     version="0.1.0",
     description="Parse chemical reaction networks and calculate CRNT deficiency",
+    license="PolyForm-Noncommercial-1.0.0",
     long_description=(PROJECT_ROOT / "README.md").read_text(encoding="utf-8"),
     long_description_content_type="text/markdown",
     packages=find_packages(include=["crntanalysis", "crntanalysis.*", "GUI", "GUI.*"]),
@@ -30,6 +31,7 @@ setup(
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Science/Research",
+        "License :: Other/Proprietary License",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3 :: Only",
         "Programming Language :: Python :: 3.9",
