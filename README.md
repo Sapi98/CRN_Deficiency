@@ -8,6 +8,70 @@ includes a command-line analysis pipeline that writes structured reports.
 
 The project is currently an alpha release (`0.1.0`).
 
+## Table of contents
+
+- [License](#license)
+- [Citation](#citation)
+- [Features](#features)
+- [Requirements](#requirements)
+- [Visualization](#visualization)
+- [Installation](#installation)
+  - [Standard installation](#standard-installation)
+  - [Using `venv`](#using-venv)
+  - [Using Conda](#using-conda)
+  - [Using pyenv](#using-pyenv)
+- [Desktop GUI](#desktop-gui)
+  - [Editing the interface](#editing-the-interface)
+- [Quick start](#quick-start)
+- [Input formats](#input-formats)
+- [Command-line usage](#command-line-usage)
+  - [Analyze reaction and ODE files](#analyze-reaction-and-ode-files)
+  - [Analyze raw text or piped input](#analyze-raw-text-or-piped-input)
+  - [Select how unresolved values are handled](#select-how-unresolved-values-are-handled)
+  - [Control console and analysis-file output](#control-console-and-analysis-file-output)
+  - [Generate reaction-network and linkage-graph figures](#generate-reaction-network-and-linkage-graph-figures)
+  - [Interactive input](#interactive-input)
+  - [Argument reference](#argument-reference)
+- [Output](#output)
+- [Project structure](#project-structure)
+- [Testing](#testing)
+- [Known limitations](#known-limitations)
+- [Detailed Documentation](#detailed-documentation)
+
+## License
+
+This software is licensed under the
+[PolyForm Noncommercial License 1.0.0](LICENSE). It may be used, modified, and
+distributed for noncommercial purposes, including education and scientific
+research. Commercial use requires a separate written license; contact
+[Saptarshi Biswas](mailto:saptarshi.biswas9@gmail.com).
+
+Required Notice: Copyright 2026 Saptarshi Biswas
+
+## Citation
+
+If you use CRNTAnalysis in your research, please cite the software. The
+repository also includes machine-readable citation metadata in
+[CITATION.cff](CITATION.cff).
+
+Plain text:
+
+> Biswas, Saptarshi (2026). *CRNTAnalysis: Chemical Reaction Network Theory
+> Analysis* (version 0.1.0) [Software].
+> https://github.com/Sapi98/CRN_Deficiency
+
+BibTeX:
+
+```bibtex
+@software{biswas2026crntanalysis,
+  author  = {Biswas, Saptarshi},
+  title   = {CRNTAnalysis: Chemical Reaction Network Theory Analysis},
+  year    = {2026},
+  version = {0.1.0},
+  url     = {https://github.com/Sapi98/CRN_Deficiency}
+}
+```
+
 ## Features
 
 - Parse `.react` files into indexed complexes and directed reactions.
@@ -528,13 +592,3 @@ and report writing.
 
 - [Developer and operations guide](Documentation/devops.md)
 - [Scientific methods](Documentation/scientific_methods.md)
-
-## License
-
-This software is licensed under the
-[PolyForm Noncommercial License 1.0.0](LICENSE). It may be used, modified, and
-distributed for noncommercial purposes, including education and scientific
-research. Commercial use requires a separate written license; contact
-[Saptarshi Biswas](mailto:saptarshi.biswas9@gmail.com).
-
-Required Notice: Copyright 2026 Saptarshi Biswas
