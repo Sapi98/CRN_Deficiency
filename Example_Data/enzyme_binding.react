@@ -1,0 +1,15 @@
+Reactions:
+E + S k_bind-> ES
+ES k_unbind-> E + S
+ES k_product-> E + P
+
+Rate Constants:
+k_bind = 1.0
+k_unbind = 0.25
+k_product = 0.5
+
+Initial Conditions:
+E = 1.0
+S = 5.0
+ES = 0.0
+P = 0.0

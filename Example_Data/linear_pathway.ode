@@ -1,0 +1,13 @@
+ODE Model:
+da/dt = -k1 * A
+db/dt = k1 * A - k2 * B
+dc/dt = k2 * B
+
+Coefficients:
+k1 = 0.8
+k2 = 0.3
+
+Initial Conditions:
+A = 1.0
+B = 0.0
+C = 0.0

@@ -1,0 +1,11 @@
+Reactions:
+A k_forward-> B
+B k_reverse-> A
+
+Rate Constants:
+k_forward = 1.2
+k_reverse = 0.4
+
+Initial Conditions:
+A = 2.0
+B = 0.0
