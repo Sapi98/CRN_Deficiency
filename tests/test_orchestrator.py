@@ -7,7 +7,12 @@ from pathlib import Path
 from unittest.mock import patch
 from importlib.util import find_spec
 
-from crntanalysis.orchestrator import AnalysisReportWriter, CRNAnalysisService, main
+from crntanalysis.orchestrator import (
+    AnalysisReportReader,
+    AnalysisReportWriter,
+    CRNAnalysisService,
+    main,
+)
 
 
 REACTION_TEXT = """Reactions:
@@ -18,6 +23,19 @@ k1 = 2
 
 
 class OrchestratorTests(unittest.TestCase):
+    def test_additional_bundled_examples_are_valid(self):
+        examples = [
+            "Example_Data/reversible_conversion.react",
+            "Example_Data/enzyme_binding.react",
+            "Example_Data/reversible_conversion.ode",
+            "Example_Data/linear_pathway.ode",
+        ]
+        for path in examples:
+            with self.subTest(path=path):
+                outcome = CRNAnalysisService().analyze_file(path)
+                self.assertGreater(len(outcome.network.reactions), 0)
+                self.assertGreater(outcome.deficiency.number_of_complexes, 0)
+
     def test_service_analyzes_text_without_console(self):
         outcome = CRNAnalysisService().analyze_text(REACTION_TEXT)
         self.assertEqual(outcome.input_format, "react")
@@ -35,6 +53,32 @@ class OrchestratorTests(unittest.TestCase):
             payload = json.loads(path.read_text(encoding="utf-8"))
             self.assertEqual(path.suffix, ".analysis")
             self.assertEqual(payload["deficiency"]["deficiency"], 0)
+
+    def test_writer_creates_plain_text_summary(self):
+        outcome = CRNAnalysisService().analyze_text(REACTION_TEXT)
+        with tempfile.TemporaryDirectory() as directory:
+            path = AnalysisReportWriter().write(outcome, directory, extension="txt")
+            self.assertEqual(path.suffix, ".txt")
+            self.assertIn("Chemical Reaction Network Deficiency Analysis", path.read_text())
+            self.assertIn("deficiency = 0", path.read_text())
+
+    def test_reader_restores_structured_report_for_visualization(self):
+        outcome = CRNAnalysisService().analyze_text(REACTION_TEXT)
+        with tempfile.TemporaryDirectory() as directory:
+            path = AnalysisReportWriter().write(outcome, directory, extension="output")
+            restored = AnalysisReportReader().read(path)
+            self.assertEqual(restored.to_dict(), outcome.to_dict())
+
+    def test_reader_rejects_plain_text_and_invalid_reports(self):
+        with tempfile.TemporaryDirectory() as directory:
+            text_path = Path(directory) / "report.txt"
+            text_path.write_text("summary")
+            with self.assertRaisesRegex(ValueError, "structured"):
+                AnalysisReportReader().read(text_path)
+            invalid_path = Path(directory) / "broken.analysis"
+            invalid_path.write_text("not json")
+            with self.assertRaisesRegex(ValueError, "Invalid analysis report"):
+                AnalysisReportReader().read(invalid_path)
 
     def test_cli_prints_and_writes_output_extension(self):
         with tempfile.TemporaryDirectory() as directory:

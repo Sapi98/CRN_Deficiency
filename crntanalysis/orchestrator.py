@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional, Sequence, Union
 
-from crntanalysis.crn_models import ReactionNetwork
+from crntanalysis.crn_models import Complex, Reaction, ReactionGraph, ReactionNetwork
 from crntanalysis.deficiency_utils import DeficiencyResult, calculate_deficiency
 from crntanalysis.ode_parser import ODEFileParser, ODEParseResult
 from crntanalysis.parser_utils import ParserError
@@ -22,6 +22,7 @@ from crntanalysis.reaction_parser import ReactionFileParser
 
 __all__ = [
     "AnalysisOutcome",
+    "AnalysisReportReader",
     "AnalysisReportWriter",
     "CRNAnalysisService",
     "ConsoleReportFormatter",
@@ -167,9 +168,9 @@ class ConsoleReportFormatter:
 
 
 class AnalysisReportWriter:
-    """Persist complete outcomes independently of any user interface."""
+    """Persist structured outcomes or plain-text summaries."""
 
-    supported_extensions = {"analysis", "output"}
+    supported_extensions = {"analysis", "output", "txt"}
 
     def write(
         self,
@@ -181,20 +182,78 @@ class AnalysisReportWriter:
     ) -> Path:
         normalized_extension = extension.lower().lstrip(".")
         if normalized_extension not in self.supported_extensions:
-            raise ValueError("extension must be 'analysis' or 'output'")
+            raise ValueError("extension must be 'txt', 'analysis', or 'output'")
         directory = Path(output_directory)
         directory.mkdir(parents=True, exist_ok=True)
         stem = filename or self._default_stem(outcome.source)
         target = directory / f"{Path(stem).stem}.{normalized_extension}"
-        target.write_text(
-            json.dumps(outcome.to_dict(), indent=2, sort_keys=False) + "\n",
-            encoding="utf-8",
+        content = (
+            ConsoleReportFormatter().format(outcome) + "\n"
+            if normalized_extension == "txt"
+            else json.dumps(outcome.to_dict(), indent=2, sort_keys=False) + "\n"
         )
+        target.write_text(content, encoding="utf-8")
         return target
 
     @staticmethod
     def _default_stem(source: Optional[str]) -> str:
         return f"{Path(source).stem}_analysis" if source else "network_analysis"
+
+
+class AnalysisReportReader:
+    """Restore a complete analysis outcome from a structured report."""
+
+    supported_extensions = {"analysis", "output"}
+
+    def read(self, path: Union[str, Path]) -> AnalysisOutcome:
+        report_path = Path(path)
+        if report_path.suffix.lower().lstrip(".") not in self.supported_extensions:
+            raise ValueError("Choose a structured .analysis or .output file")
+        try:
+            payload = json.loads(report_path.read_text(encoding="utf-8"))
+            input_data = payload["input"]
+            network_data = payload["network"]
+            complexes = [
+                Complex(
+                    index=item["index"],
+                    label=item["label"],
+                    species=dict(item["species"]),
+                )
+                for item in network_data["complexes"]
+            ]
+            reactions = [
+                Reaction(
+                    index=item["index"],
+                    source_complex=item["source_complex"],
+                    target_complex=item["target_complex"],
+                    rate_constant=item["rate_constant"],
+                    rate=item.get("rate"),
+                )
+                for item in network_data["reactions"]
+            ]
+            network = ReactionNetwork(
+                reactions=reactions,
+                complexes=complexes,
+                reaction_graph=ReactionGraph(complexes, reactions),
+                adjacency_matrix=network_data["adjacency_matrix"],
+                rate_constants=dict(network_data.get("rate_constants", {})),
+                stoichiometric_coefficients=dict(
+                    network_data.get("stoichiometric_coefficients", {})
+                ),
+                initial_conditions=dict(network_data.get("initial_conditions", {})),
+            )
+            input_format = input_data["format"]
+            if input_format not in CRNAnalysisService.supported_formats:
+                raise ValueError(f"Unsupported stored input format {input_format!r}")
+            return AnalysisOutcome(
+                input_format=input_format,
+                network=network,
+                deficiency=calculate_deficiency(network),
+                source=input_data.get("source"),
+                warnings=list(payload.get("warnings", [])),
+            )
+        except (KeyError, TypeError, json.JSONDecodeError) as error:
+            raise ValueError(f"Invalid analysis report: {error}") from error
 
 
 def _argument_parser() -> argparse.ArgumentParser:
@@ -233,12 +292,12 @@ def _argument_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--extension",
-        choices=["analysis", "output"],
+        choices=["analysis", "output", "txt"],
         default="analysis",
-        help="Structured JSON report extension",
+        help="Report extension; txt is a summary, analysis/output are structured JSON",
     )
     parser.add_argument(
-        "--no-file", action="store_true", help="Do not write the structured report"
+        "--no-file", action="store_true", help="Do not write a report file"
     )
     parser.add_argument(
         "--no-console", action="store_true", help="Do not print the analysis summary"
@@ -413,7 +472,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 filename=args.output_name,
                 extension=args.extension,
             )
-            print(f"Analysis file: {output_path}")
+            print(f"Report file: {output_path}")
         for graph_path in _write_visualizations(args, outcome):
             print(f"Graph file: {graph_path}")
         return 0
