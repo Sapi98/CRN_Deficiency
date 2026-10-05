@@ -15,7 +15,7 @@ if HAS_QT:
     from PySide6.QtTest import QTest
     from PySide6.QtWidgets import QApplication
     from GUI import mainwindow as gui
-    from crntanalysis.orchestrator import CRNAnalysisService
+    from crntanalysis.orchestrator import AnalysisReportWriter, CRNAnalysisService
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -27,6 +27,10 @@ class DesktopAnalysisTests(unittest.TestCase):
         cls.app = QApplication.instance() or QApplication([])
 
     def setUp(self):
+        self.question_patcher = patch.object(
+            gui.QMessageBox, 'question', return_value=gui.QMessageBox.No
+        )
+        self.question_patcher.start()
         self.window = gui.MainWindow()
         self.window.ui.inputTabs.setCurrentIndex(0)
 
@@ -40,6 +44,7 @@ class DesktopAnalysisTests(unittest.TestCase):
         self.wait_for_analysis()
         self.window.close()
         self.app.processEvents()
+        self.question_patcher.stop()
 
     def test_text_analysis_and_input_invalidation(self):
         ui = self.window.ui
@@ -105,6 +110,38 @@ class DesktopAnalysisTests(unittest.TestCase):
             self.wait_for_analysis()
             self.assertEqual(self.window.outcome.input_format, 'ode')
             self.assertEqual(self.window.outcome.deficiency.deficiency, 0)
+
+    def test_save_dialog_supports_default_name_and_plain_text(self):
+        outcome = CRNAnalysisService().analyze_text(
+            self.window.example_text(), input_format='react'
+        )
+        self.window.display_outcome(outcome)
+        with tempfile.TemporaryDirectory() as folder:
+            target = Path(folder) / 'summary'
+            with patch.object(
+                gui.QFileDialog,
+                'getSaveFileName',
+                return_value=(str(target), 'Plain-text summary (*.txt)'),
+            ), patch.object(gui.QMessageBox, 'information'):
+                self.window.save_result()
+            saved = target.with_suffix('.txt')
+            self.assertTrue(saved.exists())
+            self.assertIn('deficiency = 0', saved.read_text())
+
+    def test_open_structured_result_restores_report_and_graph_data(self):
+        outcome = CRNAnalysisService().analyze_text(
+            self.window.example_text(), input_format='react'
+        )
+        with tempfile.TemporaryDirectory() as folder:
+            path = AnalysisReportWriter().write(outcome, folder, extension='output')
+            with patch.object(
+                gui.QFileDialog, 'getOpenFileName', return_value=(str(path), '')
+            ):
+                self.window.open_result()
+        self.assertEqual(self.window.outcome.to_dict(), outcome.to_dict())
+        self.assertIn('deficiency = 0', self.window.ui.resultReport.toPlainText())
+        self.assertIs(self.window.graph_views[1].outcome, self.window.outcome)
+        self.assertTrue(self.window.ui.saveResultButton.isEnabled())
 
     def test_invalid_input_error_then_recovery(self):
         self.window.ui.modelEditor.setPlainText('not a valid model')
