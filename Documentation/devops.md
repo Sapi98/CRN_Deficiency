@@ -58,6 +58,9 @@ CRN_Deficiency/
 ├── requirements.txt                    # Backend and desktop GUI dependencies
 ├── pyproject.toml                      # PEP 517 build and Qt project configuration
 ├── setup.py                            # Distribution metadata and console entry point
+├── setup.sh                            # Automated macOS/Linux user setup
+├── setup.bat                           # Beginner-friendly Windows setup launcher
+├── setup.ps1                           # Windows environment and installation logic
 └── .gitignore                          # Cache, build, environment, and output exclusions
 ```
 

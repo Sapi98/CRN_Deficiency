@@ -16,6 +16,7 @@ The project is currently an alpha release (`0.1.0`).
 - [Requirements](#requirements)
 - [Visualization](#visualization)
 - [Installation](#installation)
+  - [Automated setup (recommended)](#automated-setup-recommended)
   - [Standard installation](#standard-installation)
   - [Using `venv`](#using-venv)
   - [Using Conda](#using-conda)
@@ -134,6 +135,45 @@ create axes with `matplotlib.pyplot.subplots()`, pass `ax=axes`, then call
 The linkage graph retains all reactions on each undirected connection.
 
 ## Installation
+
+### Automated setup (recommended)
+
+The setup scripts create an isolated environment, install CRNTAnalysis and all
+required packages, and then print the exact commands needed to activate the
+environment and start the application. They offer a choice between a standard
+Python virtual environment (recommended for most users) and Conda.
+
+**Before running a setup script, install one of the following:**
+
+- **Python 3.9 or newer** from [python.org](https://www.python.org/downloads/)
+  to use the recommended virtual-environment option. On Windows, enable
+  **Add Python to PATH** during installation.
+- **Miniconda or Anaconda** from the
+  [Conda installation guide](https://docs.conda.io/projects/conda/en/latest/user-guide/install/)
+  to use the Conda option.
+
+You only need Python or Conda, not both. The setup script checks the selected
+prerequisite and displays a helpful message if it cannot find it.
+
+On **macOS or Linux**, open Terminal in the project folder and run:
+
+```bash
+bash setup.sh
+```
+
+On **Windows**, double-click `setup.bat`, or open Command Prompt in the project
+folder and run:
+
+```bat
+setup.bat
+```
+
+Choose option `1` for the recommended `.venv` setup or option `2` for a Conda
+environment named `crntanalysis`.
+
+Advanced users can skip the question with `bash setup.sh --venv` or
+`bash setup.sh --conda` on macOS/Linux, and `setup.bat venv` or
+`setup.bat conda` on Windows. Existing environments are reused and updated.
 
 ### Standard installation
 
@@ -577,6 +617,8 @@ README.md                  User overview and usage guide
 requirements.txt           Runtime dependency list
 pyproject.toml             Build-system and Qt project configuration
 setup.py                   Package metadata and console entry point
+setup.sh                   Automated macOS/Linux environment setup
+setup.bat / setup.ps1      Automated Windows environment setup
 ```
 
 For module responsibilities, architecture, extension points, packaging, and
