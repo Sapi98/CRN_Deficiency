@@ -821,6 +821,46 @@ Y = 0.0
             </widget>
            </item>
            <item>
+            <layout class="QHBoxLayout" name="resultActionsLayout">
+             <item>
+              <spacer name="resultActionsSpacer">
+               <property name="orientation">
+                <enum>Qt::Orientation::Horizontal</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>40</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+             <item>
+              <widget class="QPushButton" name="openResultButton">
+               <property name="text">
+                <string>Open result…</string>
+               </property>
+               <property name="toolTip">
+                <string>Open a structured .analysis or .output file and restore its report and graphs.</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="saveResultButton">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="text">
+                <string>Save result…</string>
+               </property>
+               <property name="toolTip">
+                <string>Save the current result as plain text or a structured analysis/output file.</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item>
             <widget class="GlowTabWidget" name="analysisTabs">
              <property name="currentIndex">
               <number>0</number>

@@ -1,0 +1,11 @@
+ODE Model:
+da/dt = -k_forward * A + k_reverse * B
+db/dt = k_forward * A - k_reverse * B
+
+Coefficients:
+k_forward = 1.2
+k_reverse = 0.4
+
+Initial Conditions:
+A = 2.0
+B = 0.0

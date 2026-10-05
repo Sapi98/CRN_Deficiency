@@ -16,6 +16,7 @@ The project is currently an alpha release (`0.1.0`).
 - [Requirements](#requirements)
 - [Visualization](#visualization)
 - [Installation](#installation)
+  - [Automated setup (recommended)](#automated-setup-recommended)
   - [Standard installation](#standard-installation)
   - [Using `venv`](#using-venv)
   - [Using Conda](#using-conda)
@@ -83,7 +84,7 @@ BibTeX:
 - Calculate whole-network and per-linkage-class deficiency.
 - Calculate exact and generic symbolic stoichiometric ranks with SymPy.
 - Analyze files or raw text through a reusable service layer.
-- Print console summaries and write JSON `.analysis` or `.output` reports.
+- Print console summaries and write `.txt`, `.analysis`, or `.output` reports.
 
 ## Requirements
 
@@ -134,6 +135,45 @@ create axes with `matplotlib.pyplot.subplots()`, pass `ax=axes`, then call
 The linkage graph retains all reactions on each undirected connection.
 
 ## Installation
+
+### Automated setup (recommended)
+
+The setup scripts create an isolated environment, install CRNTAnalysis and all
+required packages, and then print the exact commands needed to activate the
+environment and start the application. They offer a choice between a standard
+Python virtual environment (recommended for most users) and Conda.
+
+**Before running a setup script, install one of the following:**
+
+- **Python 3.9 or newer** from [python.org](https://www.python.org/downloads/)
+  to use the recommended virtual-environment option. On Windows, enable
+  **Add Python to PATH** during installation.
+- **Miniconda or Anaconda** from the
+  [Conda installation guide](https://docs.conda.io/projects/conda/en/latest/user-guide/install/)
+  to use the Conda option.
+
+You only need Python or Conda, not both. The setup script checks the selected
+prerequisite and displays a helpful message if it cannot find it.
+
+On **macOS or Linux**, open Terminal in the project folder and run:
+
+```bash
+bash setup.sh
+```
+
+On **Windows**, double-click `setup.bat`, or open Command Prompt in the project
+folder and run:
+
+```bat
+setup.bat
+```
+
+Choose option `1` for the recommended `.venv` setup or option `2` for a Conda
+environment named `crntanalysis`.
+
+Advanced users can skip the question with `bash setup.sh --venv` or
+`bash setup.sh --conda` on macOS/Linux, and `setup.bat venv` or
+`setup.bat conda` on Windows. Existing environments are reused and updated.
 
 ### Standard installation
 
@@ -226,7 +266,11 @@ and PDF). Editing the input clears the previous graphs along with the report.
 
 Analysis runs in a background thread; input controls are disabled until it
 finishes. Errors appear in the results area, and changing the input clears the
-previous results. No report files are written automatically.
+previous results. After a successful analysis, the GUI asks whether to save the
+summary. The save dialog supplies a default filename and lets you choose the
+destination and `.txt`, `.analysis`, or `.output` format. Plain-text files hold
+the readable summary; the two structured formats preserve the complete network
+and can be reopened with **Open result…** to restore the report and graphs.
 
 From the repository root:
 
@@ -250,7 +294,8 @@ Keep the existing interactive widgets' object names when editing the design:
 `formatCombo`, `modelEditor`, `inputTabs`, `characterCount`, `exampleButton`,
 `clearButton`, `browseButton`, `removeButton`, `fileLabel`, `dropZone`, and
 `statusLabel`, `analyzeButton`, `resultsEmptyTitle`, `resultsMetrics`,
-`resultsHint`, `resultReport`, `analysisTabs`, `reactionGraphLayout`,
+`resultsHint`, `openResultButton`, `saveResultButton`, `resultReport`,
+`analysisTabs`, `reactionGraphLayout`,
 `linkageGraphLayout`, `reactionGraphHint`, and `linkageGraphHint`. Layout, text, size, color, and position changes
 need no Python edits. The graph pages’ **font → bold** property controls the
 rendered graph text weight, and the graph hint labels hold the interaction
@@ -343,6 +388,16 @@ See [Scientific methods](Documentation/scientific_methods.md) for the precise
 CRNT interpretation, ODE realization rules, adjacency semantics, and symbolic
 rank limitations.
 
+Additional valid examples are available in `Example_Data/`:
+
+- `reversible_conversion.react` — a reversible two-complex reaction.
+- `enzyme_binding.react` — reversible enzyme binding followed by product formation.
+- `reversible_conversion.ode` — a reversible conversion expressed as ODEs.
+- `linear_pathway.ode` — a three-species linear mass-action pathway.
+
+`crn2.ode` is intentionally invalid and demonstrates rejection of a model that
+cannot be represented as an ordinary mass-action reaction network.
+
 ## Command-line usage
 
 Installing the package creates the `crntanalysis` command. Display every
@@ -418,7 +473,8 @@ crntanalysis model.react --unresolved one
 
 ### Control console and analysis-file output
 
-Choose the output folder, basename, and `.analysis` or `.output` extension:
+Choose the output folder, basename, and `.txt`, `.analysis`, or `.output`
+extension:
 
 ```bash
 crntanalysis model.react \
@@ -427,8 +483,9 @@ crntanalysis model.react \
   --extension output
 ```
 
-Both extensions contain structured JSON. Use `--no-file` for console output
-only, or `--no-console` for a file-oriented batch run:
+The `.analysis` and `.output` extensions contain structured JSON; `.txt`
+contains the human-readable summary. Use `--no-file` for console output only,
+or `--no-console` for a file-oriented batch run:
 
 ```bash
 crntanalysis model.react --no-file
@@ -512,7 +569,7 @@ crntanalysis --format react --unresolved symbolic
 | `--unresolved {symbolic,error,one}` | Handle missing parameter values. | `symbolic` |
 | `--output-dir DIRECTORY` | Set the report and automatic-figure directory. | `output` |
 | `--output-name NAME` | Set the report and automatic-graph basename. | Source-derived |
-| `--extension {analysis,output}` | Select the JSON report extension. | `analysis` |
+| `--extension {analysis,output,txt}` | Select structured JSON or plain-text summary output. | `analysis` |
 | `--no-file` | Skip the structured analysis file. | File enabled |
 | `--no-console` | Skip the human-readable analysis summary. | Summary enabled |
 | `--reaction-graph [PATH]` | Generate a directed reaction graph. | Disabled |
@@ -539,9 +596,9 @@ AnalysisReportWriter().write(outcome, "output")
 ## Output
 
 `AnalysisOutcome` provides the parsed network, global and linkage-class
-deficiencies, source metadata, and parser warnings. Written reports use JSON so
-they can be loaded by a GUI or another program even when the filename ends in
-`.analysis` or `.output`.
+deficiencies, source metadata, and parser warnings. Structured `.analysis` and
+`.output` reports use JSON and can be reopened in the GUI. `.txt` reports store
+the same concise summary shown in the report pane but cannot restore graphs.
 
 Complex compositions are stored once and indexed. Reactions refer to source
 and target complex indices. An adjacency cell is `0` when no connection exists,
@@ -560,6 +617,8 @@ README.md                  User overview and usage guide
 requirements.txt           Runtime dependency list
 pyproject.toml             Build-system and Qt project configuration
 setup.py                   Package metadata and console entry point
+setup.sh                   Automated macOS/Linux environment setup
+setup.bat / setup.ps1      Automated Windows environment setup
 ```
 
 For module responsibilities, architecture, extension points, packaging, and

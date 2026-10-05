@@ -12,7 +12,12 @@ from PySide6.QtWidgets import QApplication, QFileDialog, QMainWindow, QMessageBo
 if __package__ in (None, ''):
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from crntanalysis.orchestrator import CRNAnalysisService, ConsoleReportFormatter
+from crntanalysis.orchestrator import (
+    AnalysisReportReader,
+    AnalysisReportWriter,
+    CRNAnalysisService,
+    ConsoleReportFormatter,
+)
 from GUI.graph_view import GraphView
 
 
@@ -135,6 +140,8 @@ class MainWindow(QMainWindow):
         self.ui.exampleButton.clicked.connect(self.load_example)
         self.ui.browseButton.clicked.connect(self.browse_file)
         self.ui.removeButton.clicked.connect(self.remove_file)
+        self.ui.openResultButton.clicked.connect(self.open_result)
+        self.ui.saveResultButton.clicked.connect(self.save_result)
         # Clear is already connected to modelEditor.clear() in form.ui.
         self.drop_handler = FileDropHandler(self.ui.dropZone)
         self.drop_handler.file_dropped.connect(self.select_file)
@@ -221,6 +228,8 @@ class MainWindow(QMainWindow):
         self.ui.analyzeButton.setText('Analyzing…' if busy else 'Analyze model  →')
         self.ui.inputTabs.setEnabled(not busy)
         self.ui.formatCombo.setEnabled(not busy)
+        self.ui.openResultButton.setEnabled(not busy)
+        self.ui.saveResultButton.setEnabled(self.outcome is not None and not busy)
         if busy:
             message = 'Analyzing your model…'
         elif self.error_message:
@@ -248,7 +257,12 @@ class MainWindow(QMainWindow):
         self.worker.start()
 
     def show_outcome(self, outcome):
+        self.display_outcome(outcome)
+        self.ask_to_save_result()
+
+    def display_outcome(self, outcome):
         self.outcome = outcome
+        self.error_message = None
         result = outcome.deficiency
         self.ui.resultsEmptyTitle.setText(f'Network deficiency: {result.deficiency}')
         self.ui.resultsMetrics.setText(
@@ -268,6 +282,79 @@ class MainWindow(QMainWindow):
         self.ui.analysisTabs.setTabEnabled(2, True)
         self.ui.analysisTabs.show()
         self.render_graph(self.ui.analysisTabs.currentIndex())
+        self.update_state()
+
+    def ask_to_save_result(self):
+        answer = QMessageBox.question(
+            self,
+            'Save analysis result?',
+            'Would you like to save the summary outcome to a file?',
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+        if answer == QMessageBox.Yes:
+            self.save_result()
+
+    def save_result(self):
+        if self.outcome is None:
+            return
+        default_stem = AnalysisReportWriter._default_stem(self.outcome.source)
+        suggested = str(Path.cwd() / f'{default_stem}.analysis')
+        filters = (
+            'Structured analysis (*.analysis);;'
+            'Structured output (*.output);;'
+            'Plain-text summary (*.txt)'
+        )
+        filename, selected_filter = QFileDialog.getSaveFileName(
+            self, 'Save analysis result', suggested, filters
+        )
+        if not filename:
+            return
+        path = Path(filename)
+        extension_by_filter = {
+            'Structured analysis (*.analysis)': 'analysis',
+            'Structured output (*.output)': 'output',
+            'Plain-text summary (*.txt)': 'txt',
+        }
+        extension = path.suffix.lower().lstrip('.')
+        if not extension:
+            extension = extension_by_filter.get(selected_filter, 'analysis')
+            path = path.with_suffix(f'.{extension}')
+        if extension not in AnalysisReportWriter.supported_extensions:
+            QMessageBox.warning(
+                self,
+                'Unsupported extension',
+                'Choose .txt, .analysis, or .output.',
+            )
+            return
+        try:
+            saved_path = AnalysisReportWriter().write(
+                self.outcome,
+                path.parent,
+                filename=path.stem,
+                extension=extension,
+            )
+        except OSError as error:
+            QMessageBox.warning(self, 'Could not save result', str(error))
+            return
+        QMessageBox.information(self, 'Result saved', f'Saved to:\n{saved_path}')
+
+    def open_result(self):
+        filename, _ = QFileDialog.getOpenFileName(
+            self,
+            'Open analysis result',
+            '',
+            'Structured results (*.analysis *.output)',
+        )
+        if not filename:
+            return
+        try:
+            outcome = AnalysisReportReader().read(filename)
+        except (OSError, ValueError) as error:
+            QMessageBox.warning(self, 'Could not open result', str(error))
+            return
+        self.ui.analysisTabs.setCurrentIndex(0)
+        self.display_outcome(outcome)
 
     def render_graph(self, index):
         view = self.graph_views.get(index)
