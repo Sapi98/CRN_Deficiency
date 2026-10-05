@@ -42,7 +42,11 @@ CRN_Deficiency/
 │   └── scientific_methods.md           # CRNT mathematics and scientific methodology
 ├── Example_Data/
 │   ├── crn1.react                      # Example explicit reaction-network input
-│   └── crn2.ode                        # Example containing a non-mass-action ODE term
+│   ├── crn2.ode                        # Example containing a non-mass-action ODE term
+│   ├── enzyme_binding.react            # Enzyme binding and product formation
+│   ├── linear_pathway.ode              # Three-species mass-action pathway
+│   ├── reversible_conversion.ode       # Reversible conversion ODE model
+│   └── reversible_conversion.react     # Reversible explicit reaction model
 ├── tests/
 │   ├── test_deficiency_utils.py        # Deficiency and symbolic-rank unit tests
 │   ├── test_gui.py                     # Desktop GUI integration tests
@@ -1486,7 +1490,7 @@ def write(
 | `outcome` | `AnalysisOutcome` | required | Result to serialize. |
 | `output_directory` | `str \| Path` | `"output"` | Destination directory. |
 | `filename` | `str \| None` | `None` | Optional stem; source-derived when absent. |
-| `extension` | `str` | `"analysis"` | `analysis` or `output`. |
+| `extension` | `str` | `"analysis"` | `analysis`, `output`, or plain-text `txt`. |
 
 ##### Returns
 
@@ -1496,7 +1500,7 @@ def write(
 
 - `ValueError`: Extension is unsupported.
 - `OSError`: The output directory or report file cannot be created or written.
-- `TypeError`: The outcome contains a value that cannot be serialized as JSON.
+- `TypeError`: A structured outcome contains a value that cannot be serialized as JSON.
 
 
 #### `AnalysisReportWriter._default_stem` — private
