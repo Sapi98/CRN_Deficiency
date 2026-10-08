@@ -1039,7 +1039,7 @@ def _parse_equation(
 
 ```python
 def _parse_term(
-    self, expression: str, affected: str, sign: int,
+    self, expression: Expr, affected: str, sign: int,
     species_names: Mapping[str, str], values: Mapping[str, float],
     line_number: int,
 ) -> ODETerm
@@ -1049,7 +1049,7 @@ def _parse_term(
 
 | Parameter | Type | Default | Description |
 |---|---|---:|---|
-| `expression` | `str` | required | Unsigned multiplicative term. |
+| `expression` | `Expr` | required | Expanded symbolic monomial, including its signed coefficient. |
 | `affected` | `str` | required | Derivative species. |
 | `sign` | `int` | required | `1` or `-1`. |
 | `species_names` | `Mapping[str, str]` | required | Canonical name map. |
@@ -1063,6 +1063,32 @@ def _parse_term(
 ##### Raises
 
 - `ODEParseError`: Factor, exponent, or rate structure is invalid.
+
+#### `ODEFileParser._expression` — private static method
+
+```python
+@staticmethod
+def _expression(text, species_names, line_number)
+```
+
+Construct symbolic arithmetic from a restricted AST without evaluating user
+code. Supports numbers, identifiers, parentheses, arithmetic, and powers.
+
+##### Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `text` | `str` | required | Arithmetic input; `^` is normalized to `**`. |
+| `species_names` | `Mapping[str, str]` | required | Canonical species names. |
+| `line_number` | `int` | required | Diagnostic source line. |
+
+##### Returns
+
+- `expression` (`Expr`): Symbolic arithmetic ready for expansion or substitution.
+
+##### Raises
+
+- `ODEParseError`: Invalid syntax, unsupported operations, or division by zero.
 
 
 #### `ODEFileParser._normalize_exponent` — private

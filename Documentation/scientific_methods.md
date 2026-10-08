@@ -200,6 +200,34 @@ linkage-class deficiencies.
 
 ## Symbolic coefficients
 
+### ODE expression normalization
+
+Before extracting monomials, the ODE parser constructs symbolic arithmetic
+through a restricted Python AST and expands products and parentheses. Function
+calls, attributes, and other executable Python syntax are rejected. Both `^`
+and `**` denote powers. Repeated species factors add their exponents.
+
+For example,
+
+$$
+x(1-x/K)=x-K^{-1}x^2
+$$
+
+has the same realization whether the quadratic factor is written as `x^2` or
+`x*x`. Its implicit positive coefficient is one. Parameter-only expressions
+such as `1/K` and `a*b` become effective rate labels and are evaluated when all
+their parameters are defined. Unresolved expressions retain symbolic labels;
+resolved effective rates must be finite and positive. Explicit integer
+multipliers attached to symbolic rates retain the existing stoichiometric
+contribution convention. Numeric-only terms use their magnitude as the rate.
+
+Species are identified from derivative left-hand sides. Include a zero
+derivative for unchanged species; other identifiers are parameters.
+Species-dependent denominators and negative or noninteger species exponents
+are rejected. Rational or generalized kinetics do not uniquely specify an
+ordinary polynomial mass-action network; an explicit kinetic representation
+or auxiliary-species construction is required for that extension.
+
 Missing rate constants do not affect structural deficiency and may remain
 symbolic.
 

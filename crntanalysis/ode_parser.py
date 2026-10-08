@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import ast
+import math
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Mapping, Optional, Tuple, Union
+from sympy import Expr, Pow, Rational, Symbol, expand
 
 from crntanalysis.crn_models import Reaction, ReactionNetwork, Scalar
 from crntanalysis.graph_utils import ComplexRegistry, ReactionGraphBuilder
@@ -100,9 +103,6 @@ class ODEFileParser(BaseFileParser[ODEParseResult]):
     """
 
     equation_pattern = re.compile(r"^\s*d([A-Za-z_]\w*)\s*/\s*dt\s*=\s*(.*?)\s*$", re.I)
-    signed_term_pattern = re.compile(r"([+-]?)\s*([^+-]+)")
-    factor_pattern = re.compile(r"^([A-Za-z_]\w*)(?:\s*\^\s*(\d+(?:\.\d*)?|[A-Za-z_]\w*))?$")
-    integer_pattern = re.compile(r"^\d+$")
     error_type = ODEParseError
 
     def __init__(
@@ -169,22 +169,50 @@ class ODEFileParser(BaseFileParser[ODEParseResult]):
     ) -> ODEEquation:
         affected = species_names[lhs.casefold()]
         terms = []
-        position = 0
-        for match in self.signed_term_pattern.finditer(rhs):
-            if rhs[position:match.start()].strip():
-                raise ODEParseError(f"Invalid expression on line {line_number}: {rhs!r}")
-            position = match.end()
-            sign = -1 if match.group(1) == "-" else 1
-            terms.append(
-                self._parse_term(match.group(2), affected, sign, species_names, values, line_number)
-            )
-        if not terms or rhs[position:].strip():
-            raise ODEParseError(f"Invalid expression on line {line_number}: {rhs!r}")
+        expression = expand(self._expression(rhs, species_names, line_number))
+        for term in expression.as_ordered_terms():
+            if term != 0:
+                terms.append(self._parse_term(
+                    term, affected, 1, species_names, values, line_number
+                ))
         return ODEEquation(affected, terms, source, line_number)
+
+    @staticmethod
+    def _expression(text, species_names, line_number):
+        """Parse arithmetic through a restricted AST, without evaluating user code."""
+        def convert(node):
+            if isinstance(node, ast.Name):
+                return Symbol(species_names.get(node.id.casefold(), node.id))
+            if isinstance(node, ast.Constant) and type(node.value) in (int, float):
+                if not math.isfinite(node.value):
+                    raise ValueError("Nonfinite number")
+                return Rational(str(node.value))
+            if isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.UAdd, ast.USub)):
+                value = convert(node.operand)
+                return -value if isinstance(node.op, ast.USub) else value
+            if isinstance(node, ast.BinOp):
+                left, right = convert(node.left), convert(node.right)
+                if isinstance(node.op, ast.Add):
+                    return left + right
+                if isinstance(node.op, ast.Sub):
+                    return left - right
+                if isinstance(node.op, ast.Mult):
+                    return left * right
+                if isinstance(node.op, ast.Div):
+                    if right == 0:
+                        raise ValueError("Division by zero")
+                    return left / right
+                if isinstance(node.op, ast.Pow):
+                    return Pow(left, right)
+            raise ValueError("Only numbers, identifiers, parentheses, +, -, *, / and powers are supported")
+        try:
+            return convert(ast.parse(text.replace("^", "**"), mode="eval").body)
+        except (SyntaxError, ValueError, TypeError) as error:
+            raise ODEParseError(f"Invalid expression on line {line_number}: {error}") from None
 
     def _parse_term(
         self,
-        expression: str,
+        expression: Expr,
         affected: str,
         sign: int,
         species_names: Mapping[str, str],
@@ -192,47 +220,44 @@ class ODEFileParser(BaseFileParser[ODEParseResult]):
         line_number: int,
     ) -> ODETerm:
         multiplier = 1
-        rate_names = []
         reactant: Dict[str, Scalar] = {}
         exponent_symbols = {}
-        for raw_factor in expression.split("*"):
-            factor = raw_factor.strip()
-            if self.integer_pattern.match(factor):
-                multiplier *= int(factor)
+        coefficient = expression
+        for canonical_species in species_names.values():
+            symbol = Symbol(canonical_species)
+            power = expression.as_powers_dict().get(symbol, 0)
+            if not power:
                 continue
-            match = self.factor_pattern.match(factor)
-            if not match:
-                raise ODEParseError(f"Invalid factor {factor!r} on line {line_number}")
-            name, exponent_token = match.groups()
-            canonical_species = species_names.get(name.casefold())
-            if canonical_species is None:
-                if exponent_token is not None:
-                    raise ODEParseError(
-                        f"Unknown species {name!r} with an exponent on line {line_number}"
-                    )
-                rate_names.append(name)
-                continue
-            exponent: Scalar = 1
-            if exponent_token:
+            coefficient /= symbol ** power
+            if power.is_number:
+                exponent = float(power)
+            elif isinstance(power, Symbol):
+                exponent_symbols[canonical_species] = str(power)
                 try:
-                    exponent = float(exponent_token)
-                except ValueError:
-                    exponent_symbols[canonical_species] = exponent_token
-                    try:
-                        exponent = self.policy.coefficient(exponent_token, values)
-                    except UnresolvedValueError as error:
-                        raise ODEParseError(f"{error} on line {line_number}") from None
+                    exponent = self.policy.coefficient(str(power), values)
+                except UnresolvedValueError as error:
+                    raise ODEParseError(f"{error} on line {line_number}") from None
+            else:
+                raise ODEParseError(f"Unsupported symbolic exponent {power} on line {line_number}")
             exponent = self._normalize_exponent(exponent, line_number)
             if exponent != 0:
                 reactant[canonical_species] = exponent
-
-        if len(rate_names) != 1:
+        if coefficient.free_symbols & {Symbol(name) for name in species_names.values()}:
             raise ODEParseError(
-                f"Expected exactly one rate constant in {expression!r} on line {line_number}; "
-                f"found {len(rate_names)}"
+                f"Species-dependent denominator or non-polynomial kinetics on line {line_number}: "
+                f"{expression}. Ordinary mass-action realization requires polynomial species monomials; "
+                "rational kinetics requires an explicit kinetic model or auxiliary-species realization."
             )
+        numeric, symbolic = coefficient.as_coeff_Mul()
+        if numeric < 0:
+            sign = -sign
+            coefficient = -coefficient
+            numeric = -numeric
+        if symbolic != 1 and numeric.is_Integer:
+            multiplier = int(numeric)
+            coefficient = symbolic
         return ODETerm(
-            affected, sign, multiplier, rate_names[0], reactant, exponent_symbols, line_number
+            affected, sign, multiplier, str(coefficient), reactant, exponent_symbols, line_number
         )
 
     @staticmethod
@@ -262,21 +287,38 @@ class ODEFileParser(BaseFileParser[ODEParseResult]):
                     + term.sign * term.multiplier
                 )
                 contribution.line_numbers.append(term.line_number)
-                used_rates.add(term.rate_constant)
+                used_rates.update(str(symbol) for symbol in self._expression(
+                    term.rate_constant, {}, term.line_number
+                ).free_symbols)
                 used_exponents.update(term.exponent_symbols.values())
 
         registry = ComplexRegistry()
         reactions = []
-        for index, contribution in enumerate(grouped.values()):
+        for contribution in grouped.values():
+            if not any(contribution.delta.values()):
+                continue
             products = self._products(contribution)
             try:
-                rate = self.policy.rate(contribution.rate_constant, values)
+                rate_expression = self._expression(
+                    contribution.rate_constant, {}, min(contribution.line_numbers)
+                )
+                substitutions = {}
+                for symbol in rate_expression.free_symbols:
+                    value = self.policy.rate(str(symbol), values)
+                    if value is not None:
+                        substitutions[symbol] = value
+                resolved = rate_expression.subs(substitutions)
+                rate = None if resolved.free_symbols else float(resolved)
+                if rate is not None and (not math.isfinite(rate) or rate <= 0):
+                    raise UnresolvedValueError(
+                        f"Effective rate {contribution.rate_constant!r} must be finite and positive"
+                    )
             except UnresolvedValueError as error:
                 line = min(contribution.line_numbers)
                 raise ODEParseError(f"{error} on line {line}") from None
             reactions.append(
                 Reaction(
-                    index=index,
+                    index=len(reactions),
                     source_complex=registry.register(contribution.reactant),
                     target_complex=registry.register(products),
                     rate_constant=contribution.rate_constant,

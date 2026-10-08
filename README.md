@@ -376,6 +376,20 @@ Coefficients:
 k1 = 0.5
 ```
 
+The ODE parser expands parentheses and combines repeated species factors.
+For example, `x*(1-x/K)`, `x-(1/K)*x^2`, and `x-(1/K)*x*x` give the same
+canonical realization: `x -> 2 x` at rate `1` and `2 x -> x` at rate `1/K`.
+Numeric coefficients and species-independent parameter expressions are valid
+effective rates. Define `K` in the `Coefficients` section to resolve `1/K`;
+otherwise it remains symbolic under the default policy. Every species must
+have a derivative equation; use `dy/dt = 0` for an unchanged species.
+
+Species-dependent denominators such as `x*y/(1+x+a*z)` and noninteger species
+powers such as `y^1.4` are outside ordinary polynomial mass-action kinetics.
+They require an explicit generalized kinetic model or an auxiliary-species
+realization before structural CRNT deficiency can be assigned. The parser
+reports an error rather than constructing a misleading reaction graph.
+
 Unspecified values remain symbolic by default. Alternative policies are:
 
 ```python
