@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'form.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.11.2
+## Created by: Qt User Interface Compiler version 6.12.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -369,6 +369,26 @@ class Ui_MainWindow(object):
 
         self.resultsLayout.addWidget(self.resultsHint)
 
+        self.resultActionsLayout = QHBoxLayout()
+        self.resultActionsLayout.setObjectName(u"resultActionsLayout")
+        self.resultActionsSpacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.resultActionsLayout.addItem(self.resultActionsSpacer)
+
+        self.openResultButton = QPushButton(self.resultsCard)
+        self.openResultButton.setObjectName(u"openResultButton")
+
+        self.resultActionsLayout.addWidget(self.openResultButton)
+
+        self.saveResultButton = QPushButton(self.resultsCard)
+        self.saveResultButton.setObjectName(u"saveResultButton")
+        self.saveResultButton.setEnabled(False)
+
+        self.resultActionsLayout.addWidget(self.saveResultButton)
+
+
+        self.resultsLayout.addLayout(self.resultActionsLayout)
+
         self.analysisTabs = GlowTabWidget(self.resultsCard)
         self.analysisTabs.setObjectName(u"analysisTabs")
         self.analysisTabs.setMinimumSize(QSize(0, 600))
@@ -575,6 +595,14 @@ class Ui_MainWindow(object):
         self.resultsMetrics.setProperty(u"role", QCoreApplication.translate("MainWindow", u"muted", None))
         self.resultsHint.setText(QCoreApplication.translate("MainWindow", u"Select an input and click Analyze model.", None))
         self.resultsHint.setProperty(u"role", QCoreApplication.translate("MainWindow", u"muted", None))
+        self.openResultButton.setText(QCoreApplication.translate("MainWindow", u"Open result\u2026", None))
+#if QT_CONFIG(tooltip)
+        self.openResultButton.setToolTip(QCoreApplication.translate("MainWindow", u"Open a structured .analysis or .output file and restore its report and graphs.", None))
+#endif // QT_CONFIG(tooltip)
+        self.saveResultButton.setText(QCoreApplication.translate("MainWindow", u"Save result\u2026", None))
+#if QT_CONFIG(tooltip)
+        self.saveResultButton.setToolTip(QCoreApplication.translate("MainWindow", u"Save the current result as plain text or a structured analysis/output file.", None))
+#endif // QT_CONFIG(tooltip)
 #if QT_CONFIG(accessibility)
         self.resultReport.setAccessibleName(QCoreApplication.translate("MainWindow", u"Analysis report", None))
 #endif // QT_CONFIG(accessibility)
