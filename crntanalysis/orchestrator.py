@@ -65,6 +65,8 @@ class CRNAnalysisService:
         *,
         input_format: str = "auto",
         unresolved: str = "symbolic",
+        allow_fractional: bool = False,
+        lift_rational: bool = False,
     ) -> AnalysisOutcome:
         input_path = Path(path)
         resolved_format = self._resolve_format(input_format, path=input_path)
@@ -74,6 +76,8 @@ class CRNAnalysisService:
             input_format=resolved_format,
             unresolved=unresolved,
             source=str(input_path),
+            allow_fractional=allow_fractional,
+            lift_rational=lift_rational,
         )
 
     def analyze_text(
@@ -83,13 +87,21 @@ class CRNAnalysisService:
         input_format: str = "auto",
         unresolved: str = "symbolic",
         source: Optional[str] = None,
+        allow_fractional: bool = False,
+        lift_rational: bool = False,
     ) -> AnalysisOutcome:
         resolved_format = self._resolve_format(input_format, text=text)
         warnings: List[str] = []
         if resolved_format == "react":
+            if lift_rational:
+                raise InputFormatError("Reciprocal lifting applies to ODE input only")
             network = ReactionFileParser(unresolved).parse_text(text)
+            if network.analysis_metadata.get("kinetics") == "user_declared":
+                warnings.append("Deficiency describes the declared stoichiometric network; supplied kinetic orders or rate laws do not assert classical mass-action theorem assumptions")
         else:
-            ode_result: ODEParseResult = ODEFileParser(unresolved).parse_text(text)
+            ode_result: ODEParseResult = ODEFileParser(
+                unresolved, allow_fractional=allow_fractional, lift_rational=lift_rational
+            ).parse_text(text)
             network = ode_result.network
             warnings.extend(ode_result.warnings)
         deficiency = calculate_deficiency(network)
@@ -228,6 +240,8 @@ class AnalysisReportReader:
                     target_complex=item["target_complex"],
                     rate_constant=item["rate_constant"],
                     rate=item.get("rate"),
+                    kinetic_orders=item.get("kinetic_orders"),
+                    rate_expression=item.get("rate_expression"),
                 )
                 for item in network_data["reactions"]
             ]
@@ -241,6 +255,7 @@ class AnalysisReportReader:
                     network_data.get("stoichiometric_coefficients", {})
                 ),
                 initial_conditions=dict(network_data.get("initial_conditions", {})),
+                analysis_metadata=dict(network_data.get("analysis_metadata", {})),
             )
             input_format = input_data["format"]
             if input_format not in CRNAnalysisService.supported_formats:
@@ -287,6 +302,10 @@ def _argument_parser() -> argparse.ArgumentParser:
         help="How to handle missing rate constants and stoichiometric coefficients",
     )
     parser.add_argument("--output-dir", default="output", help="Report/figure directory")
+    parser.add_argument("--allow-fractional", action="store_true",
+                        help="Allow nonnegative real ODE powers as source-complex coefficients")
+    parser.add_argument("--lift-rational", action="store_true",
+                        help="Introduce reciprocal auxiliary species and chain-rule ODEs")
     parser.add_argument(
         "--output-name", help="Report and automatic-graph filename prefix"
     )
@@ -433,15 +452,17 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     """Console entry point; returns a process exit code for easy testing."""
     args = _argument_parser().parse_args(argv)
     service = CRNAnalysisService()
+    analysis_options = dict(input_format=args.format, unresolved=args.unresolved,
+                            allow_fractional=args.allow_fractional, lift_rational=args.lift_rational)
     try:
         input_file = args.input_file_option or args.input_file
         if input_file:
             outcome = service.analyze_file(
-                input_file, input_format=args.format, unresolved=args.unresolved
+                input_file, **analysis_options
             )
         elif args.text is not None:
             outcome = service.analyze_text(
-                args.text, input_format=args.format, unresolved=args.unresolved
+                args.text, **analysis_options
             )
         elif args.stdin:
             text = sys.stdin.read()
@@ -449,18 +470,17 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 raise InputFormatError("No input was provided on standard input")
             outcome = service.analyze_text(
                 text,
-                input_format=args.format,
-                unresolved=args.unresolved,
+                **analysis_options,
             )
         else:
             source_type, source = _interactive_input()
             if source_type == "file":
                 outcome = service.analyze_file(
-                    source, input_format=args.format, unresolved=args.unresolved
+                    source, **analysis_options
                 )
             else:
                 outcome = service.analyze_text(
-                    source, input_format=args.format, unresolved=args.unresolved
+                    source, **analysis_options
                 )
 
         if not args.no_console:

@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-import ast
 import math
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Mapping, Optional, Tuple, Union
-from sympy import Expr, Pow, Rational, Symbol, expand
+from sympy import Expr, Rational, Symbol, expand
+from crntanalysis.ode_transformations import ReciprocalODETransformer
 
 from crntanalysis.crn_models import Reaction, ReactionNetwork, Scalar
 from crntanalysis.graph_utils import ComplexRegistry, ReactionGraphBuilder
@@ -16,7 +16,7 @@ from crntanalysis.parser_policies import (
     UnresolvedValueError,
     UnresolvedValuePolicy,
 )
-from crntanalysis.parser_utils import AssignmentParser, BaseFileParser, ParserError, SectionParser
+from crntanalysis.parser_utils import ArithmeticExpressionParser, AssignmentParser, BaseFileParser, ParserError, SectionParser
 
 __all__ = [
     "ODEEquation",
@@ -113,6 +113,8 @@ class ODEFileParser(BaseFileParser[ODEParseResult]):
         section_parser: Optional[SectionParser] = None,
         assignment_parser: Optional[AssignmentParser] = None,
         graph_builder: Optional[ReactionGraphBuilder] = None,
+        allow_fractional: bool = False,
+        lift_rational: bool = False,
     ) -> None:
         super().__init__(
             unresolved,
@@ -121,6 +123,8 @@ class ODEFileParser(BaseFileParser[ODEParseResult]):
             assignment_parser=assignment_parser,
             graph_builder=graph_builder,
         )
+        self.allow_fractional = allow_fractional
+        self.lift_rational = lift_rational
 
     def parse_text(self, text: str) -> ODEParseResult:
         sections = self.parse_sections(text)
@@ -128,16 +132,73 @@ class ODEFileParser(BaseFileParser[ODEParseResult]):
         if not rows:
             raise ODEParseError("No equations were found in the ODE Model section")
         values = self.parse_assignments(sections, "coefficients", "Coefficients")
+        initial_conditions = self.parse_assignments(sections, "initial conditions", "Initial Conditions")
+        if any(not math.isfinite(value) for value in values.values()):
+            raise ODEParseError("ODE parameters must be finite")
+        if any(not math.isfinite(value) or value < 0 for value in initial_conditions.values()):
+            raise ODEParseError("Initial concentrations must be finite and nonnegative")
 
         equation_specs = [self._split_equation(number, line) for number, line in rows]
         species_names = self._species_names(equation_specs)
+        if len(species_names) != len(equation_specs):
+            raise ODEParseError("Each species must have exactly one derivative equation")
+        if set(values) & set(species_names.values()):
+            raise ODEParseError("A species cannot also be declared as a constant parameter")
+        initial_conditions = {species_names.get(name.casefold(), name): value for name, value in initial_conditions.items()}
+        originals = {species_names[lhs.casefold()]: self._expression(rhs, species_names, number, values)
+                     for number, _, lhs, rhs in equation_specs}
+        auxiliary_records, lift_warnings = [], []
+        transformed = originals
+        auxiliary_rows = sections.get("auxiliary species", [])
+        if auxiliary_rows and not self.lift_rational:
+            raise ODEParseError("Auxiliary Species definitions require lift_rational=True or --lift-rational")
+        if self.lift_rational:
+            definitions = {}
+            for number, row in auxiliary_rows:
+                match = re.fullmatch(r"\s*([A-Za-z_]\w*)\s*=\s*(.+)", row)
+                if not match or match.group(1) in definitions:
+                    raise ODEParseError(f"Invalid or duplicate auxiliary definition on line {number}")
+                definitions[match.group(1)] = self._expression(match.group(2), species_names, number, values)
+            try:
+                lifted = ReciprocalODETransformer().lift(originals, values, initial_conditions, definitions)
+            except ValueError as error:
+                raise ODEParseError(str(error)) from None
+            transformed = lifted.equations
+            initial_conditions = lifted.initial_conditions
+            auxiliary_records, lift_warnings = lifted.auxiliaries, lifted.warnings
+            for record in auxiliary_records:
+                name = record["species"]
+                species_names[name.casefold()] = name
+            equation_specs = [(number, source, lhs, str(transformed[species_names[lhs.casefold()]]))
+                              for number, source, lhs, _ in equation_specs]
+            equation_specs.extend((rows[0][0], f"d{record['species']}/dt = {record['derivative']}",
+                                   record["species"], record["derivative"]) for record in auxiliary_records)
         equations = [
             self._parse_equation(number, source, lhs, rhs, species_names, values)
             for number, source, lhs, rhs in equation_specs
         ]
         network, used_rates, used_exponents = self._build_network(equations, values)
+        for record in auxiliary_records:
+            parameter_symbols = self._expression(record["definition"], {}, 1).free_symbols - {Symbol(name) for name in originals}
+            used_rates.update(str(symbol) for symbol in parameter_symbols)
+        network.rate_constants.update({name: values[name] for name in used_rates if name in values})
+        network.initial_conditions.update(initial_conditions)
+        network.analysis_metadata.update({
+            "realization": "canonical_real_complex" if self.allow_fractional else "canonical_mass_action",
+            "allow_fractional": self.allow_fractional,
+            "parameters_constant": True,
+            "original_equations": {name: str(rhs) for name, rhs in originals.items()},
+            "transformed_equations": {name: str(rhs) for name, rhs in transformed.items()},
+            "auxiliary_species": auxiliary_records,
+            "deficiency_scope": "augmented_realization" if auxiliary_records else "chosen_realization",
+        })
         unused = sorted(set(values) - used_rates - used_exponents)
         warnings = [f"Coefficient {name!r} is defined but not used" for name in unused]
+        warnings.extend(lift_warnings)
+        if self.allow_fractional:
+            warnings.append("Real-complex realization enabled: kinetic powers are used as source-complex coefficients; classical integer mass-action theorem assumptions are not asserted")
+        if auxiliary_records:
+            warnings.append("Deficiency describes the augmented network; original dynamics are recovered only on the recorded reciprocal constraints with admissible initial conditions")
         return ODEParseResult(equations, network, warnings)
 
     def _split_equation(self, line_number: int, line: str):
@@ -169,7 +230,7 @@ class ODEFileParser(BaseFileParser[ODEParseResult]):
     ) -> ODEEquation:
         affected = species_names[lhs.casefold()]
         terms = []
-        expression = expand(self._expression(rhs, species_names, line_number))
+        expression = expand(self._expression(rhs, species_names, line_number, values))
         for term in expression.as_ordered_terms():
             if term != 0:
                 terms.append(self._parse_term(
@@ -178,37 +239,12 @@ class ODEFileParser(BaseFileParser[ODEParseResult]):
         return ODEEquation(affected, terms, source, line_number)
 
     @staticmethod
-    def _expression(text, species_names, line_number):
+    def _expression(text, species_names, line_number, parameter_names=()):
         """Parse arithmetic through a restricted AST, without evaluating user code."""
-        def convert(node):
-            if isinstance(node, ast.Name):
-                return Symbol(species_names.get(node.id.casefold(), node.id))
-            if isinstance(node, ast.Constant) and type(node.value) in (int, float):
-                if not math.isfinite(node.value):
-                    raise ValueError("Nonfinite number")
-                return Rational(str(node.value))
-            if isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.UAdd, ast.USub)):
-                value = convert(node.operand)
-                return -value if isinstance(node.op, ast.USub) else value
-            if isinstance(node, ast.BinOp):
-                left, right = convert(node.left), convert(node.right)
-                if isinstance(node.op, ast.Add):
-                    return left + right
-                if isinstance(node.op, ast.Sub):
-                    return left - right
-                if isinstance(node.op, ast.Mult):
-                    return left * right
-                if isinstance(node.op, ast.Div):
-                    if right == 0:
-                        raise ValueError("Division by zero")
-                    return left / right
-                if isinstance(node.op, ast.Pow):
-                    return Pow(left, right)
-            raise ValueError("Only numbers, identifiers, parentheses, +, -, *, / and powers are supported")
         try:
-            return convert(ast.parse(text.replace("^", "**"), mode="eval").body)
-        except (SyntaxError, ValueError, TypeError) as error:
-            raise ODEParseError(f"Invalid expression on line {line_number}: {error}") from None
+            return ArithmeticExpressionParser.parse(text, species_names, line_number, parameter_names)
+        except ParserError as error:
+            raise ODEParseError(str(error)) from None
 
     def _parse_term(
         self,
@@ -260,15 +296,16 @@ class ODEFileParser(BaseFileParser[ODEParseResult]):
             affected, sign, multiplier, str(coefficient), reactant, exponent_symbols, line_number
         )
 
-    @staticmethod
-    def _normalize_exponent(exponent: Scalar, line_number: int) -> Scalar:
+    def _normalize_exponent(self, exponent: Scalar, line_number: int) -> Scalar:
         if isinstance(exponent, str):
             return exponent
-        if exponent < 0 or not float(exponent).is_integer():
+        if not math.isfinite(exponent) or exponent < 0:
+            raise ODEParseError(f"Species exponents must be finite and nonnegative on line {line_number}")
+        if not float(exponent).is_integer() and not self.allow_fractional:
             raise ODEParseError(
-                f"Mass-action exponents must be nonnegative integers on line {line_number}"
+                f"Mass-action exponents must be nonnegative integers on line {line_number}; enable allow_fractional=True or --allow-fractional for a real-complex realization"
             )
-        return int(exponent)
+        return int(exponent) if float(exponent).is_integer() else float(exponent)
 
     def _build_network(self, equations: List[ODEEquation], values: Mapping[str, float]):
         grouped: Dict[tuple, _ReactionContribution] = {}
@@ -304,11 +341,14 @@ class ODEFileParser(BaseFileParser[ODEParseResult]):
                 )
                 substitutions = {}
                 for symbol in rate_expression.free_symbols:
-                    value = self.policy.rate(str(symbol), values)
-                    if value is not None:
+                    value = self.policy.coefficient(str(symbol), values)
+                    if not isinstance(value, str):
                         substitutions[symbol] = value
                 resolved = rate_expression.subs(substitutions)
-                rate = None if resolved.free_symbols else float(resolved)
+                try:
+                    rate = None if resolved.free_symbols else float(resolved)
+                except (TypeError, ValueError, OverflowError):
+                    raise UnresolvedValueError(f"Effective rate {contribution.rate_constant!r} is undefined or non-real") from None
                 if rate is not None and (not math.isfinite(rate) or rate <= 0):
                     raise UnresolvedValueError(
                         f"Effective rate {contribution.rate_constant!r} must be finite and positive"
@@ -323,6 +363,7 @@ class ODEFileParser(BaseFileParser[ODEParseResult]):
                     target_complex=registry.register(products),
                     rate_constant=contribution.rate_constant,
                     rate=rate,
+                    rate_expression=str(rate_expression * self._kinetic_monomial(contribution.reactant)),
                 )
             )
 
@@ -338,6 +379,13 @@ class ODEFileParser(BaseFileParser[ODEParseResult]):
             {},
         )
         return network, used_rates, used_exponents
+
+    @staticmethod
+    def _kinetic_monomial(reactant):
+        result = Rational(1)
+        for name, power in reactant.items():
+            result *= Symbol(name) ** (Symbol(power) if isinstance(power, str) else Rational(str(power)))
+        return result
 
     @staticmethod
     def _monomial_key(reactant: Mapping[str, Scalar]) -> tuple:
@@ -356,7 +404,9 @@ class ODEFileParser(BaseFileParser[ODEParseResult]):
                         f"{reactant_value!r} for species {species!r} on lines {lines}"
                     )
                 continue
-            product_value = reactant_value + change
+            product_value = float(Rational(str(reactant_value)) + change)
+            if product_value.is_integer():
+                product_value = int(product_value)
             if product_value < 0:
                 lines = sorted(set(contribution.line_numbers))
                 raise ODEParseError(
@@ -371,9 +421,9 @@ class ODEFileParser(BaseFileParser[ODEParseResult]):
         return products
 
 
-def parse_ode_text(text: str, unresolved: str = "symbolic") -> dict:
-    return ODEFileParser(unresolved).parse_text(text).to_dict()
+def parse_ode_text(text: str, unresolved: str = "symbolic", *, allow_fractional=False, lift_rational=False) -> dict:
+    return ODEFileParser(unresolved, allow_fractional=allow_fractional, lift_rational=lift_rational).parse_text(text).to_dict()
 
 
-def parse_ode_file(path: Union[str, Path], unresolved: str = "symbolic") -> dict:
-    return ODEFileParser(unresolved).parse_file(path).to_dict()
+def parse_ode_file(path: Union[str, Path], unresolved: str = "symbolic", *, allow_fractional=False, lift_rational=False) -> dict:
+    return ODEFileParser(unresolved, allow_fractional=allow_fractional, lift_rational=lift_rational).parse_file(path).to_dict()

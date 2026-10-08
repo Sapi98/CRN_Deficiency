@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import ast
+import math
 import re
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Dict, Generic, Iterable, List, Optional, Tuple, Type, TypeVar, Union
+from sympy import Pow, Rational, Symbol
 
 from crntanalysis.graph_utils import ReactionGraphBuilder
 from crntanalysis.parser_policies import UnresolvedValuePolicy, UnresolvedValuePolicyFactory
@@ -18,6 +21,47 @@ Sections = Dict[str, List[SectionRow]]
 
 class ParserError(ValueError):
     """Base error for malformed CRN input documents."""
+
+
+class ArithmeticExpressionParser:
+    """Build symbolic arithmetic from whitelisted AST nodes; never evaluate code."""
+
+    @staticmethod
+    def parse(text, species_names=None, line_number=1, parameter_names=()):
+        species_names = species_names or {}
+
+        def convert(node):
+            if isinstance(node, ast.Name):
+                if node.id in parameter_names:
+                    return Symbol(node.id)
+                return Symbol(species_names.get(node.id.casefold(), node.id))
+            if isinstance(node, ast.Constant) and type(node.value) in (int, float):
+                if not math.isfinite(node.value):
+                    raise ValueError("Nonfinite number")
+                return Rational(str(node.value))
+            if isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.UAdd, ast.USub)):
+                value = convert(node.operand)
+                return -value if isinstance(node.op, ast.USub) else value
+            if isinstance(node, ast.BinOp):
+                left, right = convert(node.left), convert(node.right)
+                if isinstance(node.op, ast.Add):
+                    return left + right
+                if isinstance(node.op, ast.Sub):
+                    return left - right
+                if isinstance(node.op, ast.Mult):
+                    return left * right
+                if isinstance(node.op, ast.Div):
+                    if right == 0:
+                        raise ValueError("Division by zero")
+                    return left / right
+                if isinstance(node.op, ast.Pow):
+                    return Pow(left, right)
+            raise ValueError("Only numbers, identifiers, parentheses, +, -, *, / and powers are supported")
+
+        try:
+            return convert(ast.parse(text.replace("^", "**"), mode="eval").body)
+        except (SyntaxError, ValueError, TypeError) as error:
+            raise ParserError(f"Invalid expression on line {line_number}: {error}") from None
 
 
 class SectionParser:

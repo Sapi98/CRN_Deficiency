@@ -384,11 +384,70 @@ effective rates. Define `K` in the `Coefficients` section to resolve `1/K`;
 otherwise it remains symbolic under the default policy. Every species must
 have a derivative equation; use `dy/dt = 0` for an unchanged species.
 
-Species-dependent denominators such as `x*y/(1+x+a*z)` and noninteger species
-powers such as `y^1.4` are outside ordinary polynomial mass-action kinetics.
-They require an explicit generalized kinetic model or an auxiliary-species
-realization before structural CRNT deficiency can be assigned. The parser
-reports an error rather than constructing a misleading reaction graph.
+The default ODE mode requires ordinary polynomial mass-action kinetics.
+Two opt-in extensions support real powers and reciprocal auxiliary species:
+
+```bash
+crntanalysis Example_Data/AFmodel.ode --allow-fractional --lift-rational
+```
+
+`--allow-fractional` uses nonnegative real kinetic powers as the coefficients
+of the inferred source complex. For example, `-k*y^1.4` gives
+`1.4 y -> 0.4 y`, with rate `k*y^1.4`. This is a selected real-complex
+realization, not a uniquely inferred physical reaction mechanism.
+
+`--lift-rational` introduces a reciprocal species for each distinct
+species-dependent polynomial denominator, reuses shared denominators, and
+derives its ODE by the chain rule. To choose its name, add:
+
+```text
+Auxiliary Species:
+s = 1/(1+x+a*z)
+```
+
+Without this section, names such as `_aux_s1` are generated without conflicting
+with model identifiers. Parameters are treated as constant. The original
+equations, augmented equations, constraints, domain restrictions, and derived
+initial values are stored in the structured report's `analysis_metadata`.
+For AFmodel, `s(0) = 1/(1+2.05+3*4)`. Equivalence holds on the constraint
+`s*(1+x+a*z)=1` where the denominator is positive. An arbitrary initial value
+for `s` defines a different dynamical system.
+
+The reported deficiency belongs to the augmented realization. Lifting does not
+guarantee a kinetic realization: negative product coefficients, unresolved
+exponents requiring arithmetic, nonpolynomial denominators, and unsupported
+denominator powers still produce errors. Classical mass-action deficiency
+theorems are not automatically asserted for real-complex or general kinetics.
+
+The equivalent Python API is:
+
+```python
+parsed = ODEFileParser(allow_fractional=True, lift_rational=True).parse_file(
+    "Example_Data/AFmodel.ode"
+)
+print(parsed.network.analysis_metadata["auxiliary_species"])
+```
+
+For an explicitly declared reaction network, kinetics can instead be specified
+independently of stoichiometry. Fractional complex coefficients are already
+supported by the reaction parser:
+
+```text
+Reactions:
+Y k-> 0
+Rate Constants:
+k = 2
+Kinetic Orders:
+k = 1.4 Y
+```
+
+This keeps the source complex `Y` while assigning rate `k*Y^1.4`. Alternatively,
+use a `Rate Laws` section, e.g. `k = k*X*Y/(1+X+a*z)`, with the corresponding
+stoichiometric reaction explicitly declared. Each label can have kinetic orders
+or a full rate law; full laws are authoritative expressions, and their domain
+and nonnegativity must be established by the model author. Every reaction with
+the same label receives the same kinetic declaration. Graph weights remain
+rate constants or labels, not concentration-dependent rates.
 
 Unspecified values remain symbolic by default. Alternative policies are:
 
@@ -581,6 +640,8 @@ crntanalysis --format react --unresolved symbolic
 | `--stdin` | Read the complete model from standard input. | — |
 | `--format {auto,react,ode}` | Select or infer the input format. | `auto` |
 | `--unresolved {symbolic,error,one}` | Handle missing parameter values. | `symbolic` |
+| `--allow-fractional` | Infer ODE source complexes with nonnegative real powers. | Disabled |
+| `--lift-rational` | Introduce reciprocal species and derive auxiliary ODEs. | Disabled |
 | `--output-dir DIRECTORY` | Set the report and automatic-figure directory. | `output` |
 | `--output-name NAME` | Set the report and automatic-graph basename. | Source-derived |
 | `--extension {analysis,output,txt}` | Select structured JSON or plain-text summary output. | `analysis` |

@@ -8,11 +8,12 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from dataclasses import replace
 from typing import Dict, Mapping, Optional, Union
 
 from crntanalysis.crn_models import Reaction, ReactionNetwork, Scalar
 from crntanalysis.graph_utils import ComplexRegistry, ReactionGraphBuilder
-from crntanalysis.parser_utils import AssignmentParser, BaseFileParser, ParserError, SectionParser
+from crntanalysis.parser_utils import ArithmeticExpressionParser, AssignmentParser, BaseFileParser, ParserError, SectionParser
 from crntanalysis.parser_policies import (
     UnresolvedValueError,
     UnresolvedValuePolicy,
@@ -147,6 +148,7 @@ class ReactionFileParser(BaseFileParser[ReactionNetwork]):
             for index, (line_number, line) in enumerate(reaction_rows)
         ]
         complexes = registry.complexes
+        reactions = self._apply_kinetics(sections, reactions, complexes, coefficients, rates)
         graph, adjacency = self.graph_builder.build(complexes, reactions)
         return ReactionNetwork(
             reactions=reactions,
@@ -156,7 +158,47 @@ class ReactionFileParser(BaseFileParser[ReactionNetwork]):
             rate_constants=rates,
             stoichiometric_coefficients=coefficients,
             initial_conditions=initial_conditions,
+            analysis_metadata={"kinetics": "user_declared", "deficiency_scope": "declared_stoichiometric_network"}
+            if sections.get("rate laws") or sections.get("kinetic orders") else {},
         )
+
+    def _apply_kinetics(self, sections, reactions, complexes, coefficients, rates):
+        """Attach optional kinetic orders/rate laws without changing complexes."""
+        declarations = {"rate laws": {}, "kinetic orders": {}}
+        labels = {reaction.rate_constant for reaction in reactions}
+        species = {name for complex_ in complexes for name in complex_.species}
+        canonical = {name.casefold(): name for name in species}
+        for section, entries in declarations.items():
+            for number, row in sections.get(section, []):
+                match = re.fullmatch(r"\s*([A-Za-z_]\w*)\s*=\s*(.+)", row)
+                if not match or match.group(1) not in labels or match.group(1) in entries:
+                    raise ReactionParseError(f"Invalid, unknown, or duplicate reaction label in {section} on line {number}")
+                label, text = match.groups()
+                if section == "rate laws":
+                    try:
+                        entries[label] = str(ArithmeticExpressionParser.parse(
+                            text, canonical, number, {**rates, **coefficients}
+                        ))
+                    except ParserError as error:
+                        raise ReactionParseError(str(error)) from None
+                else:
+                    orders = self.complex_parser.parse(text, coefficients, number)
+                    if set(orders) - species:
+                        raise ReactionParseError(f"Kinetic orders reference unknown species on line {number}")
+                    entries[label] = orders
+        result = []
+        for reaction in reactions:
+            label = reaction.rate_constant
+            orders = declarations["kinetic orders"].get(label)
+            expression = declarations["rate laws"].get(label)
+            if orders is not None and expression is not None:
+                raise ReactionParseError(f"Specify either Kinetic Orders or a full Rate Law for {label!r}, not both")
+            if orders is not None:
+                expression = label
+                for name, power in sorted(orders.items()):
+                    expression += f"*{name}**{power}"
+            result.append(replace(reaction, kinetic_orders=orders, rate_expression=expression))
+        return result
 
     def parse_reaction(
         self,
