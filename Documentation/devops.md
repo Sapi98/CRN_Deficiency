@@ -32,6 +32,7 @@ CRN_Deficiency/
 │   ├── deficiency_utils.py             # Global and linkage-class deficiency calculation
 │   ├── graph_utils.py                  # Complex registry and weighted graph construction
 │   ├── ode_parser.py                   # Mass-action ODE parsing and CRN realization
+│   ├── ode_documents.py                # Sectioned/XPP parameter and equation input adapter
 │   ├── ode_transformations.py          # Reciprocal embeddings, chain-rule validation, and constraints
 │   ├── orchestrator.py                 # Analysis service, reporting, persistence, and CLI
 │   ├── parser_policies.py              # Strategies for unresolved parameter values
@@ -1220,6 +1221,90 @@ def parse_ode_file(path: Union[str, Path], unresolved: str = "symbolic", *,
 - `ODEParseError`: ODE content is malformed or cannot be realized as a CRN.
 - `ValueError`: The unresolved-value policy is unknown.
 
+
+### `ode_documents.py`
+
+#### `ODEDocumentParser.__init__` — public constructor
+
+```python
+def __init__(self, section_parser=None)
+```
+
+Configure the section-format fallback reader.
+
+##### Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `section_parser` | `SectionParser` or `None` | `None` | Injected reader for existing labeled documents. |
+
+#### `ODEDocumentParser.recognizes` — public class method
+
+```python
+@classmethod
+def recognizes(cls, text)
+```
+
+Detect raw derivative declarations for application-level format inference.
+
+##### Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `text` | `str` | required | Candidate document. |
+
+##### Returns
+
+- `recognized` (`bool`): Whether a non-comment derivative declaration exists.
+
+#### `ODEDocumentParser.parse` — public
+
+```python
+def parse(self, text: str) -> Sections
+```
+
+Normalize numeric XPP parameters and derivative equations to numbered sections.
+Recognized labeled documents use the injected section parser. Ignore `init`,
+solver/plot options, boundary settings, and comments; stop at `done`. Initial
+concentrations are not extracted from XPP documents. Unsupported model
+declarations fail explicitly. XPP functions, fixed variables, delays, events,
+integrals, stochastic equations, and difference equations are not implemented.
+
+##### Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `text` | `str` | required | Sectioned or XPP-style document. |
+
+##### Returns
+
+- `sections` (`Sections`): Numbered equation and coefficient rows (original source line numbers retained).
+
+##### Raises
+
+- `ParserError`: Invalid/duplicate parameter declarations, unsupported declarations, or incomplete continuations.
+
+#### `ODEFileParser.parse_sections` — public extension point
+
+```python
+def parse_sections(self, text: str)
+```
+
+Delegate document normalization to `ODEDocumentParser`.
+
+##### Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `text` | `str` | required | Input document. |
+
+##### Returns
+
+- `sections` (`Sections`): Normalized parser input.
+
+##### Raises
+
+- `ODEParseError`: The document adapter rejects an unsupported or malformed declaration.
 
 ### `ode_transformations.py`
 

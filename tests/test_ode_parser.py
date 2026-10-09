@@ -14,6 +14,32 @@ k2 = 0.1
 
 
 class ODEParserTests(unittest.TestCase):
+    def test_xpp_parameters_and_derivative_aliases_match_section_format(self):
+        standard = "# Model\nparam k=2, q=0.5\nx' = -k*x\ndy/dt = k*x-q*y\ninit x=99,y=4\n@ total=250,dt=0.1\ndone"
+        sectioned = "ODE Model:\ndx/dt = -k*x\ndy/dt = k*x-q*y\nCoefficients:\nk = 2\nq = 0.5"
+        expected = parse_ode_text(sectioned)
+        actual = parse_ode_text(standard)
+        self.assertEqual(actual, expected)
+        self.assertEqual(actual["initial_conditions"], {})
+
+    def test_cm_standard_file_accepts_parameters_and_equations(self):
+        parsed = ODEFileParser(lift_rational=True).parse_file("Example_Data/CM _model.ode")
+        self.assertEqual(parsed.network.rate_constants["a"], 0.3)
+        self.assertEqual(parsed.network.rate_constants["K"], 10)
+        self.assertEqual(len(parsed.network.analysis_metadata["auxiliary_species"]), 1)
+        self.assertGreater(len(parsed.network.reactions), 0)
+
+    def test_xpp_continuations_comments_and_scientific_notation(self):
+        text = "par k=2e-3, \\\n q=0.5 # parameters\nx' = -k*x + \\\n q*x\ndone\nignored after done"
+        parsed = parse_ode_text(text)
+        self.assertEqual(parsed["rate_constants"], {"k": 0.002, "q": 0.5})
+
+    def test_xpp_invalid_parameters_and_unsupported_dynamic_definitions_fail(self):
+        for text in ("param k=2,k=3\nx'=k*x", "param k=nope\nx'=k*x",
+                     "f(x)=x*x\nx'=f(x)", "par k=2\\"):
+            with self.subTest(text=text), self.assertRaises(ODEParseError):
+                parse_ode_text(text)
+
     def test_fractional_mode_is_explicit_and_preserves_real_coefficients(self):
         text = "ODE Model:\ndy/dt = -k*y^1.4\nCoefficients:\nk = 2"
         with self.assertRaisesRegex(ODEParseError, "allow_fractional"):

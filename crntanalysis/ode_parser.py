@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Dict, List, Mapping, Optional, Tuple, Union
 from sympy import Expr, Rational, Symbol, expand
 from crntanalysis.ode_transformations import ReciprocalODETransformer
+from crntanalysis.ode_documents import ODEDocumentParser
 
 from crntanalysis.crn_models import Reaction, ReactionNetwork, Scalar
 from crntanalysis.graph_utils import ComplexRegistry, ReactionGraphBuilder
@@ -125,6 +126,13 @@ class ODEFileParser(BaseFileParser[ODEParseResult]):
         )
         self.allow_fractional = allow_fractional
         self.lift_rational = lift_rational
+
+    def parse_sections(self, text: str):
+        """Accept either tool sections or XPP-style parameter/derivative declarations."""
+        try:
+            return ODEDocumentParser(self.section_parser).parse(text)
+        except ParserError as error:
+            raise ODEParseError(str(error)) from None
 
     def parse_text(self, text: str) -> ODEParseResult:
         sections = self.parse_sections(text)

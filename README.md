@@ -351,6 +351,41 @@ ode_data = parse_ode_file("model.ode")
 
 ## Input formats
 
+XPP-style `.ode` files can be read directly, without converting them to the
+section format. This reader uses numeric parameter declarations and autonomous
+derivative equations, for example:
+
+```text
+param k=2, q=0.5
+x' = -k*x
+dy/dt = k*x-q*y
+init x=1,y=0
+@ total=250,dt=0.1
+done
+```
+
+`p`, `par`, `param`, `parameter`, and `parameters` are supported parameter
+keywords. Both derivative spellings are accepted, as are `#` comments,
+scientific notation, and backslash line continuations. Initial-state, solver,
+and plotting directives are ignored in this format: only parameters and
+equations enter structural analysis. Without initial conditions, reciprocal
+lifting records the required auxiliary initial-value expression as a warning.
+The existing section format continues to support explicit `Initial Conditions`.
+
+Run the supplied CM model directly (quote its filename because it has spaces):
+
+```bash
+crntanalysis "Example_Data/CM _model.ode" --lift-rational
+```
+
+Raw XPP-style equation text is also automatically recognized through `--text`,
+`--stdin`, and the analysis service. Rational kinetics still requires
+`--lift-rational`, and fractional powers require `--allow-fractional`.
+The reader supports the parameter/equation subset of the
+[XPP file format](https://sites.pitt.edu/~phase/bard/bardware/xpp/help/xppodes.html),
+not its full language: functions, temporary/fixed variables, events, delayed,
+stochastic, integral, and difference equations require explicit conversion.
+
 A reaction file contains labeled sections such as:
 
 ```text

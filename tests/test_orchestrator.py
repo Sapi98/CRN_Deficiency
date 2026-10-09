@@ -23,6 +23,11 @@ k1 = 2
 
 
 class OrchestratorTests(unittest.TestCase):
+    def test_raw_standard_ode_text_is_detected_automatically(self):
+        outcome = CRNAnalysisService().analyze_text("param k=2\nx'=-k*x\ndone")
+        self.assertEqual(outcome.input_format, "ode")
+        self.assertEqual(outcome.network.rate_constants, {"k": 2})
+
     def test_cli_enables_reciprocal_and_fractional_realization(self):
         stdout = StringIO()
         with redirect_stdout(stdout):

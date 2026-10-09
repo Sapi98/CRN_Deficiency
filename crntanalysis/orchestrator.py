@@ -17,6 +17,7 @@ from typing import List, Optional, Sequence, Union
 from crntanalysis.crn_models import Complex, Reaction, ReactionGraph, ReactionNetwork
 from crntanalysis.deficiency_utils import DeficiencyResult, calculate_deficiency
 from crntanalysis.ode_parser import ODEFileParser, ODEParseResult
+from crntanalysis.ode_documents import ODEDocumentParser
 from crntanalysis.parser_utils import ParserError
 from crntanalysis.reaction_parser import ReactionFileParser
 
@@ -136,6 +137,8 @@ class CRNAnalysisService:
             if "reactions:" in headings:
                 return "react"
             if "ode model:" in headings:
+                return "ode"
+            if ODEDocumentParser.recognizes(text):
                 return "ode"
         raise InputFormatError(
             "Could not determine input format; specify 'react' or 'ode' explicitly"
