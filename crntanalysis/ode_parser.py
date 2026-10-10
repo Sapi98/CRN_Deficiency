@@ -296,7 +296,27 @@ class ODEFileParser(BaseFileParser[ODEParseResult]):
             raise ODEParseError(
                 f"Species-dependent denominator or non-polynomial kinetics on line {line_number}: "
                 f"{expression}. Ordinary mass-action realization requires polynomial species monomials; "
-                "rational kinetics requires an explicit kinetic model or auxiliary-species realization."
+                "rational kinetics may need an auxiliary-species realization.\n\n"
+                "For a reciprocal polynomial denominator D, define a new species s = 1/D. "
+                "For example, for x*y/(1+x+a*z), use this sectioned .ode format:\n\n"
+                "ODE Model:\n"
+                "dx/dt = -x*y/(1+x+a*z)\n"
+                "dy/dt = x*y/(1+x+a*z)\n\n"
+                "Auxiliary Species:\n"
+                "s = 1/(1+x+a*z)\n\n"
+                "Coefficients:\n"
+                "a = 3\n"
+                "z = 4\n\n"
+                "Adapt the example to your actual equations and denominator; choose an unused species name. "
+                "Keep the original rational equations: the tool derives ds/dt by the chain rule. "
+                "In an XPP-style file, add the standalone assignment s = 1/(1+x+a*z).\n"
+                "Check 'Lift rational ODE rates using auxiliary species' at the top of the GUI "
+                "Model input panel, then click Analyze model again "
+                "(CLI: --lift-rational; Python: lift_rational=True). "
+                "That option can also generate reciprocal auxiliaries automatically without a definition. "
+                "This applies to supported reciprocal polynomial denominators, not arbitrary "
+                "non-polynomial expressions. The denominator must be positive on the analysis domain; "
+                "deficiency describes the augmented network."
             )
         numeric, symbolic = coefficient.as_coeff_Mul()
         if numeric < 0:

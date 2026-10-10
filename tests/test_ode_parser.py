@@ -160,8 +160,16 @@ class ODEParserTests(unittest.TestCase):
         self.assertEqual(result["complexes"][edge["source_complex"]]["species"], {"x": 2})
 
     def test_species_denominator_is_rejected_with_kinetic_explanation(self):
-        with self.assertRaisesRegex(ODEParseError, "Species-dependent denominator"):
+        with self.assertRaisesRegex(ODEParseError, "Species-dependent denominator") as caught:
             parse_ode_text("ODE Model:\ndx/dt = x*(1-x/K)-x*y/(1+x+a*z)\ndy/dt = 0\ndz/dt = 0")
+        message = str(caught.exception)
+        self.assertIn('Auxiliary Species:\ns = 1/(1+x+a*z)', message)
+        self.assertIn('Lift rational ODE rates using auxiliary species', message)
+        self.assertIn('standalone assignment', message)
+        self.assertIn('not arbitrary non-polynomial', message)
+        example = message.split('format:\n\n', 1)[1].split('\n\nAdapt the example', 1)[0]
+        result = ODEFileParser(lift_rational=True).parse_text(example)
+        self.assertEqual(result.network.analysis_metadata['auxiliary_species'][0]['species'], 's')
 
     def test_zero_equation_and_decimal_rate(self):
         result = parse_ode_text("ODE Model:\ndx/dt = 0.5*x\ndy/dt = 0")
