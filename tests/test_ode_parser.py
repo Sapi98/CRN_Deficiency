@@ -132,9 +132,35 @@ class ODEParserTests(unittest.TestCase):
         self.assertEqual(simplify(actual - s**3*(x+y)), 0)
 
     def test_invalid_auxiliary_names_and_definitions_are_rejected(self):
-        for definition in ("x = 1/(1+x)", "s = 1/(2+x)"):
+        for definition in ("x = 1/(1+x)", "s = 1/(1+t)"):
             with self.subTest(definition=definition), self.assertRaises(ODEParseError):
                 parse_ode_text("ODE Model:\ndx/dt = -x/(1+x)\nAuxiliary Species:\n" + definition, lift_rational=True)
+
+    def test_nested_auxiliaries_add_each_chain_rule_ode(self):
+        from sympy import Symbol, simplify
+        text = "ODE Model:\ndx/dt = -x*t\nAuxiliary Species:\nt = 1/(1+s)\ns = 1/(1+x)\nInitial Conditions:\nx = 1"
+        parsed = ODEFileParser(lift_rational=True).parse_text(text)
+        metadata = parsed.network.analysis_metadata
+        self.assertEqual(set(metadata['transformed_equations']), {'x', 's', 't'})
+        self.assertEqual(len(parsed.equations), 3)
+        x, s, t = Symbol('x'), Symbol('s'), Symbol('t')
+        self.assertEqual(simplify(ODEFileParser._expression(metadata['transformed_equations']['s'], {}, 1) - x*t*s**2), 0)
+        self.assertEqual(simplify(ODEFileParser._expression(metadata['transformed_equations']['t'], {}, 1) + x*s**2*t**3), 0)
+        self.assertEqual(parsed.network.initial_conditions['s'], 0.5)
+        self.assertAlmostEqual(parsed.network.initial_conditions['t'], 2/3)
+        self.assertEqual(metadata['auxiliary_species'][1]['dependencies'], ['s'])
+
+    def test_polynomial_auxiliary_gets_an_ode(self):
+        parsed = ODEFileParser(lift_rational=True).parse_text(
+            'ODE Model:\ndx/dt=x\nAuxiliary Species:\nu=x*x\nInitial Conditions:\nx=2')
+        self.assertEqual(set(parsed.network.analysis_metadata['transformed_equations']), {'x', 'u'})
+        self.assertEqual(parsed.network.initial_conditions['u'], 4)
+
+    def test_circular_auxiliaries_are_rejected(self):
+        for definitions in ('s=1/(1+s)', 's=1/(1+t)\nt=1/(1+s)'):
+            with self.subTest(definitions=definitions), self.assertRaisesRegex(ODEParseError, 'Circular'):
+                ODEFileParser(lift_rational=True).parse_text(
+                    'ODE Model:\ndx/dt=x\nAuxiliary Species:\n' + definitions)
 
     def test_equivalent_logistic_forms_have_identical_realizations(self):
         forms = ["x*(1-x/K)", "x-(1/K)*x^2", "x-(1/K)*x*x"]

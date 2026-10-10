@@ -193,7 +193,7 @@ class ODEFileParser(BaseFileParser[ODEParseResult]):
         ]
         network, used_rates, used_exponents = self._build_network(equations, values)
         for record in auxiliary_records:
-            parameter_symbols = self._expression(record["definition"], {}, 1).free_symbols - {Symbol(name) for name in originals}
+            parameter_symbols = self._expression(record["definition"], {}, 1).free_symbols - {Symbol(name) for name in transformed}
             used_rates.update(str(symbol) for symbol in parameter_symbols)
         network.rate_constants.update({name: values[name] for name in used_rates if name in values})
         network.initial_conditions.update(initial_conditions)

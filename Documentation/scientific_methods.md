@@ -247,6 +247,23 @@ kinetic-order deficiency is not yet calculated here.
 
 ### Reciprocal auxiliary species
 
+Explicit auxiliary definitions may form an acyclic dependency graph. For
+$u_j=g_j(x,u_1,\ldots,u_{j-1})$, the augmented system includes
+
+$$
+\dot u_j = \sum_i \frac{\partial g_j}{\partial x_i}\dot x_i
+           + \sum_{k<j}\frac{\partial g_j}{\partial u_k}\dot u_k.
+$$
+
+The parser orders definitions by dependency, derives every auxiliary ODE,
+and verifies recovery of the original dynamics on the definition constraints.
+Supported explicit definitions are polynomial or reciprocal-polynomial;
+remaining supported reciprocal denominators are lifted automatically.
+Initial values are computed from the same constraints when the original
+initial concentrations and parameters are available. Circular definitions
+are rejected because they require implicit-system/DAE analysis. A valid
+embedding need not admit a nonnegative-complex CRN realization.
+
 For a species-dependent polynomial denominator $D(x)$ with constant parameters,
 introduce $s=D(x)^{-1}$. The chain rule gives
 

@@ -397,7 +397,32 @@ The reader supports the parameter/equation subset of the
 [XPP file format](https://sites.pitt.edu/~phase/bard/bardware/xpp/help/xppodes.html),
 not its full language. Standalone assignments such as `s = 1/(1+x)` are
 treated as named reciprocal auxiliary species with `--lift-rational`, not
-as general XPP fixed variables. Functions, other fixed variables, events, delayed,
+as general XPP fixed variables. Explicit polynomial auxiliary definitions
+are also supported. Each auxiliary adds its chain-rule ODE to the augmented
+system. Definitions can depend on other auxiliaries and may appear in any
+order, for example:
+
+```text
+ODE Model:
+dx/dt = -x*t
+
+Auxiliary Species:
+s = 1/(1+x)
+t = 1/(1+s)
+
+Initial Conditions:
+x = 1
+```
+
+With rational lifting enabled, this adds `ds/dt = x*t*s^2` and
+`dt/dt = -x*s^2*t^3` (the second `t` is the species name), and computes
+consistent auxiliary initial values. Circular definitions such as
+`s = 1/(1+t)` together with `t = 1/(1+s)` are rejected: they require an
+implicit/DAE formulation rather than explicit chain-rule substitution.
+An augmented system must still admit a nonnegative-complex CRN realization;
+adding auxiliaries does not guarantee this.
+
+Functions, other fixed variables, events, delayed,
 stochastic, integral, and difference equations require explicit conversion.
 
 A reaction file contains labeled sections such as:
