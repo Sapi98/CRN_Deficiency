@@ -15,10 +15,10 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QComboBox, QFrame, QHBoxLayout,
-    QLabel, QMainWindow, QPlainTextEdit, QPushButton,
-    QScrollArea, QSizePolicy, QSpacerItem, QVBoxLayout,
-    QWidget)
+from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QFrame,
+    QHBoxLayout, QLabel, QMainWindow, QPlainTextEdit,
+    QPushButton, QScrollArea, QSizePolicy, QSpacerItem,
+    QVBoxLayout, QWidget)
 
 from GUI.widgets import GlowTabWidget
 
@@ -124,6 +124,16 @@ class Ui_MainWindow(object):
 
 
         self.inputLayout.addLayout(self.formatLayout)
+
+        self.allowFractionalCheck = QCheckBox(self.inputCard)
+        self.allowFractionalCheck.setObjectName(u"allowFractionalCheck")
+
+        self.inputLayout.addWidget(self.allowFractionalCheck)
+
+        self.liftRationalCheck = QCheckBox(self.inputCard)
+        self.liftRationalCheck.setObjectName(u"liftRationalCheck")
+
+        self.inputLayout.addWidget(self.liftRationalCheck)
 
         self.inputTabs = GlowTabWidget(self.inputCard)
         self.inputTabs.setObjectName(u"inputTabs")
@@ -533,6 +543,14 @@ class Ui_MainWindow(object):
 #if QT_CONFIG(accessibility)
         self.formatCombo.setAccessibleName(QCoreApplication.translate("MainWindow", u"Model input format", None))
 #endif // QT_CONFIG(accessibility)
+        self.allowFractionalCheck.setText(QCoreApplication.translate("MainWindow", u"Allow fractional ODE powers (real complexes)", None))
+#if QT_CONFIG(tooltip)
+        self.allowFractionalCheck.setToolTip(QCoreApplication.translate("MainWindow", u"Use nonnegative real powers when realizing the ODE as a network. Classical mass-action theorem assumptions may not apply.", None))
+#endif // QT_CONFIG(tooltip)
+        self.liftRationalCheck.setText(QCoreApplication.translate("MainWindow", u"Lift rational ODE rates using auxiliary species", None))
+#if QT_CONFIG(tooltip)
+        self.liftRationalCheck.setToolTip(QCoreApplication.translate("MainWindow", u"Enable Auxiliary Species definitions and reciprocal substitutions. Deficiency describes the augmented realization.", None))
+#endif // QT_CONFIG(tooltip)
         self.editorHint.setText(QCoreApplication.translate("MainWindow", u"Paste or write your model below.", None))
         self.editorHint.setProperty(u"role", QCoreApplication.translate("MainWindow", u"muted", None))
 #if QT_CONFIG(accessibility)

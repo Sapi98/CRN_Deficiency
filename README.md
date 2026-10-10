@@ -253,6 +253,14 @@ network deficiency, complexes, linkage classes, stoichiometric rank, species,
 and reactions. A read-only report includes per-linkage-class results, parser
 warnings, and symbolic-rank notes. Missing parameter values remain symbolic.
 
+For ODE models, the input panel also provides **Allow fractional ODE powers**
+and **Lift rational ODE rates using auxiliary species**. Enable both before
+analyzing `Example_Data/AFmodel.ode`: its `y^1.4` term requires fractional
+powers, and its `Auxiliary Species` section requires rational lifting.
+These options are off by default and disabled for reaction-file inputs.
+Deficiency then describes the augmented real-complex realization, not a
+unique network determined by the original ODE.
+
 The **Reaction graph** tab shows complexes as labeled nodes with directed
 reaction arrows and rate labels. The **Linkage graph** tab shows undirected
 connections between complexes. Both views color complexes by linkage class
