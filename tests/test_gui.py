@@ -156,6 +156,15 @@ class DesktopAnalysisTests(unittest.TestCase):
             self.assertIn('deficiency = 0', saved.read_text())
 
     def test_open_structured_result_restores_report_and_graph_data(self):
+        self.window.show()
+        self.app.processEvents()
+        self.assertTrue(self.window.ui.openResultButton.isVisible())
+        self.assertTrue(self.window.ui.openResultButton.isEnabled())
+        self.assertTrue(self.window.open_result_action.isEnabled())
+        self.assertFalse(self.window.ui.analyzeButton.isEnabled())
+        self.assertFalse(self.window.ui.analysisTabs.isVisible())
+        self.assertEqual(self.window.ui.resultsLayout.itemAt(1).layout(),
+                         self.window.ui.resultActionsLayout)
         outcome = CRNAnalysisService().analyze_text(
             self.window.example_text(), input_format='react'
         )
@@ -164,7 +173,7 @@ class DesktopAnalysisTests(unittest.TestCase):
             with patch.object(
                 gui.QFileDialog, 'getOpenFileName', return_value=(str(path), '')
             ):
-                self.window.open_result()
+                self.window.open_result_action.trigger()
         self.assertEqual(self.window.outcome.to_dict(), outcome.to_dict())
         self.assertIn('deficiency = 0', self.window.ui.resultReport.toPlainText())
         self.assertIs(self.window.graph_views[1].outcome, self.window.outcome)

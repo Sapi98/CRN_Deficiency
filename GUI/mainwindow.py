@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 from PySide6.QtCore import QEvent, QObject, QThread, Qt, Signal
+from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import QApplication, QFileDialog, QMainWindow, QMessageBox
 
 
@@ -19,6 +20,7 @@ from crntanalysis.orchestrator import (
     ConsoleReportFormatter,
 )
 from GUI.graph_view import GraphView
+from crntanalysis import __version__
 
 
 def load_ui_class():
@@ -130,6 +132,15 @@ class MainWindow(QMainWindow):
         super().__init__(parent)
         self.ui = load_ui_class()()
         self.ui.setupUi(self)
+        self.setWindowTitle(f'CRNTAnalysis v{__version__} • Model workspace')
+        # Keep saved-result actions above the empty-state content, independent
+        # of the report/graph tabs' visibility.
+        self.ui.resultsLayout.removeItem(self.ui.resultActionsLayout)
+        self.ui.resultsLayout.insertLayout(1, self.ui.resultActionsLayout)
+        self.open_result_action = QAction('Open result…', self)
+        self.open_result_action.setShortcut(QKeySequence.Open)
+        self.open_result_action.triggered.connect(self.open_result)
+        self.menuBar().addMenu('File').addAction(self.open_result_action)
         self.selected_file = None
         self.worker = None
         self.outcome = None
@@ -219,7 +230,7 @@ class MainWindow(QMainWindow):
         self.error_message = None
         self.ui.resultsEmptyTitle.setText('Your network insights will appear here')
         self.ui.resultsMetrics.setText('Complexes   ·   Linkage classes   ·   Stoichiometric rank   ·   Deficiency')
-        self.ui.resultsHint.setText('Select an input and click Analyze model.')
+        self.ui.resultsHint.setText('Open a saved result, or select an input and click Analyze model.')
         self.ui.resultReport.clear()
         self.ui.analysisTabs.hide()
         for view in self.graph_views.values():
@@ -238,6 +249,8 @@ class MainWindow(QMainWindow):
         self.ui.allowFractionalCheck.setEnabled(ode_options_enabled)
         self.ui.liftRationalCheck.setEnabled(ode_options_enabled)
         self.ui.openResultButton.setEnabled(not busy)
+        self.ui.openResultButton.show()
+        self.open_result_action.setEnabled(not busy)
         self.ui.saveResultButton.setEnabled(self.outcome is not None and not busy)
         if busy:
             message = 'Analyzing your model…'

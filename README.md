@@ -6,7 +6,7 @@ Network Theory (CRNT) deficiency. It accepts explicit reaction files and
 mass-action polynomial ODE files, provides typed and dictionary APIs, and
 includes a command-line analysis pipeline that writes structured reports.
 
-The project is currently an alpha release (`0.1.0`).
+The current application version is **v1.1** (package version `1.1.0`).
 
 ## Table of contents
 
@@ -58,7 +58,7 @@ repository also includes machine-readable citation metadata in
 Plain text:
 
 > Biswas, Saptarshi (2026). *CRNTAnalysis: Chemical Reaction Network Theory
-> Analysis* (version 0.1.0) [Software].
+> Analysis* (version 1.1.0) [Software].
 > https://github.com/Sapi98/CRN_Deficiency
 
 BibTeX:
@@ -68,7 +68,7 @@ BibTeX:
   author  = {Biswas, Saptarshi},
   title   = {CRNTAnalysis: Chemical Reaction Network Theory Analysis},
   year    = {2026},
-  version = {0.1.0},
+  version = {1.1.0},
   url     = {https://github.com/Sapi98/CRN_Deficiency}
 }
 ```
@@ -252,6 +252,10 @@ click **Analyze model** to run the backend analysis service. The overview shows
 network deficiency, complexes, linkage classes, stoichiometric rank, species,
 and reactions. A read-only report includes per-linkage-class results, parser
 warnings, and symbolic-rank notes. Missing parameter values remain symbolic.
+
+You can open a saved `.analysis` or `.output` report immediately using
+**Open result…** at the top of Analysis overview or **File → Open result…**
+(Ctrl+O / Command+O). No model input or analysis run is required.
 
 For ODE models, the input panel also provides **Allow fractional ODE powers**
 and **Lift rational ODE rates using auxiliary species**. Enable both before

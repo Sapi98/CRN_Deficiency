@@ -15,7 +15,7 @@ from crntanalysis.reaction_parser import (
     parse_reaction_text,
 )
 
-__version__ = "0.1.0"
+__version__ = "1.1.0"
 
 __all__ = [
     "DeficiencyCalculator",
