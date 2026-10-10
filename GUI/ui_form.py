@@ -638,3 +638,4 @@ class Ui_MainWindow(object):
         self.statusLabel.setText(QCoreApplication.translate("MainWindow", u"Ready \u2022 Paste text or select a model file.", None))
         self.statusLabel.setProperty(u"role", QCoreApplication.translate("MainWindow", u"muted", None))
     # retranslateUi
+

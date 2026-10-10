@@ -29,6 +29,15 @@ class ODEParserTests(unittest.TestCase):
         self.assertEqual(len(parsed.network.analysis_metadata["auxiliary_species"]), 1)
         self.assertGreater(len(parsed.network.reactions), 0)
 
+    def test_xpp_named_reciprocal_matches_sectioned_auxiliary(self):
+        raw = "param k=2\nx'=-k*x/(1+x)\ns = 1/(1+x)\ndone"
+        sectioned = "ODE Model:\ndx/dt=-k*x/(1+x)\nCoefficients:\nk=2\nAuxiliary Species:\ns=1/(1+x)"
+        parser = ODEFileParser(lift_rational=True)
+        self.assertEqual(parser.parse_text(raw).network.to_dict(),
+                         parser.parse_text(sectioned).network.to_dict())
+        with self.assertRaisesRegex(ODEParseError, 'lift_rational'):
+            ODEFileParser().parse_text(raw)
+
     def test_xpp_continuations_comments_and_scientific_notation(self):
         text = "par k=2e-3, \\\n q=0.5 # parameters\nx' = -k*x + \\\n q*x\ndone\nignored after done"
         parsed = parse_ode_text(text)

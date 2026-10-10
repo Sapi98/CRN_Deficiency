@@ -395,7 +395,9 @@ Raw XPP-style equation text is also automatically recognized through `--text`,
 `--lift-rational`, and fractional powers require `--allow-fractional`.
 The reader supports the parameter/equation subset of the
 [XPP file format](https://sites.pitt.edu/~phase/bard/bardware/xpp/help/xppodes.html),
-not its full language: functions, temporary/fixed variables, events, delayed,
+not its full language. Standalone assignments such as `s = 1/(1+x)` are
+treated as named reciprocal auxiliary species with `--lift-rational`, not
+as general XPP fixed variables. Functions, other fixed variables, events, delayed,
 stochastic, integral, and difference equations require explicit conversion.
 
 A reaction file contains labeled sections such as:
