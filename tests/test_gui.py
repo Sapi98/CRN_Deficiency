@@ -76,6 +76,33 @@ class DesktopAnalysisTests(unittest.TestCase):
         self.assertEqual(self.window.outcome.to_dict(), expected.to_dict())
         self.assertEqual(self.window.outcome.deficiency.deficiency, 2)
 
+    def test_af_model_with_explicit_ode_options(self):
+        path = ROOT / 'Example_Data/AFmodel.ode'
+        self.window.select_file(path)
+        self.window.ui.allowFractionalCheck.setChecked(True)
+        self.window.ui.liftRationalCheck.setChecked(True)
+        self.window.ui.analyzeButton.click()
+        self.assertFalse(self.window.ui.liftRationalCheck.isEnabled())
+        self.wait_for_analysis()
+        self.assertIsNone(self.window.error_message)
+        expected = CRNAnalysisService().analyze_file(
+            path, allow_fractional=True, lift_rational=True
+        )
+        self.assertEqual(self.window.outcome.to_dict(), expected.to_dict())
+        self.window.ui.liftRationalCheck.setChecked(False)
+        self.assertIsNone(self.window.outcome)
+
+    def test_reaction_format_disables_ode_options(self):
+        self.window.ui.formatCombo.setCurrentIndex(1)
+        self.window.ui.liftRationalCheck.setChecked(True)
+        self.window.ui.allowFractionalCheck.setChecked(True)
+        self.window.ui.formatCombo.setCurrentIndex(0)
+        self.assertFalse(self.window.ui.liftRationalCheck.isEnabled())
+        self.window.ui.exampleButton.click()
+        self.window.ui.analyzeButton.click()
+        self.wait_for_analysis()
+        self.assertIsNone(self.window.error_message)
+
     def test_dropped_ode_file_uses_backend(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / 'model.ode'

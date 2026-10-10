@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Union
 
 
@@ -25,13 +25,19 @@ class Complex:
 
 @dataclass(frozen=True)
 class Reaction:
-    """A directed edge referencing complexes stored once by the network."""
+    """An edge with optional kinetics independent of stoichiometric complexes.
+
+    ``kinetic_orders=None`` uses source-complex coefficients. A supplied full
+    ``rate_expression`` is authoritative; graph weights remain rate constants.
+    """
 
     index: int
     source_complex: int
     target_complex: int
     rate_constant: str
     rate: Optional[float] = None
+    kinetic_orders: Optional[Dict[str, Scalar]] = None
+    rate_expression: Optional[str] = None
 
     @property
     def source(self) -> int:
@@ -46,7 +52,7 @@ class Reaction:
         return self.rate if self.rate is not None else self.rate_constant
 
     def to_dict(self) -> dict:
-        return {
+        result = {
             "index": self.index,
             "source_complex": self.source_complex,
             "target_complex": self.target_complex,
@@ -54,6 +60,11 @@ class Reaction:
             "rate": self.rate,
             "weight": self.weight,
         }
+        if self.kinetic_orders is not None:
+            result["kinetic_orders"] = dict(self.kinetic_orders)
+        if self.rate_expression is not None:
+            result["rate_expression"] = self.rate_expression
+        return result
 
 
 @dataclass(frozen=True)
@@ -81,6 +92,7 @@ class ReactionNetwork:
     rate_constants: Dict[str, float]
     stoichiometric_coefficients: Dict[str, float]
     initial_conditions: Dict[str, float]
+    analysis_metadata: dict = field(default_factory=dict)
 
     @property
     def complex_index(self) -> Dict[str, int]:
@@ -94,7 +106,7 @@ class ReactionNetwork:
 
     def to_dict(self) -> dict:
         """Return a normalized dictionary without copying complex data per edge."""
-        return {
+        result = {
             "reactions": [reaction.to_dict() for reaction in self.reactions],
             "complexes": [complex_.to_dict() for complex_ in self.complexes],
             "complex_index": self.complex_index,
@@ -107,3 +119,6 @@ class ReactionNetwork:
             "stoichiometric_coefficients": dict(self.stoichiometric_coefficients),
             "initial_conditions": dict(self.initial_conditions),
         }
+        if self.analysis_metadata:
+            result["analysis_metadata"] = self.analysis_metadata
+        return result

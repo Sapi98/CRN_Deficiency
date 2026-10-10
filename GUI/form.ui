@@ -281,6 +281,18 @@ QPushButton:hover { color: #176cd3; }</string>
               </layout>
              </item>
              <item>
+              <widget class="QCheckBox" name="allowFractionalCheck">
+               <property name="text"><string>Allow fractional ODE powers (real complexes)</string></property>
+               <property name="toolTip"><string>Use nonnegative real powers when realizing the ODE as a network. Classical mass-action theorem assumptions may not apply.</string></property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="liftRationalCheck">
+               <property name="text"><string>Lift rational ODE rates using auxiliary species</string></property>
+               <property name="toolTip"><string>Enable Auxiliary Species definitions and reciprocal substitutions. Deficiency describes the augmented realization.</string></property>
+              </widget>
+             </item>
+             <item>
               <widget class="GlowTabWidget" name="inputTabs">
                <property name="currentIndex">
                 <number>1</number>

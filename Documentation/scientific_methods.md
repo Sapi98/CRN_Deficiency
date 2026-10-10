@@ -200,6 +200,89 @@ linkage-class deficiencies.
 
 ## Symbolic coefficients
 
+### ODE expression normalization
+
+Before extracting monomials, the ODE parser constructs symbolic arithmetic
+through a restricted Python AST and expands products and parentheses. Function
+calls, attributes, and other executable Python syntax are rejected. Both `^`
+and `**` denote powers. Repeated species factors add their exponents.
+
+For example,
+
+$$
+x(1-x/K)=x-K^{-1}x^2
+$$
+
+has the same realization whether the quadratic factor is written as `x^2` or
+`x*x`. Its implicit positive coefficient is one. Parameter-only expressions
+such as `1/K` and `a*b` become effective rate labels and are evaluated when all
+their parameters are defined. Unresolved expressions retain symbolic labels;
+resolved effective rates must be finite and positive. Explicit integer
+multipliers attached to symbolic rates retain the existing stoichiometric
+contribution convention. Numeric-only terms use their magnitude as the rate.
+
+Species are identified from derivative left-hand sides. Include a zero
+derivative for unchanged species; other identifiers are parameters.
+Species-dependent denominators and noninteger exponents are rejected in the
+default mode. Opt-in extensions are described below.
+
+### Real complexes and independent kinetic orders
+
+`allow_fractional=True` permits nonnegative real ODE powers and adopts the
+same source-monomial realization convention as the integer mode. The reaction
+`1.4 Y -> 0.4 Y` reproduces `dy/dt = -k*y^1.4`. Nonnegative product coefficients
+remain required. Stoichiometric rank and structural deficiency are computed on
+the resulting real complex vectors; no classical integer mass-action theorem
+is inferred from the numerical deficiency alone.
+
+Explicit `.react` networks may use `Kinetic Orders` or `Rate Laws` to decouple
+stoichiometry from kinetics. Kinetic orders are represented separately when
+declared; `None` means the ordinary source-complex convention. A full rate law
+is stored separately and takes precedence as the authoritative kinetic
+expression. Arbitrary rate laws require the model author to establish their
+admissible domain and nonnegativity. This distinction follows generalized
+mass-action theory's separation of stoichiometric and kinetic complexes;
+kinetic-order deficiency is not yet calculated here.
+[Müller and Regensburger, 2014](https://arxiv.org/abs/1406.6587).
+
+### Reciprocal auxiliary species
+
+For a species-dependent polynomial denominator $D(x)$ with constant parameters,
+introduce $s=D(x)^{-1}$. The chain rule gives
+
+$$
+\dot{s}=-s^2\sum_i\frac{\partial D}{\partial x_i}\dot{x}_i.
+$$
+
+`lift_rational=True` identifies negative integer powers of such denominators,
+replaces them with positive powers of shared auxiliary species, and constructs
+their derivatives from the original coupled ODEs. Parameter-only denominators
+remain effective rate expressions. Names are collision-checked, including
+explicit definitions in `Auxiliary Species`. The supported scope is autonomous
+ODEs with polynomial species denominators, optionally with nonnegative real
+monomial powers in numerators. Unsupported transformations raise errors.
+
+For AFmodel, $D=1+x+az$ and
+
+$$
+\dot{s}=-s^2\dot{x}=-xs^2+K^{-1}x^2s^2+xys^3.
+$$
+
+The original dynamics are recovered on $sD=1$ in the domain $D>0$. The
+implementation verifies symbolic pullback identities for the original and
+auxiliary equations. It derives initial values from original concentrations
+and parameter values, rejects inconsistent or singular supplied initial
+conditions, and retains unresolved initial expressions as warnings. Positivity
+of the denominator over an entire trajectory is a domain assumption, not a
+property established by checking its initial value.
+
+The augmented equations still undergo the nonnegative-complex kinetic
+realizability check. Fractional powers are permitted only if separately enabled.
+The calculated $n$, $s$, $l$, and deficiency refer to the augmented network,
+including auxiliary complexes and reaction vectors, rather than being intrinsic
+invariants of the original rational ODE. Here the auxiliary symbol $s$ is a
+species name; the $s$ in the deficiency formula denotes stoichiometric rank.
+
 Missing rate constants do not affect structural deficiency and may remain
 symbolic.
 

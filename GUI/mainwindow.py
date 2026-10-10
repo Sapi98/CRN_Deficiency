@@ -102,19 +102,23 @@ class AnalysisWorker(QThread):
     succeeded = Signal(object)
     failed = Signal(str)
 
-    def __init__(self, source, input_format, is_file, parent=None):
+    def __init__(self, source, input_format, is_file, parent=None, *,
+                 allow_fractional=False, lift_rational=False):
         super().__init__(parent)
         self.source = source
         self.input_format = input_format
         self.is_file = is_file
+        self.analysis_options = dict(input_format=input_format,
+                                     allow_fractional=allow_fractional,
+                                     lift_rational=lift_rational)
 
     def run(self):
         try:
             service = CRNAnalysisService()
             if self.is_file:
-                outcome = service.analyze_file(self.source, input_format=self.input_format)
+                outcome = service.analyze_file(self.source, **self.analysis_options)
             else:
-                outcome = service.analyze_text(self.source, input_format=self.input_format)
+                outcome = service.analyze_text(self.source, **self.analysis_options)
             self.succeeded.emit(outcome)
         except Exception as error:
             # Exceptions must cross the thread boundary as data, never escape run().
@@ -136,6 +140,8 @@ class MainWindow(QMainWindow):
         self.ui.modelEditor.textChanged.connect(self.input_changed)
         self.ui.inputTabs.currentChanged.connect(self.input_changed)
         self.ui.formatCombo.currentIndexChanged.connect(self.input_changed)
+        self.ui.allowFractionalCheck.toggled.connect(self.input_changed)
+        self.ui.liftRationalCheck.toggled.connect(self.input_changed)
         self.ui.analyzeButton.clicked.connect(self.analyze_model)
         self.ui.exampleButton.clicked.connect(self.load_example)
         self.ui.browseButton.clicked.connect(self.browse_file)
@@ -228,6 +234,9 @@ class MainWindow(QMainWindow):
         self.ui.analyzeButton.setText('Analyzing…' if busy else 'Analyze model  →')
         self.ui.inputTabs.setEnabled(not busy)
         self.ui.formatCombo.setEnabled(not busy)
+        ode_options_enabled = not busy and self.ui.formatCombo.currentIndex() == 1
+        self.ui.allowFractionalCheck.setEnabled(ode_options_enabled)
+        self.ui.liftRationalCheck.setEnabled(ode_options_enabled)
         self.ui.openResultButton.setEnabled(not busy)
         self.ui.saveResultButton.setEnabled(self.outcome is not None and not busy)
         if busy:
@@ -249,7 +258,11 @@ class MainWindow(QMainWindow):
         is_file = self.ui.inputTabs.currentIndex() == 1
         source = self.selected_file if is_file else self.ui.modelEditor.toPlainText()
         input_format = 'ode' if self.ui.formatCombo.currentIndex() == 1 else 'react'
-        self.worker = AnalysisWorker(source, input_format, is_file, self)
+        self.worker = AnalysisWorker(
+            source, input_format, is_file, self,
+            allow_fractional=input_format == 'ode' and self.ui.allowFractionalCheck.isChecked(),
+            lift_rational=input_format == 'ode' and self.ui.liftRationalCheck.isChecked(),
+        )
         self.worker.succeeded.connect(self.show_outcome)
         self.worker.failed.connect(self.show_error)
         self.worker.finished.connect(self.analysis_finished)

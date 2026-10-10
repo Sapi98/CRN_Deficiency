@@ -1,0 +1,20 @@
+
+
+# Parameters
+param a=0.3, z=0.302413, e=0.635, K=10, c=0.212371, d=0.2, b=0.47701
+
+# Variables
+init x=1.5, y=4.5
+
+# Equations
+dx/dt = x*(1 - x/K) - (x*y)/( 1 + a*(x + z) + b*y + c*(x + z)*y) 
+dy/dt = e*(x + z)*y/(( 1 + a*(x + z) + b*y + c*(x + z)*y)) - d*y
+
+# Time settings
+@ total=250, dt=0.1
+
+# Plot settings
+
+
+done
+

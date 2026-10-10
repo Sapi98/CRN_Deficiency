@@ -32,6 +32,8 @@ CRN_Deficiency/
 │   ├── deficiency_utils.py             # Global and linkage-class deficiency calculation
 │   ├── graph_utils.py                  # Complex registry and weighted graph construction
 │   ├── ode_parser.py                   # Mass-action ODE parsing and CRN realization
+│   ├── ode_documents.py                # Sectioned/XPP parameter and equation input adapter
+│   ├── ode_transformations.py          # Reciprocal embeddings, chain-rule validation, and constraints
 │   ├── orchestrator.py                 # Analysis service, reporting, persistence, and CLI
 │   ├── parser_policies.py              # Strategies for unresolved parameter values
 │   ├── parser_utils.py                 # Shared section, assignment, and base parser logic
@@ -940,11 +942,22 @@ def __init__(
     section_parser: Optional[SectionParser] = None,
     assignment_parser: Optional[AssignmentParser] = None,
     graph_builder: Optional[ReactionGraphBuilder] = None,
+    allow_fractional: bool = False,
+    lift_rational: bool = False,
 ) -> None
 ```
 
 Parameters, defaults, return, and policy-selection exceptions match
 `ReactionFileParser.__init__`.
+
+##### Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `allow_fractional` | `bool` | `False` | Allow finite nonnegative real exponents in the source-complex convention. |
+| `lift_rational` | `bool` | `False` | Apply reciprocal embeddings before kinetic realization. |
+
+The other dependency-injection parameters retain their shared parser meanings.
 
 #### `ODEFileParser.parse_text` — public
 
@@ -1039,7 +1052,7 @@ def _parse_equation(
 
 ```python
 def _parse_term(
-    self, expression: str, affected: str, sign: int,
+    self, expression: Expr, affected: str, sign: int,
     species_names: Mapping[str, str], values: Mapping[str, float],
     line_number: int,
 ) -> ODETerm
@@ -1049,7 +1062,7 @@ def _parse_term(
 
 | Parameter | Type | Default | Description |
 |---|---|---:|---|
-| `expression` | `str` | required | Unsigned multiplicative term. |
+| `expression` | `Expr` | required | Expanded symbolic monomial, including its signed coefficient. |
 | `affected` | `str` | required | Derivative species. |
 | `sign` | `int` | required | `1` or `-1`. |
 | `species_names` | `Mapping[str, str]` | required | Canonical name map. |
@@ -1064,12 +1077,38 @@ def _parse_term(
 
 - `ODEParseError`: Factor, exponent, or rate structure is invalid.
 
+#### `ODEFileParser._expression` — private static method
+
+```python
+@staticmethod
+def _expression(text, species_names, line_number, parameter_names=())
+```
+
+Construct symbolic arithmetic from a restricted AST without evaluating user
+code. Supports numbers, identifiers, parentheses, arithmetic, and powers.
+
+##### Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `text` | `str` | required | Arithmetic input; `^` is normalized to `**`. |
+| `species_names` | `Mapping[str, str]` | required | Canonical species names. |
+| `line_number` | `int` | required | Diagnostic source line. |
+| `parameter_names` | iterable of `str` | `()` | Preserve exact declared parameter names before case-insensitive species matching. |
+
+##### Returns
+
+- `expression` (`Expr`): Symbolic arithmetic ready for expansion or substitution.
+
+##### Raises
+
+- `ODEParseError`: Invalid syntax, unsupported operations, or division by zero.
+
 
 #### `ODEFileParser._normalize_exponent` — private
 
 ```python
-@staticmethod
-def _normalize_exponent(exponent: Scalar, line_number: int) -> Scalar
+def _normalize_exponent(self, exponent: Scalar, line_number: int) -> Scalar
 ```
 
 ##### Parameters
@@ -1081,11 +1120,11 @@ def _normalize_exponent(exponent: Scalar, line_number: int) -> Scalar
 
 ##### Returns
 
-- `return_value` (`int \| str`): Symbol or normalized integer exponent.
+- `return_value` (`int \| float \| str`): Integer, enabled real exponent, or retained symbol.
 
 ##### Raises
 
-- `ODEParseError`: A numerical exponent is negative or nonintegral.
+- `ODEParseError`: An exponent is negative/nonfinite, or fractional powers are disabled.
 
 
 #### `ODEFileParser._build_network` — private
@@ -1155,8 +1194,10 @@ def _products(contribution: _ReactionContribution) -> Dict[str, Scalar]
 #### `parse_ode_text` and `parse_ode_file` — public functions
 
 ```python
-def parse_ode_text(text: str, unresolved: str = "symbolic") -> dict
-def parse_ode_file(path: Union[str, Path], unresolved: str = "symbolic") -> dict
+def parse_ode_text(text: str, unresolved: str = "symbolic", *,
+                   allow_fractional=False, lift_rational=False) -> dict
+def parse_ode_file(path: Union[str, Path], unresolved: str = "symbolic", *,
+                   allow_fractional=False, lift_rational=False) -> dict
 ```
 
 ##### Parameters
@@ -1166,6 +1207,8 @@ def parse_ode_file(path: Union[str, Path], unresolved: str = "symbolic") -> dict
 | `text` | `str` | required | Complete ODE document for the text function. |
 | `path` | `str \| Path` | required | ODE file for the file function. |
 | `unresolved` | `str` | `"symbolic"` | Missing-value policy. |
+| `allow_fractional` | `bool` | `False` | Allow real source-complex coefficients. |
+| `lift_rational` | `bool` | `False` | Introduce reciprocal auxiliary species. |
 
 ##### Returns
 
@@ -1178,6 +1221,218 @@ def parse_ode_file(path: Union[str, Path], unresolved: str = "symbolic") -> dict
 - `ODEParseError`: ODE content is malformed or cannot be realized as a CRN.
 - `ValueError`: The unresolved-value policy is unknown.
 
+
+### `ode_documents.py`
+
+#### `ODEDocumentParser.__init__` — public constructor
+
+```python
+def __init__(self, section_parser=None)
+```
+
+Configure the section-format fallback reader.
+
+##### Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `section_parser` | `SectionParser` or `None` | `None` | Injected reader for existing labeled documents. |
+
+#### `ODEDocumentParser.recognizes` — public class method
+
+```python
+@classmethod
+def recognizes(cls, text)
+```
+
+Detect raw derivative declarations for application-level format inference.
+
+##### Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `text` | `str` | required | Candidate document. |
+
+##### Returns
+
+- `recognized` (`bool`): Whether a non-comment derivative declaration exists.
+
+#### `ODEDocumentParser.parse` — public
+
+```python
+def parse(self, text: str) -> Sections
+```
+
+Normalize numeric XPP parameters and derivative equations to numbered sections.
+Recognized labeled documents use the injected section parser. Ignore `init`,
+solver/plot options, boundary settings, and comments; stop at `done`. Initial
+concentrations are not extracted from XPP documents. Unsupported model
+declarations fail explicitly. XPP functions, fixed variables, delays, events,
+integrals, stochastic equations, and difference equations are not implemented.
+
+##### Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `text` | `str` | required | Sectioned or XPP-style document. |
+
+##### Returns
+
+- `sections` (`Sections`): Numbered equation and coefficient rows (original source line numbers retained).
+
+##### Raises
+
+- `ParserError`: Invalid/duplicate parameter declarations, unsupported declarations, or incomplete continuations.
+
+#### `ODEFileParser.parse_sections` — public extension point
+
+```python
+def parse_sections(self, text: str)
+```
+
+Delegate document normalization to `ODEDocumentParser`.
+
+##### Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `text` | `str` | required | Input document. |
+
+##### Returns
+
+- `sections` (`Sections`): Normalized parser input.
+
+##### Raises
+
+- `ODEParseError`: The document adapter rejects an unsupported or malformed declaration.
+
+### `ode_transformations.py`
+
+The transformation stage is independent of graph building and deficiency
+calculation. It operates on symbolic ODEs, emits augmented equations and
+constraint metadata, and verifies recovery before passing equations back to
+the kinetic realization stage. `ReciprocalLiftResult` is a data container.
+
+#### `ReciprocalODETransformer.lift` — public
+
+```python
+def lift(
+    self, equations: Mapping[str, Expr], values: Mapping[str, float],
+    initial_conditions: Mapping[str, float],
+    requested: Optional[Mapping[str, Expr]] = None,
+) -> ReciprocalLiftResult
+```
+
+Identify shared polynomial species denominators, introduce reciprocal
+auxiliaries, derive their chain-rule dynamics, and verify pullback identities.
+Input mappings are not mutated. Automatic identifiers avoid existing symbols.
+This stage checks embedding equivalence; the ODE parser subsequently checks
+whether the augmented terms admit nonnegative product complexes.
+
+##### Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `equations` | `Mapping[str, Expr]` | required | Original species to derivative expression. |
+| `values` | `Mapping[str, float]` | required | Constant model parameters. |
+| `initial_conditions` | `Mapping[str, float]` | required | Original and optional auxiliary concentrations. |
+| `requested` | `Mapping[str, Expr]` or `None` | `None` | Named reciprocal definitions from `Auxiliary Species`. |
+
+##### Returns
+
+- `result` (`ReciprocalLiftResult`): Augmented `equations`, completed `initial_conditions`, `auxiliaries` constraint records, and `warnings` for unresolved initial values.
+
+##### Raises
+
+- `ValueError`: Unsupported denominator powers, nonpolynomial denominators, more than 32 auxiliaries, invalid/conflicting names, failed symbolic verification, or inconsistent/singular/nonpositive reciprocal initial values.
+
+Private nested helpers `rewrite` and `convert` are local implementation details
+of the transformer and shared arithmetic parser, respectively, rather than
+independent class methods.
+
+#### `ArithmeticExpressionParser.parse` — public shared parser utility
+
+```python
+@staticmethod
+def parse(text, species_names=None, line_number=1, parameter_names=())
+```
+
+Construct SymPy arithmetic from whitelisted AST nodes without `eval` or
+`sympify` on user input. Declared parameter spellings take precedence over
+case-insensitive species matching.
+
+##### Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `text` | `str` | required | Arithmetic expression. |
+| `species_names` | mapping or `None` | `None` | Canonical species name map. |
+| `line_number` | `int` | `1` | Diagnostic location. |
+| `parameter_names` | iterable of `str` | `()` | Exact parameter identifiers. |
+
+##### Returns
+
+- `expression` (`Expr`): Parsed symbolic expression.
+
+##### Raises
+
+- `ParserError`: Invalid syntax, unsupported nodes, nonfinite literals, or explicit division by zero.
+
+#### `ReactionFileParser._apply_kinetics` — private
+
+```python
+def _apply_kinetics(self, sections, reactions, complexes, coefficients, rates)
+```
+
+Attach independent kinetic orders or a full rate expression by reaction label
+using dataclass replacement. Stoichiometric complexes and reaction indices
+are retained. Full rate laws are declarations, not positivity proofs.
+
+##### Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `sections` | `Sections` | required | Named input sections. |
+| `reactions` | `list[Reaction]` | required | Original reactions. |
+| `complexes` | `list[Complex]` | required | Indexed stoichiometric complexes. |
+| `coefficients` | `Mapping[str, float]` | required | Defined kinetic-order coefficients. |
+| `rates` | `Mapping[str, float]` | required | Declared constant parameters, preserving their exact names. |
+
+##### Returns
+
+- `reactions` (`list[Reaction]`): Reactions carrying optional kinetic declarations.
+
+##### Raises
+
+- `ReactionParseError`: Malformed/unknown/duplicate labels, unknown kinetic species, executable syntax, or conflicting declarations.
+
+#### `ODEFileParser._kinetic_monomial` — private
+
+```python
+@staticmethod
+def _kinetic_monomial(reactant)
+```
+
+Build a symbolic species monomial for reaction-rate serialization.
+
+##### Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `reactant` | `Mapping[str, Scalar]` | required | Source species and exponents. |
+
+##### Returns
+
+- `monomial` (`Expr`): Product of species powers.
+
+Reaction models now accept optional `kinetic_orders` and `rate_expression`.
+`kinetic_orders=None` means orders follow source-complex coefficients; explicit
+orders can differ. `rate_expression` holds a full concentration-dependent rate.
+Graph weights remain the scalar/symbolic rate constant. `ReactionNetwork`
+stores `analysis_metadata` only when supplied, preserving old report support.
+The report reader restores these fields. ODE metadata records original and
+transformed equations, realization mode, constant-parameter assumptions,
+reciprocal constraints/domains, initial-value expressions, and deficiency scope.
 
 ### `deficiency_utils.py`
 
@@ -1375,7 +1630,8 @@ def to_dict(self) -> dict
 ```python
 def analyze_file(
     self, path: Union[str, Path], *, input_format: str = "auto",
-    unresolved: str = "symbolic"
+    unresolved: str = "symbolic", allow_fractional: bool = False,
+    lift_rational: bool = False
 ) -> AnalysisOutcome
 ```
 
@@ -1386,6 +1642,8 @@ def analyze_file(
 | `path` | `str \| Path` | required | `.react` or `.ode` input path. |
 | `input_format` | `str` | `"auto"` | Explicit format or suffix detection. |
 | `unresolved` | `str` | `"symbolic"` | Missing-value policy. |
+| `allow_fractional` | `bool` | `False` | Enable real-complex ODE inference. |
+| `lift_rational` | `bool` | `False` | Enable reciprocal ODE embedding. |
 
 ##### Returns
 
@@ -1405,7 +1663,8 @@ def analyze_file(
 ```python
 def analyze_text(
     self, text: str, *, input_format: str = "auto",
-    unresolved: str = "symbolic", source: Optional[str] = None
+    unresolved: str = "symbolic", source: Optional[str] = None,
+    allow_fractional: bool = False, lift_rational: bool = False
 ) -> AnalysisOutcome
 ```
 
@@ -1417,6 +1676,8 @@ def analyze_text(
 | `input_format` | `str` | `"auto"` | Explicit format or heading detection. |
 | `unresolved` | `str` | `"symbolic"` | Missing-value policy. |
 | `source` | `str \| None` | `None` | Optional display/source identifier. |
+| `allow_fractional` | `bool` | `False` | Enable real-complex ODE inference. |
+| `lift_rational` | `bool` | `False` | Enable reciprocal ODE embedding. |
 
 ##### Returns
 

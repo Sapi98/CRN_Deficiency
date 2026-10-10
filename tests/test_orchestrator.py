@@ -23,6 +23,22 @@ k1 = 2
 
 
 class OrchestratorTests(unittest.TestCase):
+    def test_raw_standard_ode_text_is_detected_automatically(self):
+        outcome = CRNAnalysisService().analyze_text("param k=2\nx'=-k*x\ndone")
+        self.assertEqual(outcome.input_format, "ode")
+        self.assertEqual(outcome.network.rate_constants, {"k": 2})
+
+    def test_cli_enables_reciprocal_and_fractional_realization(self):
+        stdout = StringIO()
+        with redirect_stdout(stdout):
+            status = main([
+                "--file", "Example_Data/AFmodel.ode", "--allow-fractional",
+                "--lift-rational", "--no-file",
+            ])
+        self.assertEqual(status, 0)
+        self.assertIn("augmented network", stdout.getvalue())
+        self.assertIn("deficiency = 6", stdout.getvalue())
+
     def test_additional_bundled_examples_are_valid(self):
         examples = [
             "Example_Data/reversible_conversion.react",

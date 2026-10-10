@@ -253,6 +253,14 @@ network deficiency, complexes, linkage classes, stoichiometric rank, species,
 and reactions. A read-only report includes per-linkage-class results, parser
 warnings, and symbolic-rank notes. Missing parameter values remain symbolic.
 
+For ODE models, the input panel also provides **Allow fractional ODE powers**
+and **Lift rational ODE rates using auxiliary species**. Enable both before
+analyzing `Example_Data/AFmodel.ode`: its `y^1.4` term requires fractional
+powers, and its `Auxiliary Species` section requires rational lifting.
+These options are off by default and disabled for reaction-file inputs.
+Deficiency then describes the augmented real-complex realization, not a
+unique network determined by the original ODE.
+
 The **Reaction graph** tab shows complexes as labeled nodes with directed
 reaction arrows and rate labels. The **Linkage graph** tab shows undirected
 connections between complexes. Both views color complexes by linkage class
@@ -351,6 +359,41 @@ ode_data = parse_ode_file("model.ode")
 
 ## Input formats
 
+XPP-style `.ode` files can be read directly, without converting them to the
+section format. This reader uses numeric parameter declarations and autonomous
+derivative equations, for example:
+
+```text
+param k=2, q=0.5
+x' = -k*x
+dy/dt = k*x-q*y
+init x=1,y=0
+@ total=250,dt=0.1
+done
+```
+
+`p`, `par`, `param`, `parameter`, and `parameters` are supported parameter
+keywords. Both derivative spellings are accepted, as are `#` comments,
+scientific notation, and backslash line continuations. Initial-state, solver,
+and plotting directives are ignored in this format: only parameters and
+equations enter structural analysis. Without initial conditions, reciprocal
+lifting records the required auxiliary initial-value expression as a warning.
+The existing section format continues to support explicit `Initial Conditions`.
+
+Run the supplied CM model directly (quote its filename because it has spaces):
+
+```bash
+crntanalysis "Example_Data/CM _model.ode" --lift-rational
+```
+
+Raw XPP-style equation text is also automatically recognized through `--text`,
+`--stdin`, and the analysis service. Rational kinetics still requires
+`--lift-rational`, and fractional powers require `--allow-fractional`.
+The reader supports the parameter/equation subset of the
+[XPP file format](https://sites.pitt.edu/~phase/bard/bardware/xpp/help/xppodes.html),
+not its full language: functions, temporary/fixed variables, events, delayed,
+stochastic, integral, and difference equations require explicit conversion.
+
 A reaction file contains labeled sections such as:
 
 ```text
@@ -375,6 +418,79 @@ dy/dt = -k1 * X^2 * Y
 Coefficients:
 k1 = 0.5
 ```
+
+The ODE parser expands parentheses and combines repeated species factors.
+For example, `x*(1-x/K)`, `x-(1/K)*x^2`, and `x-(1/K)*x*x` give the same
+canonical realization: `x -> 2 x` at rate `1` and `2 x -> x` at rate `1/K`.
+Numeric coefficients and species-independent parameter expressions are valid
+effective rates. Define `K` in the `Coefficients` section to resolve `1/K`;
+otherwise it remains symbolic under the default policy. Every species must
+have a derivative equation; use `dy/dt = 0` for an unchanged species.
+
+The default ODE mode requires ordinary polynomial mass-action kinetics.
+Two opt-in extensions support real powers and reciprocal auxiliary species:
+
+```bash
+crntanalysis Example_Data/AFmodel.ode --allow-fractional --lift-rational
+```
+
+`--allow-fractional` uses nonnegative real kinetic powers as the coefficients
+of the inferred source complex. For example, `-k*y^1.4` gives
+`1.4 y -> 0.4 y`, with rate `k*y^1.4`. This is a selected real-complex
+realization, not a uniquely inferred physical reaction mechanism.
+
+`--lift-rational` introduces a reciprocal species for each distinct
+species-dependent polynomial denominator, reuses shared denominators, and
+derives its ODE by the chain rule. To choose its name, add:
+
+```text
+Auxiliary Species:
+s = 1/(1+x+a*z)
+```
+
+Without this section, names such as `_aux_s1` are generated without conflicting
+with model identifiers. Parameters are treated as constant. The original
+equations, augmented equations, constraints, domain restrictions, and derived
+initial values are stored in the structured report's `analysis_metadata`.
+For AFmodel, `s(0) = 1/(1+2.05+3*4)`. Equivalence holds on the constraint
+`s*(1+x+a*z)=1` where the denominator is positive. An arbitrary initial value
+for `s` defines a different dynamical system.
+
+The reported deficiency belongs to the augmented realization. Lifting does not
+guarantee a kinetic realization: negative product coefficients, unresolved
+exponents requiring arithmetic, nonpolynomial denominators, and unsupported
+denominator powers still produce errors. Classical mass-action deficiency
+theorems are not automatically asserted for real-complex or general kinetics.
+
+The equivalent Python API is:
+
+```python
+parsed = ODEFileParser(allow_fractional=True, lift_rational=True).parse_file(
+    "Example_Data/AFmodel.ode"
+)
+print(parsed.network.analysis_metadata["auxiliary_species"])
+```
+
+For an explicitly declared reaction network, kinetics can instead be specified
+independently of stoichiometry. Fractional complex coefficients are already
+supported by the reaction parser:
+
+```text
+Reactions:
+Y k-> 0
+Rate Constants:
+k = 2
+Kinetic Orders:
+k = 1.4 Y
+```
+
+This keeps the source complex `Y` while assigning rate `k*Y^1.4`. Alternatively,
+use a `Rate Laws` section, e.g. `k = k*X*Y/(1+X+a*z)`, with the corresponding
+stoichiometric reaction explicitly declared. Each label can have kinetic orders
+or a full rate law; full laws are authoritative expressions, and their domain
+and nonnegativity must be established by the model author. Every reaction with
+the same label receives the same kinetic declaration. Graph weights remain
+rate constants or labels, not concentration-dependent rates.
 
 Unspecified values remain symbolic by default. Alternative policies are:
 
@@ -567,6 +683,8 @@ crntanalysis --format react --unresolved symbolic
 | `--stdin` | Read the complete model from standard input. | — |
 | `--format {auto,react,ode}` | Select or infer the input format. | `auto` |
 | `--unresolved {symbolic,error,one}` | Handle missing parameter values. | `symbolic` |
+| `--allow-fractional` | Infer ODE source complexes with nonnegative real powers. | Disabled |
+| `--lift-rational` | Introduce reciprocal species and derive auxiliary ODEs. | Disabled |
 | `--output-dir DIRECTORY` | Set the report and automatic-figure directory. | `output` |
 | `--output-name NAME` | Set the report and automatic-graph basename. | Source-derived |
 | `--extension {analysis,output,txt}` | Select structured JSON or plain-text summary output. | `analysis` |
