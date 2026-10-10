@@ -29,6 +29,43 @@ class ODEParserTests(unittest.TestCase):
         self.assertEqual(len(parsed.network.analysis_metadata["auxiliary_species"]), 1)
         self.assertGreater(len(parsed.network.reactions), 0)
 
+    def test_parallel_ode_rates_are_added_without_merging_reverse_edges(self):
+        from sympy import Symbol, simplify
+        parsed = ODEFileParser().parse_text(
+            'ODE Model:\ndx/dt=-a*x-b*x+c*y+d*y\ndy/dt=a*x+b*x-c*y-d*y\n'
+            'Coefficients:\na=1\nb=2\nc=3\nd=4')
+        reactions = parsed.network.reactions
+        self.assertEqual(len(reactions), 2)
+        self.assertEqual([r.index for r in reactions], [0, 1])
+        self.assertEqual(sorted(r.rate for r in reactions), [3, 7])
+        for r in reactions:
+            expected = ((Symbol('a') + Symbol('b')) * Symbol('x')
+                        if parsed.network.complexes[r.source].species == {'x': 1}
+                        else (Symbol('c') + Symbol('d')) * Symbol('y'))
+            self.assertEqual(simplify(ODEFileParser._expression(r.rate_expression, {}, 1) - expected), 0)
+
+    def test_cm_has_unique_directed_edges_and_preserves_vector_field(self):
+        from sympy import Symbol, simplify
+        from crntanalysis.deficiency_utils import calculate_deficiency
+        parsed = ODEFileParser(lift_rational=True).parse_file('Example_Data/CM _model.ode')
+        network = parsed.network
+        endpoints = [(r.source, r.target) for r in network.reactions]
+        self.assertEqual(len(endpoints), len(set(endpoints)))
+        self.assertEqual(calculate_deficiency(network).deficiency, 10)
+        for species, rhs in network.analysis_metadata['transformed_equations'].items():
+            reconstructed = 0
+            for r in network.reactions:
+                change = (network.complexes[r.target].species.get(species, 0)
+                          - network.complexes[r.source].species.get(species, 0))
+                reconstructed += change * ODEFileParser._expression(r.rate_expression, {}, 1)
+            self.assertEqual(simplify(reconstructed - ODEFileParser._expression(rhs, {}, 1)), 0)
+
+    def test_parallel_symbolic_rates_remain_symbolic(self):
+        parsed = ODEFileParser().parse_text('ODE Model:\ndx/dt=-a*x-b*x')
+        self.assertEqual(len(parsed.network.reactions), 1)
+        self.assertEqual(parsed.network.reactions[0].rate_constant, 'a + b')
+        self.assertIsNone(parsed.network.reactions[0].rate)
+
     def test_xpp_named_reciprocal_matches_sectioned_auxiliary(self):
         raw = "param k=2\nx'=-k*x/(1+x)\ns = 1/(1+x)\ndone"
         sectioned = "ODE Model:\ndx/dt=-k*x/(1+x)\nCoefficients:\nk=2\nAuxiliary Species:\ns=1/(1+x)"

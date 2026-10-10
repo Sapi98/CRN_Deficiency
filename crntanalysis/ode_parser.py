@@ -368,6 +368,7 @@ class ODEFileParser(BaseFileParser[ODEParseResult]):
 
         registry = ComplexRegistry()
         reactions = []
+        reaction_positions = {}
         for contribution in grouped.values():
             if not any(contribution.delta.values()):
                 continue
@@ -393,16 +394,42 @@ class ODEFileParser(BaseFileParser[ODEParseResult]):
             except UnresolvedValueError as error:
                 line = min(contribution.line_numbers)
                 raise ODEParseError(f"{error} on line {line}") from None
-            reactions.append(
-                Reaction(
-                    index=len(reactions),
-                    source_complex=registry.register(contribution.reactant),
-                    target_complex=registry.register(products),
-                    rate_constant=contribution.rate_constant,
-                    rate=rate,
-                    rate_expression=str(rate_expression * self._kinetic_monomial(contribution.reactant)),
+            source = registry.register(contribution.reactant)
+            target = registry.register(products)
+            # In this canonical realization the source complex determines the
+            # kinetic monomial. Identical directed endpoints therefore have
+            # identical kinetics and their positive rate constants can be added.
+            key = (source, target)
+            if key in reaction_positions:
+                position = reaction_positions[key]
+                previous = reactions[position]
+                rate_expression = expand(
+                    self._expression(previous.rate_constant, {}, 1) + rate_expression
                 )
+                if previous.rate is None or rate is None:
+                    rate = None
+                else:
+                    try:
+                        rate = math.fsum((previous.rate, rate))
+                    except OverflowError:
+                        raise ODEParseError('Combined effective rate must be finite') from None
+                    if not math.isfinite(rate):
+                        raise ODEParseError('Combined effective rate must be finite')
+            else:
+                position = len(reactions)
+                reaction_positions[key] = position
+            reaction = Reaction(
+                index=position,
+                source_complex=source,
+                target_complex=target,
+                rate_constant=str(rate_expression),
+                rate=rate,
+                rate_expression=str(rate_expression * self._kinetic_monomial(contribution.reactant)),
             )
+            if position == len(reactions):
+                reactions.append(reaction)
+            else:
+                reactions[position] = reaction
 
         complexes = registry.complexes
         graph, adjacency = self.graph_builder.build(complexes, reactions)

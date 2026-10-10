@@ -422,6 +422,12 @@ implicit/DAE formulation rather than explicit chain-rule substitution.
 An augmented system must still admit a nonnegative-complex CRN realization;
 adding auxiliaries does not guarantee this.
 
+ODE-generated reactions with identical source and target complexes are merged
+into one directed edge by adding their rate constants. This is valid because
+these canonical reactions share the source-complex kinetic monomial. Symbolic
+rates remain symbolic sums; reverse reactions remain separate. Explicit
+reaction-file channels are retained as written.
+
 Functions, other fixed variables, events, delayed,
 stochastic, integral, and difference equations require explicit conversion.
 
