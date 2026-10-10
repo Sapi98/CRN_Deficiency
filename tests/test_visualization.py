@@ -5,7 +5,16 @@ from importlib.util import find_spec
 
 from crntanalysis.crn_models import Complex, Reaction
 from test_deficiency_utils import network_from
-from crntanalysis.visualization import NetworkGraphAdapter, NetworkVisualizer
+from crntanalysis.visualization import NetworkGraphAdapter, NetworkVisualizer, format_rate_label
+
+
+class RateLabelTests(unittest.TestCase):
+    def test_display_precision_and_symbolic_labels(self):
+        for value, expected in ((1.234567, '1.235'), (2.0, '2'),
+                                (0.0000123456, '1.235e-05'),
+                                (0, '0'), ('k1/K', 'k1/K')):
+            with self.subTest(value=value):
+                self.assertEqual(format_rate_label(value), expected)
 
 
 @unittest.skipUnless(find_spec("networkx") and find_spec("matplotlib"), "optional visualization dependencies")
@@ -39,6 +48,16 @@ class VisualizationTests(unittest.TestCase):
         figure2, ax2 = visualizer.draw_linkage_graph(self.network, show_deficiency=True)
         self.assertEqual(len(ax2.patches), 2)
         self.assertEqual(len(ax2.get_legend().get_texts()), 2)
+
+    def test_graph_labels_round_without_changing_rates(self):
+        rate = 1.23456789
+        network = network_from([Complex(0, 'A', {'A': 1}), Complex(1, 'B', {'B': 1})],
+                               [Reaction(0, 0, 1, 'k', rate)])
+        for draw in (NetworkVisualizer().draw_reaction_network,
+                     NetworkVisualizer().draw_linkage_graph):
+            _, ax = draw(network, show_rates=True)
+            self.assertIn('r0: 1.235', [text.get_text() for text in ax.texts])
+        self.assertEqual(network.reactions[0].rate, rate)
 
     def test_empty_and_invalid_networks(self):
         NetworkVisualizer().draw_linkage_graph(network_from([], []))

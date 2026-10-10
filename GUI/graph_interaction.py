@@ -1,6 +1,7 @@
 """Animated Qt overlays and complex details for embedded Matplotlib graphs."""
 import math
 import time
+from crntanalysis.visualization import format_rate_label
 from PySide6.QtCore import QEvent, QObject, QPoint, QPointF, Qt, QTimer
 from PySide6.QtGui import QColor, QPainter, QRadialGradient
 from PySide6.QtWidgets import QFrame, QGraphicsDropShadowEffect, QLabel, QVBoxLayout, QWidget
@@ -157,7 +158,7 @@ class GraphInteraction(QObject):
                  f'Linkage class L{linkage.index} · deficiency {linkage.deficiency}',
                  f'Incoming: {len(incoming)} · Outgoing: {len(outgoing)}', '', 'Connected reactions:']
         for reaction in incident[:6]:
-            lines.append(f'r{reaction.index}: {labels[reaction.source]} → {labels[reaction.target]} (rate {reaction.weight})')
+            lines.append(f'r{reaction.index}: {labels[reaction.source]} → {labels[reaction.target]} (rate {format_rate_label(reaction.weight)})')
         if len(incident) > 6:
             lines.append(f'… and {len(incident) - 6} more')
         if not incident:
