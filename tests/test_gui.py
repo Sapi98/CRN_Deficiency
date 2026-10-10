@@ -48,6 +48,7 @@ class DesktopAnalysisTests(unittest.TestCase):
 
     def test_text_analysis_and_input_invalidation(self):
         ui = self.window.ui
+        self.assertEqual(ui.previewBadge.text(), 'Desktop App v1.1')
         self.assertFalse(ui.analyzeButton.isEnabled())
         ui.exampleButton.click()
         self.assertTrue(ui.analyzeButton.isEnabled())

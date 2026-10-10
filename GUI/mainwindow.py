@@ -133,6 +133,7 @@ class MainWindow(QMainWindow):
         self.ui = load_ui_class()()
         self.ui.setupUi(self)
         self.setWindowTitle(f'CRNTAnalysis v{__version__} • Model workspace')
+        self.ui.previewBadge.setText(f'Desktop App v{__version__.removesuffix(".0")}')
         # Keep saved-result actions above the empty-state content, independent
         # of the report/graph tabs' visibility.
         self.ui.resultsLayout.removeItem(self.ui.resultActionsLayout)

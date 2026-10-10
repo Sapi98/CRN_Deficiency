@@ -530,7 +530,7 @@ class Ui_MainWindow(object):
         self.brandLabel.setText(QCoreApplication.translate("MainWindow", u"CRNTAnalysis", None))
         self.taglineLabel.setText(QCoreApplication.translate("MainWindow", u"Chemical Reaction Network Theory", None))
         self.taglineLabel.setProperty(u"role", QCoreApplication.translate("MainWindow", u"muted", None))
-        self.previewBadge.setText(QCoreApplication.translate("MainWindow", u"Desktop App v1.0", None))
+        self.previewBadge.setText(QCoreApplication.translate("MainWindow", u"Desktop App v1.1", None))
         self.titleLabel.setText(QCoreApplication.translate("MainWindow", u"Your model, ready to explore.", None))
         self.subtitleLabel.setText(QCoreApplication.translate("MainWindow", u"Paste a reaction network or upload a model file to get started.", None))
         self.inputHeading.setText(QCoreApplication.translate("MainWindow", u"01  /  Model input", None))
@@ -638,4 +638,3 @@ class Ui_MainWindow(object):
         self.statusLabel.setText(QCoreApplication.translate("MainWindow", u"Ready \u2022 Paste text or select a model file.", None))
         self.statusLabel.setProperty(u"role", QCoreApplication.translate("MainWindow", u"muted", None))
     # retranslateUi
-
