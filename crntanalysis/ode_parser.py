@@ -159,7 +159,13 @@ class ODEFileParser(BaseFileParser[ODEParseResult]):
         transformed = originals
         auxiliary_rows = sections.get("auxiliary species", [])
         if auxiliary_rows and not self.lift_rational:
-            raise ODEParseError("Auxiliary Species definitions require lift_rational=True or --lift-rational")
+            raise ODEParseError(
+                "Auxiliary Species definitions require rational lifting. "
+                "In the GUI, check 'Lift rational ODE rates using auxiliary species' "
+                "at the top of the Model input panel, then click Analyze model again. "
+                "For fractional powers, also check 'Allow fractional ODE powers (real complexes)'. "
+                "CLI: --lift-rational; Python: lift_rational=True."
+            )
         if self.lift_rational:
             definitions = {}
             for number, row in auxiliary_rows:
@@ -311,7 +317,10 @@ class ODEFileParser(BaseFileParser[ODEParseResult]):
             raise ODEParseError(f"Species exponents must be finite and nonnegative on line {line_number}")
         if not float(exponent).is_integer() and not self.allow_fractional:
             raise ODEParseError(
-                f"Mass-action exponents must be nonnegative integers on line {line_number}; enable allow_fractional=True or --allow-fractional for a real-complex realization"
+                f"Mass-action exponents must be nonnegative integers on line {line_number}. "
+                "For a real-complex realization, check 'Allow fractional ODE powers (real complexes)' "
+                "at the top of the GUI Model input panel, then click Analyze model again. "
+                "CLI: --allow-fractional; Python: allow_fractional=True."
             )
         return int(exponent) if float(exponent).is_integer() else float(exponent)
 

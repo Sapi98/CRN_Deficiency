@@ -38,6 +38,21 @@ class ODEParserTests(unittest.TestCase):
         with self.assertRaisesRegex(ODEParseError, 'lift_rational'):
             ODEFileParser().parse_text(raw)
 
+    def test_option_errors_guide_gui_users_to_checkboxes(self):
+        cases = (
+            ("ODE Model:\ndx/dt=-x/(1+x)\nAuxiliary Species:\ns=1/(1+x)",
+             'Lift rational ODE rates using auxiliary species'),
+            ("ODE Model:\ndx/dt=-x^1.4",
+             'Allow fractional ODE powers (real complexes)'),
+        )
+        for text, checkbox in cases:
+            with self.subTest(checkbox=checkbox):
+                with self.assertRaises(ODEParseError) as caught:
+                    ODEFileParser().parse_text(text)
+                self.assertIn(checkbox, str(caught.exception))
+                self.assertIn('top of the', str(caught.exception))
+                self.assertIn('Analyze model again', str(caught.exception))
+
     def test_xpp_continuations_comments_and_scientific_notation(self):
         text = "par k=2e-3, \\\n q=0.5 # parameters\nx' = -k*x + \\\n q*x\ndone\nignored after done"
         parsed = parse_ode_text(text)
