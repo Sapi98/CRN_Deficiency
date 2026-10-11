@@ -3,6 +3,9 @@
 # Analyze using --allow-fractional --lift-rational.
 # Deficiency then refers to the augmented real-complex realization.
 
+Species:
+x, y
+
 ODE Model:
 dx/dt = x*(1-x/K) - x*y/(1+x+a*z)
 dy/dt = y*(e*((x+z)/(1+x+a*z))) - d*y - c*z*y^p

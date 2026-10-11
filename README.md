@@ -363,6 +363,32 @@ ode_data = parse_ode_file("model.ode")
 
 ## Input formats
 
+Declare original dynamic variables explicitly in a sectioned ODE file:
+
+```text
+Species:
+x, y
+
+ODE Model:
+dx/dt = -k*x
+dy/dt = k*x
+
+Coefficients:
+k = 0.5
+```
+
+Every declared species must have exactly one derivative equation (use `0`
+if its derivative is zero). All other expression identifiers are constant
+parameters unless defined as auxiliary species. Numeric values go in
+`Coefficients:`; unspecified constants follow the selected unresolved-value
+policy. Declared names determine species capitalization. Auxiliary species
+belong in `Auxiliary Species:`, not in the original `Species:` list, because
+their ODEs are derived automatically. For backward compatibility, omitted
+species declarations still infer dynamic species from derivative left sides.
+
+For XPP-style input, use the tool extension `species x, y` before the equations.
+This declaration is a CRNTAnalysis extension, not a claim of standard XPP syntax.
+
 XPP-style `.ode` files can be read directly, without converting them to the
 section format. This reader uses numeric parameter declarations and autonomous
 derivative equations, for example:

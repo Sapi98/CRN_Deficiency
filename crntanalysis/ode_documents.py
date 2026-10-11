@@ -41,6 +41,10 @@ class ODEDocumentParser:
             pending = ""
             if line.lower() == "done":
                 break
+            declaration = re.fullmatch(r"species\s*:?\s+(.+)", line, re.I)
+            if declaration:
+                sections.setdefault('species', []).append((start, declaration.group(1)))
+                continue
             match = self.parameter_pattern.match(line)
             if match:
                 for assignment in match.group(1).split(","):

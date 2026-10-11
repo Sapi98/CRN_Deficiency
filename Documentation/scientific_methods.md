@@ -247,6 +247,13 @@ kinetic-order deficiency is not yet calculated here.
 
 ### Reciprocal auxiliary species
 
+An optional `Species:` declaration identifies the original dynamic variables.
+Every listed variable must have one derivative equation; all remaining
+identifiers are constant parameters except explicitly defined auxiliary
+species. Auxiliary variables are added to the augmented state independently
+of the original declaration. Without a declaration, the original state is
+inferred from derivative left-hand sides for backward compatibility.
+
 Explicit auxiliary definitions may form an acyclic dependency graph. For
 $u_j=g_j(x,u_1,\ldots,u_{j-1})$, the augmented system includes
 

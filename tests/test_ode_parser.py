@@ -14,6 +14,28 @@ k2 = 0.1
 
 
 class ODEParserTests(unittest.TestCase):
+    def test_explicit_species_preserve_names_and_zero_derivatives(self):
+        parsed = ODEFileParser().parse_text(
+            'Species:\nx, y\nODE Model:\ndx/dt=0\ndy/dt=k*y+z*y\nCoefficients:\nk=2\nz=3')
+        self.assertEqual(parsed.network.analysis_metadata['species_declaration'], ['x', 'y'])
+        self.assertEqual(parsed.network.analysis_metadata['original_equations']['x'], '0')
+        self.assertEqual(set(parsed.network.rate_constants), {'k', 'z'})
+        self.assertNotIn('z', {name for c in parsed.network.complexes for name in c.species})
+
+    def test_explicit_species_validate_derivatives_and_duplicates(self):
+        for text in ('Species:\nx,y\nODE Model:\ndx/dt=x',
+                     'Species:\nx\nODE Model:\ndx/dt=x\ndy/dt=y',
+                     'Species:\nx,X\nODE Model:\ndx/dt=x',
+                     'Species:\nx=1\nODE Model:\ndx/dt=x',
+                     'Species:\nx\nODE Model:\ndx/dt=x\nCoefficients:\nx=2'):
+            with self.subTest(text=text), self.assertRaises(ODEParseError):
+                ODEFileParser().parse_text(text)
+
+    def test_xpp_explicit_species_and_automatic_auxiliary_registration(self):
+        parsed = ODEFileParser(lift_rational=True).parse_text(
+            "species x,y\nparam z=2\nx'=-x/(1+x+z)\ny'=0\ns=1/(1+x+z)")
+        self.assertEqual(parsed.network.analysis_metadata['species_declaration'], ['x', 'y'])
+        self.assertEqual(set(parsed.network.analysis_metadata['transformed_equations']), {'x', 'y', 's'})
     def test_xpp_parameters_and_derivative_aliases_match_section_format(self):
         standard = "# Model\nparam k=2, q=0.5\nx' = -k*x\ndy/dt = k*x-q*y\ninit x=99,y=4\n@ total=250,dt=0.1\ndone"
         sectioned = "ODE Model:\ndx/dt = -k*x\ndy/dt = k*x-q*y\nCoefficients:\nk = 2\nq = 0.5"
