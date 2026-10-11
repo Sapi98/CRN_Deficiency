@@ -1267,7 +1267,12 @@ Normalize numeric XPP parameters and derivative equations to numbered sections.
 Recognized labeled documents use the injected section parser. Ignore `init`,
 solver/plot options, boundary settings, and comments; stop at `done`. Initial
 concentrations are not extracted from XPP documents. Unsupported model
-declarations fail explicitly. XPP functions, fixed variables, delays, events,
+declarations fail explicitly. Standalone `name = expression` assignments are
+routed to auxiliary-species validation: only supported reciprocal definitions
+with rational lifting are accepted, including polynomial explicit definitions
+and acyclic dependencies on other auxiliaries. Each definition contributes
+its differentiated ODE; circular dependencies are rejected. General XPP fixed-variable substitution
+is not implemented. XPP functions, delays, events,
 integrals, stochastic equations, and difference equations are not implemented.
 
 ##### Parameters
@@ -1312,6 +1317,33 @@ The transformation stage is independent of graph building and deficiency
 calculation. It operates on symbolic ODEs, emits augmented equations and
 constraint metadata, and verifies recovery before passing equations back to
 the kinetic realization stage. `ReciprocalLiftResult` is a data container.
+
+#### `ReciprocalODETransformer.lift_definitions` — public
+
+```python
+def lift_definitions(self, equations, values, initial_conditions, definitions)
+```
+
+Order explicit auxiliary definitions by dependency, derive their ODEs,
+verify chain-rule constraints, and close remaining reciprocal denominators.
+Called by `lift` for nested, polynomial, or explicitly referenced auxiliaries.
+
+##### Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `equations` | `Mapping[str, Expr]` | required | Original derivative equations. |
+| `values` | `Mapping[str, float]` | required | Constant parameters. |
+| `initial_conditions` | `Mapping[str, float]` | required | Known initial concentrations. |
+| `definitions` | `Mapping[str, Expr]` | required | Explicit auxiliary definitions. |
+
+##### Returns
+
+- `result` (`ReciprocalLiftResult`): Augmented ODEs, initial values, constraint records with dependencies, and warnings.
+
+##### Raises
+
+- `ValueError`: Circular dependencies, identifier conflicts, undeclared definition identifiers, unsupported expressions, inconsistent or inadmissible initial values, failed verification, or more than 32 auxiliaries.
 
 #### `ReciprocalODETransformer.lift` — public
 

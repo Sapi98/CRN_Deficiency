@@ -11,6 +11,7 @@ from crntanalysis.orchestrator import (
     AnalysisReportReader,
     AnalysisReportWriter,
     CRNAnalysisService,
+    ConsoleReportFormatter,
     main,
 )
 
@@ -23,6 +24,30 @@ k1 = 2
 
 
 class OrchestratorTests(unittest.TestCase):
+    def test_detailed_auxiliary_report_is_shared_by_text_and_saved_results(self):
+        outcome = CRNAnalysisService().analyze_text(
+            'ODE Model:\ndx/dt=-x*t\nAuxiliary Species:\ns=1/(1+x)\nt=1/(1+s)\n'
+            'Initial Conditions:\nx=1', lift_rational=True)
+        report = ConsoleReportFormatter().format(outcome)
+        for expected in ('Network details', 'Indexed complexes', 'Reactions and rates',
+                         'Original ODE system', 'ODE system used for network construction',
+                         'Auxiliary species: s, t', 'Auxiliary definitions and derived ODEs',
+                         'ds/dt =', 'dt/dt =', 'Dependencies:', 'Constraint:', 'Initial value:'):
+            self.assertIn(expected, report)
+        with tempfile.TemporaryDirectory() as folder:
+            text = AnalysisReportWriter().write(outcome, folder, extension='txt')
+            self.assertEqual(text.read_text(), report + '\n')
+            for extension in ('analysis', 'output'):
+                path = AnalysisReportWriter().write(outcome, folder, extension=extension)
+                restored = AnalysisReportReader().read(path)
+                self.assertEqual(ConsoleReportFormatter().format(restored), report)
+
+    def test_report_lists_species_with_zero_derivatives(self):
+        outcome = CRNAnalysisService().analyze_text('ODE Model:\ndx/dt=0\ndy/dt=y')
+        report = ConsoleReportFormatter().format(outcome)
+        self.assertIn('Species: X, y', report)
+        self.assertIn('dX/dt = 0', report)
+
     def test_raw_standard_ode_text_is_detected_automatically(self):
         outcome = CRNAnalysisService().analyze_text("param k=2\nx'=-k*x\ndone")
         self.assertEqual(outcome.input_format, "ode")

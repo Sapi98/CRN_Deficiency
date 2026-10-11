@@ -55,13 +55,19 @@ class ODEDocumentParser:
                 species = match.group(1) or match.group(2)
                 sections["ode model"].append((start, f"d{species}/dt = {match.group(3)}"))
                 continue
+            # Named reciprocal definitions use the same validation and chain-rule
+            # lifting as an Auxiliary Species section in a sectioned document.
+            if re.fullmatch(r"[A-Za-z_]\w*\s*=\s*.+", line):
+                sections.setdefault("auxiliary species", []).append((start, line))
+                continue
             # Structural analysis deliberately ignores initial-state and solver settings.
             if line.startswith("@") or re.match(r"^(?:init|initial|i|options?|boundary|bndry)\b", line, re.I):
                 continue
             raise ParserError(
                 f"Unsupported XPP declaration on line {start}: {line!r}. "
                 "This reader accepts numeric parameters and autonomous derivative equations; "
-                "functions, fixed variables, events, delays, and difference equations need explicit conversion."
+                "named reciprocal auxiliary definitions are also supported with rational lifting. "
+                "Functions, events, delays, and difference equations need explicit conversion."
             )
         if pending:
             raise ParserError(f"Unterminated line continuation starting on line {start}")

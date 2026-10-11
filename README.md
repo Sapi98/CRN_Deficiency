@@ -6,7 +6,7 @@ Network Theory (CRNT) deficiency. It accepts explicit reaction files and
 mass-action polynomial ODE files, provides typed and dictionary APIs, and
 includes a command-line analysis pipeline that writes structured reports.
 
-The project is currently an alpha release (`0.1.0`).
+The current application version is **v1.1** (package version `1.1.0`).
 
 ## Table of contents
 
@@ -58,7 +58,7 @@ repository also includes machine-readable citation metadata in
 Plain text:
 
 > Biswas, Saptarshi (2026). *CRNTAnalysis: Chemical Reaction Network Theory
-> Analysis* (version 0.1.0) [Software].
+> Analysis* (version 1.1.0) [Software].
 > https://github.com/Sapi98/CRN_Deficiency
 
 BibTeX:
@@ -68,7 +68,7 @@ BibTeX:
   author  = {Biswas, Saptarshi},
   title   = {CRNTAnalysis: Chemical Reaction Network Theory Analysis},
   year    = {2026},
-  version = {0.1.0},
+  version = {1.1.0},
   url     = {https://github.com/Sapi98/CRN_Deficiency}
 }
 ```
@@ -253,6 +253,10 @@ network deficiency, complexes, linkage classes, stoichiometric rank, species,
 and reactions. A read-only report includes per-linkage-class results, parser
 warnings, and symbolic-rank notes. Missing parameter values remain symbolic.
 
+You can open a saved `.analysis` or `.output` report immediately using
+**Open result…** at the top of Analysis overview or **File → Open result…**
+(Ctrl+O / Command+O). No model input or analysis run is required.
+
 For ODE models, the input panel also provides **Allow fractional ODE powers**
 and **Lift rational ODE rates using auxiliary species**. Enable both before
 analyzing `Example_Data/AFmodel.ode`: its `y^1.4` term requires fractional
@@ -391,7 +395,47 @@ Raw XPP-style equation text is also automatically recognized through `--text`,
 `--lift-rational`, and fractional powers require `--allow-fractional`.
 The reader supports the parameter/equation subset of the
 [XPP file format](https://sites.pitt.edu/~phase/bard/bardware/xpp/help/xppodes.html),
-not its full language: functions, temporary/fixed variables, events, delayed,
+not its full language. Standalone assignments such as `s = 1/(1+x)` are
+treated as named reciprocal auxiliary species with `--lift-rational`, not
+as general XPP fixed variables. Explicit polynomial auxiliary definitions
+are also supported. Each auxiliary adds its chain-rule ODE to the augmented
+system. Definitions can depend on other auxiliaries and may appear in any
+order, for example:
+
+```text
+ODE Model:
+dx/dt = -x*t
+
+Auxiliary Species:
+s = 1/(1+x)
+t = 1/(1+s)
+
+Initial Conditions:
+x = 1
+```
+
+With rational lifting enabled, this adds `ds/dt = x*t*s^2` and
+`dt/dt = -x*s^2*t^3` (the second `t` is the species name), and computes
+consistent auxiliary initial values. Circular definitions such as
+`s = 1/(1+t)` together with `t = 1/(1+s)` are rejected: they require an
+implicit/DAE formulation rather than explicit chain-rule substitution.
+An augmented system must still admit a nonnegative-complex CRN realization;
+adding auxiliaries does not guarantee this.
+
+ODE-generated reactions with identical source and target complexes are merged
+into one directed edge by adding their rate constants. This is valid because
+these canonical reactions share the source-complex kinetic monomial. Symbolic
+rates remain symbolic sums; reverse reactions remain separate. Explicit
+reaction-file channels are retained as written.
+
+Console, GUI, and saved plain-text reports include indexed complexes, reactions
+and rates, species lists, parameters, initial conditions, the original ODEs,
+and the complete augmented ODE system. Auxiliary details include each
+definition, derived ODE, dependency information when available, constraints,
+domain, and initial value. Structured `.analysis` and `.output` files retain
+this information in network metadata and restore the detailed report when opened.
+
+Functions, other fixed variables, events, delayed,
 stochastic, integral, and difference equations require explicit conversion.
 
 A reaction file contains labeled sections such as:

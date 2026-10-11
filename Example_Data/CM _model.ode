@@ -10,6 +10,9 @@ init x=1.5, y=4.5
 dx/dt = x*(1 - x/K) - (x*y)/( 1 + a*(x + z) + b*y + c*(x + z)*y) 
 dy/dt = e*(x + z)*y/(( 1 + a*(x + z) + b*y + c*(x + z)*y)) - d*y
 
+# Auxiliary Species
+s = 1/( 1 + a*(x + z) + b*y + c*(x + z)*y)
+
 # Time settings
 @ total=250, dt=0.1
 

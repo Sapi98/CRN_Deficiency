@@ -134,7 +134,7 @@ QPushButton:hover { color: #176cd3; }</string>
        <item>
         <widget class="QLabel" name="previewBadge">
          <property name="text">
-          <string>Desktop App v1.0</string>
+          <string>Desktop App v1.1</string>
          </property>
          <property name="wordWrap">
           <bool>false</bool>

@@ -29,6 +29,67 @@ class ODEParserTests(unittest.TestCase):
         self.assertEqual(len(parsed.network.analysis_metadata["auxiliary_species"]), 1)
         self.assertGreater(len(parsed.network.reactions), 0)
 
+    def test_parallel_ode_rates_are_added_without_merging_reverse_edges(self):
+        from sympy import Symbol, simplify
+        parsed = ODEFileParser().parse_text(
+            'ODE Model:\ndx/dt=-a*x-b*x+c*y+d*y\ndy/dt=a*x+b*x-c*y-d*y\n'
+            'Coefficients:\na=1\nb=2\nc=3\nd=4')
+        reactions = parsed.network.reactions
+        self.assertEqual(len(reactions), 2)
+        self.assertEqual([r.index for r in reactions], [0, 1])
+        self.assertEqual(sorted(r.rate for r in reactions), [3, 7])
+        for r in reactions:
+            expected = ((Symbol('a') + Symbol('b')) * Symbol('x')
+                        if parsed.network.complexes[r.source].species == {'x': 1}
+                        else (Symbol('c') + Symbol('d')) * Symbol('y'))
+            self.assertEqual(simplify(ODEFileParser._expression(r.rate_expression, {}, 1) - expected), 0)
+
+    def test_cm_has_unique_directed_edges_and_preserves_vector_field(self):
+        from sympy import Symbol, simplify
+        from crntanalysis.deficiency_utils import calculate_deficiency
+        parsed = ODEFileParser(lift_rational=True).parse_file('Example_Data/CM _model.ode')
+        network = parsed.network
+        endpoints = [(r.source, r.target) for r in network.reactions]
+        self.assertEqual(len(endpoints), len(set(endpoints)))
+        self.assertEqual(calculate_deficiency(network).deficiency, 10)
+        for species, rhs in network.analysis_metadata['transformed_equations'].items():
+            reconstructed = 0
+            for r in network.reactions:
+                change = (network.complexes[r.target].species.get(species, 0)
+                          - network.complexes[r.source].species.get(species, 0))
+                reconstructed += change * ODEFileParser._expression(r.rate_expression, {}, 1)
+            self.assertEqual(simplify(reconstructed - ODEFileParser._expression(rhs, {}, 1)), 0)
+
+    def test_parallel_symbolic_rates_remain_symbolic(self):
+        parsed = ODEFileParser().parse_text('ODE Model:\ndx/dt=-a*x-b*x')
+        self.assertEqual(len(parsed.network.reactions), 1)
+        self.assertEqual(parsed.network.reactions[0].rate_constant, 'a + b')
+        self.assertIsNone(parsed.network.reactions[0].rate)
+
+    def test_xpp_named_reciprocal_matches_sectioned_auxiliary(self):
+        raw = "param k=2\nx'=-k*x/(1+x)\ns = 1/(1+x)\ndone"
+        sectioned = "ODE Model:\ndx/dt=-k*x/(1+x)\nCoefficients:\nk=2\nAuxiliary Species:\ns=1/(1+x)"
+        parser = ODEFileParser(lift_rational=True)
+        self.assertEqual(parser.parse_text(raw).network.to_dict(),
+                         parser.parse_text(sectioned).network.to_dict())
+        with self.assertRaisesRegex(ODEParseError, 'lift_rational'):
+            ODEFileParser().parse_text(raw)
+
+    def test_option_errors_guide_gui_users_to_checkboxes(self):
+        cases = (
+            ("ODE Model:\ndx/dt=-x/(1+x)\nAuxiliary Species:\ns=1/(1+x)",
+             'Lift rational ODE rates using auxiliary species'),
+            ("ODE Model:\ndx/dt=-x^1.4",
+             'Allow fractional ODE powers (real complexes)'),
+        )
+        for text, checkbox in cases:
+            with self.subTest(checkbox=checkbox):
+                with self.assertRaises(ODEParseError) as caught:
+                    ODEFileParser().parse_text(text)
+                self.assertIn(checkbox, str(caught.exception))
+                self.assertIn('top of the', str(caught.exception))
+                self.assertIn('Analyze model again', str(caught.exception))
+
     def test_xpp_continuations_comments_and_scientific_notation(self):
         text = "par k=2e-3, \\\n q=0.5 # parameters\nx' = -k*x + \\\n q*x\ndone\nignored after done"
         parsed = parse_ode_text(text)
@@ -108,9 +169,35 @@ class ODEParserTests(unittest.TestCase):
         self.assertEqual(simplify(actual - s**3*(x+y)), 0)
 
     def test_invalid_auxiliary_names_and_definitions_are_rejected(self):
-        for definition in ("x = 1/(1+x)", "s = 1/(2+x)"):
+        for definition in ("x = 1/(1+x)", "s = 1/(1+t)"):
             with self.subTest(definition=definition), self.assertRaises(ODEParseError):
                 parse_ode_text("ODE Model:\ndx/dt = -x/(1+x)\nAuxiliary Species:\n" + definition, lift_rational=True)
+
+    def test_nested_auxiliaries_add_each_chain_rule_ode(self):
+        from sympy import Symbol, simplify
+        text = "ODE Model:\ndx/dt = -x*t\nAuxiliary Species:\nt = 1/(1+s)\ns = 1/(1+x)\nInitial Conditions:\nx = 1"
+        parsed = ODEFileParser(lift_rational=True).parse_text(text)
+        metadata = parsed.network.analysis_metadata
+        self.assertEqual(set(metadata['transformed_equations']), {'x', 's', 't'})
+        self.assertEqual(len(parsed.equations), 3)
+        x, s, t = Symbol('x'), Symbol('s'), Symbol('t')
+        self.assertEqual(simplify(ODEFileParser._expression(metadata['transformed_equations']['s'], {}, 1) - x*t*s**2), 0)
+        self.assertEqual(simplify(ODEFileParser._expression(metadata['transformed_equations']['t'], {}, 1) + x*s**2*t**3), 0)
+        self.assertEqual(parsed.network.initial_conditions['s'], 0.5)
+        self.assertAlmostEqual(parsed.network.initial_conditions['t'], 2/3)
+        self.assertEqual(metadata['auxiliary_species'][1]['dependencies'], ['s'])
+
+    def test_polynomial_auxiliary_gets_an_ode(self):
+        parsed = ODEFileParser(lift_rational=True).parse_text(
+            'ODE Model:\ndx/dt=x\nAuxiliary Species:\nu=x*x\nInitial Conditions:\nx=2')
+        self.assertEqual(set(parsed.network.analysis_metadata['transformed_equations']), {'x', 'u'})
+        self.assertEqual(parsed.network.initial_conditions['u'], 4)
+
+    def test_circular_auxiliaries_are_rejected(self):
+        for definitions in ('s=1/(1+s)', 's=1/(1+t)\nt=1/(1+s)'):
+            with self.subTest(definitions=definitions), self.assertRaisesRegex(ODEParseError, 'Circular'):
+                ODEFileParser(lift_rational=True).parse_text(
+                    'ODE Model:\ndx/dt=x\nAuxiliary Species:\n' + definitions)
 
     def test_equivalent_logistic_forms_have_identical_realizations(self):
         forms = ["x*(1-x/K)", "x-(1/K)*x^2", "x-(1/K)*x*x"]
@@ -136,8 +223,16 @@ class ODEParserTests(unittest.TestCase):
         self.assertEqual(result["complexes"][edge["source_complex"]]["species"], {"x": 2})
 
     def test_species_denominator_is_rejected_with_kinetic_explanation(self):
-        with self.assertRaisesRegex(ODEParseError, "Species-dependent denominator"):
+        with self.assertRaisesRegex(ODEParseError, "Species-dependent denominator") as caught:
             parse_ode_text("ODE Model:\ndx/dt = x*(1-x/K)-x*y/(1+x+a*z)\ndy/dt = 0\ndz/dt = 0")
+        message = str(caught.exception)
+        self.assertIn('Auxiliary Species:\ns = 1/(1+x+a*z)', message)
+        self.assertIn('Lift rational ODE rates using auxiliary species', message)
+        self.assertIn('standalone assignment', message)
+        self.assertIn('not arbitrary non-polynomial', message)
+        example = message.split('format:\n\n', 1)[1].split('\n\nAdapt the example', 1)[0]
+        result = ODEFileParser(lift_rational=True).parse_text(example)
+        self.assertEqual(result.network.analysis_metadata['auxiliary_species'][0]['species'], 's')
 
     def test_zero_equation_and_decimal_rate(self):
         result = parse_ode_text("ODE Model:\ndx/dt = 0.5*x\ndy/dt = 0")

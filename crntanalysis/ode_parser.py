@@ -159,7 +159,13 @@ class ODEFileParser(BaseFileParser[ODEParseResult]):
         transformed = originals
         auxiliary_rows = sections.get("auxiliary species", [])
         if auxiliary_rows and not self.lift_rational:
-            raise ODEParseError("Auxiliary Species definitions require lift_rational=True or --lift-rational")
+            raise ODEParseError(
+                "Auxiliary Species definitions require rational lifting. "
+                "In the GUI, check 'Lift rational ODE rates using auxiliary species' "
+                "at the top of the Model input panel, then click Analyze model again. "
+                "For fractional powers, also check 'Allow fractional ODE powers (real complexes)'. "
+                "CLI: --lift-rational; Python: lift_rational=True."
+            )
         if self.lift_rational:
             definitions = {}
             for number, row in auxiliary_rows:
@@ -187,7 +193,7 @@ class ODEFileParser(BaseFileParser[ODEParseResult]):
         ]
         network, used_rates, used_exponents = self._build_network(equations, values)
         for record in auxiliary_records:
-            parameter_symbols = self._expression(record["definition"], {}, 1).free_symbols - {Symbol(name) for name in originals}
+            parameter_symbols = self._expression(record["definition"], {}, 1).free_symbols - {Symbol(name) for name in transformed}
             used_rates.update(str(symbol) for symbol in parameter_symbols)
         network.rate_constants.update({name: values[name] for name in used_rates if name in values})
         network.initial_conditions.update(initial_conditions)
@@ -290,7 +296,27 @@ class ODEFileParser(BaseFileParser[ODEParseResult]):
             raise ODEParseError(
                 f"Species-dependent denominator or non-polynomial kinetics on line {line_number}: "
                 f"{expression}. Ordinary mass-action realization requires polynomial species monomials; "
-                "rational kinetics requires an explicit kinetic model or auxiliary-species realization."
+                "rational kinetics may need an auxiliary-species realization.\n\n"
+                "For a reciprocal polynomial denominator D, define a new species s = 1/D. "
+                "For example, for x*y/(1+x+a*z), use this sectioned .ode format:\n\n"
+                "ODE Model:\n"
+                "dx/dt = -x*y/(1+x+a*z)\n"
+                "dy/dt = x*y/(1+x+a*z)\n\n"
+                "Auxiliary Species:\n"
+                "s = 1/(1+x+a*z)\n\n"
+                "Coefficients:\n"
+                "a = 3\n"
+                "z = 4\n\n"
+                "Adapt the example to your actual equations and denominator; choose an unused species name. "
+                "Keep the original rational equations: the tool derives ds/dt by the chain rule. "
+                "In an XPP-style file, add the standalone assignment s = 1/(1+x+a*z).\n"
+                "Check 'Lift rational ODE rates using auxiliary species' at the top of the GUI "
+                "Model input panel, then click Analyze model again "
+                "(CLI: --lift-rational; Python: lift_rational=True). "
+                "That option can also generate reciprocal auxiliaries automatically without a definition. "
+                "This applies to supported reciprocal polynomial denominators, not arbitrary "
+                "non-polynomial expressions. The denominator must be positive on the analysis domain; "
+                "deficiency describes the augmented network."
             )
         numeric, symbolic = coefficient.as_coeff_Mul()
         if numeric < 0:
@@ -311,7 +337,10 @@ class ODEFileParser(BaseFileParser[ODEParseResult]):
             raise ODEParseError(f"Species exponents must be finite and nonnegative on line {line_number}")
         if not float(exponent).is_integer() and not self.allow_fractional:
             raise ODEParseError(
-                f"Mass-action exponents must be nonnegative integers on line {line_number}; enable allow_fractional=True or --allow-fractional for a real-complex realization"
+                f"Mass-action exponents must be nonnegative integers on line {line_number}. "
+                "For a real-complex realization, check 'Allow fractional ODE powers (real complexes)' "
+                "at the top of the GUI Model input panel, then click Analyze model again. "
+                "CLI: --allow-fractional; Python: allow_fractional=True."
             )
         return int(exponent) if float(exponent).is_integer() else float(exponent)
 
@@ -339,6 +368,7 @@ class ODEFileParser(BaseFileParser[ODEParseResult]):
 
         registry = ComplexRegistry()
         reactions = []
+        reaction_positions = {}
         for contribution in grouped.values():
             if not any(contribution.delta.values()):
                 continue
@@ -364,16 +394,42 @@ class ODEFileParser(BaseFileParser[ODEParseResult]):
             except UnresolvedValueError as error:
                 line = min(contribution.line_numbers)
                 raise ODEParseError(f"{error} on line {line}") from None
-            reactions.append(
-                Reaction(
-                    index=len(reactions),
-                    source_complex=registry.register(contribution.reactant),
-                    target_complex=registry.register(products),
-                    rate_constant=contribution.rate_constant,
-                    rate=rate,
-                    rate_expression=str(rate_expression * self._kinetic_monomial(contribution.reactant)),
+            source = registry.register(contribution.reactant)
+            target = registry.register(products)
+            # In this canonical realization the source complex determines the
+            # kinetic monomial. Identical directed endpoints therefore have
+            # identical kinetics and their positive rate constants can be added.
+            key = (source, target)
+            if key in reaction_positions:
+                position = reaction_positions[key]
+                previous = reactions[position]
+                rate_expression = expand(
+                    self._expression(previous.rate_constant, {}, 1) + rate_expression
                 )
+                if previous.rate is None or rate is None:
+                    rate = None
+                else:
+                    try:
+                        rate = math.fsum((previous.rate, rate))
+                    except OverflowError:
+                        raise ODEParseError('Combined effective rate must be finite') from None
+                    if not math.isfinite(rate):
+                        raise ODEParseError('Combined effective rate must be finite')
+            else:
+                position = len(reactions)
+                reaction_positions[key] = position
+            reaction = Reaction(
+                index=position,
+                source_complex=source,
+                target_complex=target,
+                rate_constant=str(rate_expression),
+                rate=rate,
+                rate_expression=str(rate_expression * self._kinetic_monomial(contribution.reactant)),
             )
+            if position == len(reactions):
+                reactions.append(reaction)
+            else:
+                reactions[position] = reaction
 
         complexes = registry.complexes
         graph, adjacency = self.graph_builder.build(complexes, reactions)

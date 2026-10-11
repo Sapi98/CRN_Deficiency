@@ -1,10 +1,24 @@
 """Optional complex-graph visualization, independent of console and GUI code."""
 
 from pathlib import Path
+from numbers import Real
 
 from crntanalysis.deficiency_utils import calculate_deficiency
 
-__all__ = ["NetworkGraphAdapter", "NetworkVisualizer"]
+__all__ = ["NetworkGraphAdapter", "NetworkVisualizer", "format_rate_label"]
+
+
+def format_rate_label(value):
+    """Format display-only rates to three decimals; preserve symbolic labels.
+
+    Small nonzero rates use scientific notation to avoid displaying zero.
+    """
+    if isinstance(value, Real):
+        if 0 < abs(value) < 0.001:
+            mantissa, exponent = f'{value:.3e}'.split('e')
+            return f'{mantissa.rstrip("0").rstrip(".")}e{exponent}'
+        return f'{value:.3f}'.rstrip('0').rstrip('.')
+    return str(value)
 
 
 def _networkx():
@@ -135,7 +149,7 @@ class NetworkVisualizer:
                 ax.add_patch(patch)
                 if show_rates:
                     reactions = [data["reaction"]] if graph.is_directed() else data["reactions"]
-                    label = ", ".join(f"r{r.index}: {r.weight}" for r in reactions)
+                    label = ", ".join(f"r{r.index}: {format_rate_label(r.weight)}" for r in reactions)
                     ax.text(*label_position, label, fontsize=8, fontweight=font_weight, ha="center", va="center",
                             bbox=dict(facecolor="white", edgecolor="none", alpha=.85))
         results = calculate_deficiency(network).linkage_classes if show_deficiency else None

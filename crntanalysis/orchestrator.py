@@ -146,16 +146,23 @@ class CRNAnalysisService:
 
 
 class ConsoleReportFormatter:
-    """Create a compact report suitable for terminals and GUI text panes."""
+    """Create a detailed report suitable for terminals and GUI text panes."""
 
     def format(self, outcome: AnalysisOutcome) -> str:
         result = outcome.deficiency
+        network = outcome.network
+        metadata = network.analysis_metadata
+        originals = metadata.get('original_equations', {})
+        transformed = metadata.get('transformed_equations', {})
+        auxiliaries = metadata.get('auxiliary_species', [])
+        auxiliary_names = {item['species'] for item in auxiliaries}
+        species = sorted(set(result.species) | set(originals) | set(transformed))
         complexes = {item.index: item for item in outcome.network.complexes}
         lines = [
             "Chemical Reaction Network Deficiency Analysis",
             f"Input: {outcome.source or '<provided text>'}",
             f"Format: {outcome.input_format}",
-            f"Species: {', '.join(result.species) or '<none>'}",
+            f"Species: {', '.join(species) or '<none>'}",
             "",
             "Whole network",
             f"  n = {result.number_of_complexes}",
@@ -172,6 +179,50 @@ class ConsoleReportFormatter:
                 f"({', '.join(labels)}), n={item.number_of_complexes}, "
                 f"s={item.stoichiometric_rank}, l=1, deficiency={item.deficiency}"
             )
+        lines.extend(['', 'Network details',
+                      f'  Species count: {len(species)}',
+                      f'  Reaction count: {len(network.reactions)}',
+                      f'  Original species: {", ".join(name for name in species if name not in auxiliary_names) or "<none>"}',
+                      f'  Auxiliary species: {", ".join(sorted(auxiliary_names)) or "<none>"}',
+                      '', 'Indexed complexes'])
+        lines.extend(f'  C{item.index}: {item.label}' for item in network.complexes)
+        lines.extend(['', 'Reactions and rates'])
+        for reaction in network.reactions:
+            lines.append(f'  r{reaction.index}: C{reaction.source} ({complexes[reaction.source].label}) '
+                         f'-> C{reaction.target} ({complexes[reaction.target].label}); '
+                         f'rate constant = {reaction.rate_constant}; weight = {reaction.weight}')
+            if reaction.kinetic_orders is not None:
+                lines.append(f'    Kinetic orders: {reaction.kinetic_orders}')
+            if reaction.rate_expression is not None:
+                lines.append(f'    Rate law: {reaction.rate_expression}')
+        for heading, assignments in (
+            ('Parameters / rate constants', network.rate_constants),
+            ('Stoichiometric coefficients', network.stoichiometric_coefficients),
+            ('Initial conditions', network.initial_conditions),
+        ):
+            if assignments:
+                lines.extend(['', heading])
+                lines.extend(f'  {name} = {value}' for name, value in assignments.items())
+        if originals:
+            lines.extend(['', 'Original ODE system'])
+            lines.extend(f'  d{name}/dt = {rhs}' for name, rhs in originals.items())
+        if transformed:
+            lines.extend(['', 'ODE system used for network construction (including auxiliaries)'])
+            lines.extend(f'  d{name}/dt = {rhs}' for name, rhs in transformed.items())
+        if auxiliaries:
+            lines.extend(['', 'Auxiliary definitions and derived ODEs'])
+            for auxiliary in auxiliaries:
+                name = auxiliary['species']
+                lines.extend([f'  {name} = {auxiliary["definition"]}',
+                              f'    d{name}/dt = {auxiliary["derivative"]}'])
+                for key, label in (('dependencies', 'Dependencies'), ('constraint', 'Constraint'),
+                                   ('domain', 'Domain'), ('initial_expression', 'Initial expression'),
+                                   ('initial_value', 'Initial value'), ('chain_rule_verified', 'Chain rule verified')):
+                    if key in auxiliary:
+                        value = auxiliary[key]
+                        lines.append(f'    {label}: {"unresolved" if value is None else value}')
+        if metadata.get('deficiency_scope'):
+            lines.extend(['', f'Deficiency scope: {metadata["deficiency_scope"]}'])
         if result.symbolic_rank:
             lines.extend(
                 ["", "Note: stoichiometric rank is generic because symbolic coefficients remain."]
