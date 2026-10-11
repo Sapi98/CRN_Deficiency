@@ -230,7 +230,12 @@ class ConsoleReportFormatter:
         if outcome.warnings:
             lines.extend(["", "Warnings"])
             lines.extend(f"  - {warning}" for warning in outcome.warnings)
-        return "\n".join(lines)
+        # Presentation only: retain Python/SymPy syntax in domain objects and
+        # structured reports for reliable round-tripping and computation.
+        report = "\n".join(lines)
+        if '**' in report:
+            lines.insert(3, 'Notation: ^ denotes exponentiation (for example, x^2).')
+        return "\n".join(lines).replace('**', '^')
 
 
 class AnalysisReportWriter:

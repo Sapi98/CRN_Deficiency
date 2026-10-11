@@ -24,6 +24,25 @@ k1 = 2
 
 
 class OrchestratorTests(unittest.TestCase):
+    def test_report_uses_caret_powers_without_changing_saved_expressions(self):
+        outcome = CRNAnalysisService().analyze_text(
+            'ODE Model:\ndx/dt=-x/(1+x)\nAuxiliary Species:\ns=1/(1+x)',
+            lift_rational=True)
+        original = outcome.to_dict()
+        report = ConsoleReportFormatter().format(outcome)
+        self.assertIn('s^3', report)
+        self.assertNotIn('**', report)
+        self.assertIn('^ denotes exponentiation', report)
+        self.assertEqual(outcome.to_dict(), original)
+        with tempfile.TemporaryDirectory() as folder:
+            text = AnalysisReportWriter().write(outcome, folder, extension='txt')
+            self.assertEqual(text.read_text(), report + '\n')
+            path = AnalysisReportWriter().write(outcome, folder)
+            restored = AnalysisReportReader().read(path)
+            self.assertEqual(restored.to_dict(), original)
+            self.assertIn('s**3', restored.network.analysis_metadata['transformed_equations']['s'])
+            self.assertEqual(ConsoleReportFormatter().format(restored), report)
+
     def test_detailed_auxiliary_report_is_shared_by_text_and_saved_results(self):
         outcome = CRNAnalysisService().analyze_text(
             'ODE Model:\ndx/dt=-x*t\nAuxiliary Species:\ns=1/(1+x)\nt=1/(1+s)\n'
