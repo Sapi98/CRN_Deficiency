@@ -428,6 +428,13 @@ these canonical reactions share the source-complex kinetic monomial. Symbolic
 rates remain symbolic sums; reverse reactions remain separate. Explicit
 reaction-file channels are retained as written.
 
+Console, GUI, and saved plain-text reports include indexed complexes, reactions
+and rates, species lists, parameters, initial conditions, the original ODEs,
+and the complete augmented ODE system. Auxiliary details include each
+definition, derived ODE, dependency information when available, constraints,
+domain, and initial value. Structured `.analysis` and `.output` files retain
+this information in network metadata and restore the detailed report when opened.
+
 Functions, other fixed variables, events, delayed,
 stochastic, integral, and difference equations require explicit conversion.
 
