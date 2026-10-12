@@ -35,7 +35,7 @@ class GeneralizedKineticsTests(unittest.TestCase):
 
     def test_augmented_analysis_report_round_trip_preserves_constraints_and_rates(self):
         outcome = CRNAnalysisService().analyze_file(
-            "Example_Data/AFmodel.ode", allow_fractional=True, lift_rational=True
+            "Example_Data/fractional_auxiliary.ode", allow_fractional=True, lift_rational=True
         )
         with tempfile.TemporaryDirectory() as directory:
             path = AnalysisReportWriter().write(outcome, directory)

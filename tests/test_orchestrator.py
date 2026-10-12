@@ -76,12 +76,12 @@ class OrchestratorTests(unittest.TestCase):
         stdout = StringIO()
         with redirect_stdout(stdout):
             status = main([
-                "--file", "Example_Data/AFmodel.ode", "--allow-fractional",
+                "--file", "Example_Data/fractional_auxiliary.ode", "--allow-fractional",
                 "--lift-rational", "--no-file",
             ])
         self.assertEqual(status, 0)
         self.assertIn("augmented network", stdout.getvalue())
-        self.assertIn("deficiency = 6", stdout.getvalue())
+        self.assertIn("deficiency = 0", stdout.getvalue())
 
     def test_additional_bundled_examples_are_valid(self):
         examples = [

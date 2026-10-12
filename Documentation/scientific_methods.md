@@ -286,7 +286,7 @@ explicit definitions in `Auxiliary Species`. The supported scope is autonomous
 ODEs with polynomial species denominators, optionally with nonnegative real
 monomial powers in numerators. Unsupported transformations raise errors.
 
-For AFmodel, $D=1+x+az$ and
+For a generic logistic example with $D=1+x$, the chain rule gives
 
 $$
 \dot{s}=-s^2\dot{x}=-xs^2+K^{-1}x^2s^2+xys^3.
