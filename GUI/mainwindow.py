@@ -179,7 +179,7 @@ class MainWindow(QMainWindow):
 
     def example_text(self):
         if self.ui.formatCombo.currentIndex() == 1:
-            return 'ODE Model:\ndx/dt = -k1 * X\ndy/dt = k1 * X\n\nCoefficients:\nk1 = 0.5\n'
+            return 'Species:\nX, Y\n\nODE Model:\ndx/dt = -k1 * X\ndy/dt = k1 * X\n\nCoefficients:\nk1 = 0.5\n'
         return 'Reactions:\nX k1-> Y\nY k2-> X\n\nRate Constants:\nk1 = 0.5\nk2 = 0.2\n\nInitial Conditions:\nX = 1.0\nY = 0.0\n'
 
     def load_example(self):

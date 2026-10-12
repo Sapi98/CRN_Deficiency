@@ -14,6 +14,38 @@ k2 = 0.1
 
 
 class ODEParserTests(unittest.TestCase):
+    def test_sectioned_rational_example_matches_xpp_network(self):
+        parser = ODEFileParser(lift_rational=True)
+        sectioned = parser.parse_file('Example_Data/rational_auxiliary_sectioned.ode').network
+        xpp = parser.parse_file('Example_Data/rational_auxiliary_xpp.ode').network
+        self.assertEqual(sectioned.reactions, xpp.reactions)
+        self.assertEqual(sectioned.complexes, xpp.complexes)
+        self.assertEqual(sectioned.analysis_metadata['transformed_equations'],
+                         xpp.analysis_metadata['transformed_equations'])
+        self.assertAlmostEqual(sectioned.initial_conditions['s'], 0.25)
+
+    def test_explicit_species_preserve_names_and_zero_derivatives(self):
+        parsed = ODEFileParser().parse_text(
+            'Species:\nx, y\nODE Model:\ndx/dt=0\ndy/dt=k*y+z*y\nCoefficients:\nk=2\nz=3')
+        self.assertEqual(parsed.network.analysis_metadata['species_declaration'], ['x', 'y'])
+        self.assertEqual(parsed.network.analysis_metadata['original_equations']['x'], '0')
+        self.assertEqual(set(parsed.network.rate_constants), {'k', 'z'})
+        self.assertNotIn('z', {name for c in parsed.network.complexes for name in c.species})
+
+    def test_explicit_species_validate_derivatives_and_duplicates(self):
+        for text in ('Species:\nx,y\nODE Model:\ndx/dt=x',
+                     'Species:\nx\nODE Model:\ndx/dt=x\ndy/dt=y',
+                     'Species:\nx,X\nODE Model:\ndx/dt=x',
+                     'Species:\nx=1\nODE Model:\ndx/dt=x',
+                     'Species:\nx\nODE Model:\ndx/dt=x\nCoefficients:\nx=2'):
+            with self.subTest(text=text), self.assertRaises(ODEParseError):
+                ODEFileParser().parse_text(text)
+
+    def test_xpp_explicit_species_and_automatic_auxiliary_registration(self):
+        parsed = ODEFileParser(lift_rational=True).parse_text(
+            "species x,y\nparam z=2\nx'=-x/(1+x+z)\ny'=0\ns=1/(1+x+z)")
+        self.assertEqual(parsed.network.analysis_metadata['species_declaration'], ['x', 'y'])
+        self.assertEqual(set(parsed.network.analysis_metadata['transformed_equations']), {'x', 'y', 's'})
     def test_xpp_parameters_and_derivative_aliases_match_section_format(self):
         standard = "# Model\nparam k=2, q=0.5\nx' = -k*x\ndy/dt = k*x-q*y\ninit x=99,y=4\n@ total=250,dt=0.1\ndone"
         sectioned = "ODE Model:\ndx/dt = -k*x\ndy/dt = k*x-q*y\nCoefficients:\nk = 2\nq = 0.5"
@@ -22,10 +54,10 @@ class ODEParserTests(unittest.TestCase):
         self.assertEqual(actual, expected)
         self.assertEqual(actual["initial_conditions"], {})
 
-    def test_cm_standard_file_accepts_parameters_and_equations(self):
-        parsed = ODEFileParser(lift_rational=True).parse_file("Example_Data/CM _model.ode")
-        self.assertEqual(parsed.network.rate_constants["a"], 0.3)
-        self.assertEqual(parsed.network.rate_constants["K"], 10)
+    def test_xpp_example_accepts_parameters_and_equations(self):
+        parsed = ODEFileParser(lift_rational=True).parse_file("Example_Data/rational_auxiliary_xpp.ode")
+        self.assertEqual(parsed.network.rate_constants["k"], 0.4)
+        self.assertEqual(parsed.network.rate_constants["q"], 0.2)
         self.assertEqual(len(parsed.network.analysis_metadata["auxiliary_species"]), 1)
         self.assertGreater(len(parsed.network.reactions), 0)
 
@@ -44,14 +76,14 @@ class ODEParserTests(unittest.TestCase):
                         else (Symbol('c') + Symbol('d')) * Symbol('y'))
             self.assertEqual(simplify(ODEFileParser._expression(r.rate_expression, {}, 1) - expected), 0)
 
-    def test_cm_has_unique_directed_edges_and_preserves_vector_field(self):
+    def test_xpp_example_has_unique_directed_edges_and_preserves_vector_field(self):
         from sympy import Symbol, simplify
         from crntanalysis.deficiency_utils import calculate_deficiency
-        parsed = ODEFileParser(lift_rational=True).parse_file('Example_Data/CM _model.ode')
+        parsed = ODEFileParser(lift_rational=True).parse_file('Example_Data/rational_auxiliary_xpp.ode')
         network = parsed.network
         endpoints = [(r.source, r.target) for r in network.reactions]
         self.assertEqual(len(endpoints), len(set(endpoints)))
-        self.assertEqual(calculate_deficiency(network).deficiency, 10)
+        self.assertEqual(calculate_deficiency(network).deficiency, 1)
         for species, rhs in network.analysis_metadata['transformed_equations'].items():
             reconstructed = 0
             for r in network.reactions:
@@ -111,16 +143,16 @@ class ODEParserTests(unittest.TestCase):
         self.assertEqual(parsed.network.product_complex(reaction).species, {"y": 0.4})
         self.assertEqual(reaction.rate_expression, "k*y**(7/5)")
 
-    def test_af_model_recovers_original_odes_and_reconstructs_reaction_vector_field(self):
+    def test_fractional_example_recovers_original_odes_and_reconstructs_reaction_vector_field(self):
         from sympy import Rational, Symbol, simplify
         parser = ODEFileParser(allow_fractional=True, lift_rational=True)
-        parsed = parser.parse_file("Example_Data/AFmodel.ode")
+        parsed = parser.parse_file("Example_Data/fractional_auxiliary.ode")
         metadata = parsed.network.analysis_metadata
         self.assertEqual(len(metadata["auxiliary_species"]), 1)
         auxiliary = metadata["auxiliary_species"][0]
         self.assertEqual(auxiliary["species"], "s")
         self.assertTrue(auxiliary["chain_rule_verified"])
-        self.assertAlmostEqual(parsed.network.initial_conditions["s"], 1 / 15.05)
+        self.assertAlmostEqual(parsed.network.initial_conditions["s"], 0.5)
         field = {name: 0 for name in metadata["transformed_equations"]}
         for reaction in parsed.network.reactions:
             source = parsed.network.reactant_complex(reaction).species

@@ -247,6 +247,13 @@ kinetic-order deficiency is not yet calculated here.
 
 ### Reciprocal auxiliary species
 
+An optional `Species:` declaration identifies the original dynamic variables.
+Every listed variable must have one derivative equation; all remaining
+identifiers are constant parameters except explicitly defined auxiliary
+species. Auxiliary variables are added to the augmented state independently
+of the original declaration. Without a declaration, the original state is
+inferred from derivative left-hand sides for backward compatibility.
+
 Explicit auxiliary definitions may form an acyclic dependency graph. For
 $u_j=g_j(x,u_1,\ldots,u_{j-1})$, the augmented system includes
 
@@ -279,7 +286,7 @@ explicit definitions in `Auxiliary Species`. The supported scope is autonomous
 ODEs with polynomial species denominators, optionally with nonnegative real
 monomial powers in numerators. Unsupported transformations raise errors.
 
-For AFmodel, $D=1+x+az$ and
+For a generic logistic example with $D=1+x$, the chain rule gives
 
 $$
 \dot{s}=-s^2\dot{x}=-xs^2+K^{-1}x^2s^2+xys^3.

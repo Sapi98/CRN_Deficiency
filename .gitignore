@@ -131,6 +131,9 @@ __pypackages__/
 celerybeat-schedule
 celerybeat.pid
 
+# VS Code
+.vscode
+
 # Redis
 *.rdb
 *.aof
@@ -222,6 +225,9 @@ __marimo__/
 
 # Generated analysis reports
 output/
+
+# Private research inputs and their local analysis artifacts
+Research_Models/
 
 # QT Creator Cache
 .qtcreator

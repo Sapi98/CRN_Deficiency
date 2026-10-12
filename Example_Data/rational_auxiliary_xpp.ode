@@ -1,0 +1,9 @@
+# Generic XPP-style example: two species with a shared saturating denominator.
+# Run with --lift-rational.
+species x, y
+param k=0.4, q=0.2
+x' = -k*x/(1+x+y)
+y' = -q*y/(1+x+y)
+s = 1/(1+x+y)
+@ total=50, dt=0.05
+done

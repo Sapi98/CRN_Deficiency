@@ -8,6 +8,14 @@ includes a command-line analysis pipeline that writes structured reports.
 
 The current application version is **v1.1** (package version `1.1.0`).
 
+ODE formatting examples demonstrate three approaches:
+
+| Approach | Example | Required options |
+|---|---|---|
+| Fully sectioned rational ODEs with explicit headings | `Example_Data/rational_auxiliary_sectioned.ode` | `--lift-rational` |
+| XPP-style rational ODEs with a shared auxiliary | `Example_Data/rational_auxiliary_xpp.ode` | `--lift-rational` |
+| Sectioned fractional-power ODEs with an auxiliary | `Example_Data/fractional_auxiliary.ode` | `--allow-fractional --lift-rational` |
+
 ## Table of contents
 
 - [License](#license)
@@ -259,7 +267,7 @@ You can open a saved `.analysis` or `.output` report immediately using
 
 For ODE models, the input panel also provides **Allow fractional ODE powers**
 and **Lift rational ODE rates using auxiliary species**. Enable both before
-analyzing `Example_Data/AFmodel.ode`: its `y^1.4` term requires fractional
+analyzing `Example_Data/fractional_auxiliary.ode`: its `y^1.5` term requires fractional
 powers, and its `Auxiliary Species` section requires rational lifting.
 These options are off by default and disabled for reaction-file inputs.
 Deficiency then describes the augmented real-complex realization, not a
@@ -363,6 +371,32 @@ ode_data = parse_ode_file("model.ode")
 
 ## Input formats
 
+Declare original dynamic variables explicitly in a sectioned ODE file:
+
+```text
+Species:
+x, y
+
+ODE Model:
+dx/dt = -k*x
+dy/dt = k*x
+
+Coefficients:
+k = 0.5
+```
+
+Every declared species must have exactly one derivative equation (use `0`
+if its derivative is zero). All other expression identifiers are constant
+parameters unless defined as auxiliary species. Numeric values go in
+`Coefficients:`; unspecified constants follow the selected unresolved-value
+policy. Declared names determine species capitalization. Auxiliary species
+belong in `Auxiliary Species:`, not in the original `Species:` list, because
+their ODEs are derived automatically. For backward compatibility, omitted
+species declarations still infer dynamic species from derivative left sides.
+
+For XPP-style input, use the tool extension `species x, y` before the equations.
+This declaration is a CRNTAnalysis extension, not a claim of standard XPP syntax.
+
 XPP-style `.ode` files can be read directly, without converting them to the
 section format. This reader uses numeric parameter declarations and autonomous
 derivative equations, for example:
@@ -384,10 +418,10 @@ equations enter structural analysis. Without initial conditions, reciprocal
 lifting records the required auxiliary initial-value expression as a warning.
 The existing section format continues to support explicit `Initial Conditions`.
 
-Run the supplied CM model directly (quote its filename because it has spaces):
+Run the generic XPP-style example directly:
 
 ```bash
-crntanalysis "Example_Data/CM _model.ode" --lift-rational
+crntanalysis "Example_Data/rational_auxiliary_xpp.ode" --lift-rational
 ```
 
 Raw XPP-style equation text is also automatically recognized through `--text`,
@@ -434,6 +468,8 @@ and the complete augmented ODE system. Auxiliary details include each
 definition, derived ODE, dependency information when available, constraints,
 domain, and initial value. Structured `.analysis` and `.output` files retain
 this information in network metadata and restore the detailed report when opened.
+Human-readable reports use `^` for powers (for example, `x^2` and `y^(7/5)`).
+Structured reports retain Python/SymPy `**` notation for reliable computation.
 
 Functions, other fixed variables, events, delayed,
 stochastic, integral, and difference equations require explicit conversion.
@@ -475,7 +511,7 @@ The default ODE mode requires ordinary polynomial mass-action kinetics.
 Two opt-in extensions support real powers and reciprocal auxiliary species:
 
 ```bash
-crntanalysis Example_Data/AFmodel.ode --allow-fractional --lift-rational
+crntanalysis Example_Data/fractional_auxiliary.ode --allow-fractional --lift-rational
 ```
 
 `--allow-fractional` uses nonnegative real kinetic powers as the coefficients
@@ -489,15 +525,15 @@ derives its ODE by the chain rule. To choose its name, add:
 
 ```text
 Auxiliary Species:
-s = 1/(1+x+a*z)
+s = 1/(1+x)
 ```
 
 Without this section, names such as `_aux_s1` are generated without conflicting
 with model identifiers. Parameters are treated as constant. The original
 equations, augmented equations, constraints, domain restrictions, and derived
 initial values are stored in the structured report's `analysis_metadata`.
-For AFmodel, `s(0) = 1/(1+2.05+3*4)`. Equivalence holds on the constraint
-`s*(1+x+a*z)=1` where the denominator is positive. An arbitrary initial value
+For the fractional auxiliary example, `s(0) = 1/(1+1) = 0.5`. Equivalence holds on the constraint
+`s*(1+x)=1` where the denominator is positive. An arbitrary initial value
 for `s` defines a different dynamical system.
 
 The reported deficiency belongs to the augmented realization. Lifting does not
@@ -510,7 +546,7 @@ The equivalent Python API is:
 
 ```python
 parsed = ODEFileParser(allow_fractional=True, lift_rational=True).parse_file(
-    "Example_Data/AFmodel.ode"
+    "Example_Data/fractional_auxiliary.ode"
 )
 print(parsed.network.analysis_metadata["auxiliary_species"])
 ```

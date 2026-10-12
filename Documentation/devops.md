@@ -1264,6 +1264,12 @@ def parse(self, text: str) -> Sections
 ```
 
 Normalize numeric XPP parameters and derivative equations to numbered sections.
+The CRNTAnalysis extension `species x, y` becomes a `species` section. In
+sectioned files, `Species:` lists identifiers separated by commas or whitespace.
+Declarations are optional for legacy compatibility. When present, the ODE
+parser validates exact agreement with derivative species, rejects duplicates
+and species/parameter conflicts, and preserves declared names. Auxiliary
+definitions register their own species separately.
 Recognized labeled documents use the injected section parser. Ignore `init`,
 solver/plot options, boundary settings, and comments; stop at `done`. Initial
 concentrations are not extracted from XPP documents. Unsupported model

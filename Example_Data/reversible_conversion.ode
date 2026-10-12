@@ -1,3 +1,6 @@
+Species:
+A, B
+
 ODE Model:
 da/dt = -k_forward * A + k_reverse * B
 db/dt = k_forward * A - k_reverse * B

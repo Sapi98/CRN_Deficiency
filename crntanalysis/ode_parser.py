@@ -148,6 +148,28 @@ class ODEFileParser(BaseFileParser[ODEParseResult]):
 
         equation_specs = [self._split_equation(number, line) for number, line in rows]
         species_names = self._species_names(equation_specs)
+        if 'species' in sections:
+            declared = {}
+            for number, row in sections['species']:
+                names = re.split(r'[\s,]+', row.strip())
+                for name in names:
+                    if not re.fullmatch(r'[A-Za-z_]\w*', name) or name.casefold() in declared:
+                        raise ODEParseError(f'Invalid or duplicate species declaration on line {number}: {name!r}')
+                    declared[name.casefold()] = name
+            if not declared:
+                raise ODEParseError('Species declaration must contain at least one dynamic species')
+            lhs_names = {lhs.casefold() for _, _, lhs, _ in equation_specs}
+            missing = set(declared) - lhs_names
+            undeclared = lhs_names - set(declared)
+            if missing or undeclared:
+                raise ODEParseError(
+                    'Species declarations must match derivative equations. '
+                    f'Missing ODEs: {sorted(declared[name] for name in missing)}; '
+                    f'undeclared derivative species: {sorted(undeclared)}. '
+                    'Use a zero derivative for an explicitly dynamic species that remains constant; '
+                    'put fixed parameters outside the Species section.'
+                )
+            species_names = declared
         if len(species_names) != len(equation_specs):
             raise ODEParseError("Each species must have exactly one derivative equation")
         if set(values) & set(species_names.values()):
@@ -201,6 +223,7 @@ class ODEFileParser(BaseFileParser[ODEParseResult]):
             "realization": "canonical_real_complex" if self.allow_fractional else "canonical_mass_action",
             "allow_fractional": self.allow_fractional,
             "parameters_constant": True,
+            "species_declaration": list(originals) if 'species' in sections else None,
             "original_equations": {name: str(rhs) for name, rhs in originals.items()},
             "transformed_equations": {name: str(rhs) for name, rhs in transformed.items()},
             "auxiliary_species": auxiliary_records,

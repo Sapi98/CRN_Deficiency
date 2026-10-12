@@ -77,8 +77,8 @@ class DesktopAnalysisTests(unittest.TestCase):
         self.assertEqual(self.window.outcome.to_dict(), expected.to_dict())
         self.assertEqual(self.window.outcome.deficiency.deficiency, 2)
 
-    def test_af_model_with_explicit_ode_options(self):
-        path = ROOT / 'Example_Data/AFmodel.ode'
+    def test_fractional_example_with_explicit_ode_options(self):
+        path = ROOT / 'Example_Data/fractional_auxiliary.ode'
         self.window.select_file(path)
         self.window.ui.allowFractionalCheck.setChecked(True)
         self.window.ui.liftRationalCheck.setChecked(True)
