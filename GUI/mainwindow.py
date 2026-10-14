@@ -25,6 +25,11 @@ from crntanalysis import __version__
 
 def load_ui_class():
     """Regenerate the Designer form using the active Python environment's uic."""
+    if getattr(sys, 'frozen', False):
+        # A frozen executable is not a Python interpreter. Release builds
+        # compile the form beforehand; development retains runtime generation.
+        from GUI.ui_form import Ui_MainWindow
+        return Ui_MainWindow
     directory = Path(__file__).resolve().parent
     form_path = directory / 'form.ui'
     generated_path = directory / 'ui_form.py'

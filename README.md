@@ -254,6 +254,11 @@ python3 -c "import crntanalysis; print(crntanalysis.__version__)"
 
 ## Desktop GUI
 
+For a standalone app that collaborators can run without installing Python,
+see [the standalone build guide](packaging/README.md). The isolated build
+workflow does not modify the development GUI or parser sources and creates
+no installer.
+
 The PySide6 desktop interface accepts pasted reaction/ODE text and model files
 through drag and drop or a native file browser. Select the matching format and
 click **Analyze model** to run the backend analysis service. The overview shows
