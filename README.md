@@ -32,6 +32,11 @@ ODE formatting examples demonstrate three approaches:
 - [Desktop GUI](#desktop-gui)
   - [Editing the interface](#editing-the-interface)
 - [Quick start](#quick-start)
+- [Building a standalone executable](#building-a-standalone-executable)
+  - [Build environment and commands](#build-environment-and-commands)
+  - [Sharing the application](#sharing-the-application)
+  - [Troubleshooting dependency installation](#troubleshooting-dependency-installation)
+  - [Verify before sharing](#verify-before-sharing)
 - [Input formats](#input-formats)
 - [Command-line usage](#command-line-usage)
   - [Analyze reaction and ODE files](#analyze-reaction-and-ode-files)
@@ -254,6 +259,11 @@ python3 -c "import crntanalysis; print(crntanalysis.__version__)"
 
 ## Desktop GUI
 
+For a standalone app that collaborators can run without installing Python,
+see [Building a standalone executable](#building-a-standalone-executable). The isolated build
+workflow does not modify the development GUI or parser sources and creates
+no installer.
+
 The PySide6 desktop interface accepts pasted reaction/ODE text and model files
 through drag and drop or a native file browser. Select the matching format and
 click **Analyze model** to run the backend analysis service. The overview shows
@@ -327,6 +337,95 @@ Both `python GUI/mainwindow.py` from the repository root and
 `python mainwindow.py` from inside `GUI` work. For an installed version, use
 `crntanalysis-gui`. If the installed GUI directory is read-only, the generated
 interface is loaded in memory instead of writing `ui_form.py`.
+
+## Building a standalone executable
+
+This workflow keeps the Python package, CLI, GUI launcher, and development
+Designer regeneration unchanged. It copies application sources into a temporary
+directory, generates the UI there, and builds a standalone one-folder bundle.
+The bundled GUI imports that generated UI without invoking Python subprocesses.
+Only the three allowlisted public examples and project license are included;
+research inputs and analysis outputs are not copied.
+
+### Build environment and commands
+
+Use a dedicated environment on the operating system and architecture you want
+to distribute for. Collaborators do not need Python, but the build machine does.
+
+```bash
+python3 -m venv .venv-build
+```
+
+Activate with `source .venv-build/bin/activate` on macOS/Linux, or
+`.venv-build\Scripts\activate` in Windows Command Prompt. Then, from the root:
+
+```bash
+python -m pip install --upgrade pip
+python -m pip install --no-compile -r packaging/requirements-build.txt
+python -m pip check
+python packaging/build_standalone.py
+```
+
+### Sharing the application
+
+Build separately on each target operating system; a macOS build does not
+produce a Windows executable.
+
+Outputs are under `dist/standalone/`:
+
+- macOS: share `CRNTAnalysis.app` (compress it using Finder). Build separately
+  for Apple Silicon and Intel unless using a verified universal environment.
+- Windows: zip and share the entire `CRNTAnalysis` folder. Run its
+  `CRNTAnalysis.exe`; do not send only the executable.
+- Linux: share the entire `CRNTAnalysis` folder and run `CRNTAnalysis/CRNTAnalysis`.
+  Verify compatibility with the target distribution and system libraries.
+
+For another build, use a fresh destination, for example:
+
+```bash
+python packaging/build_standalone.py --output dist/standalone-next
+```
+
+The script refuses to overwrite an existing bundle. No installer is created.
+This is a standalone application folder/bundle, not a single-file executable.
+Public resources are inside the bundle's `resources` directory (under `_internal`
+on Windows/Linux, and usually `Contents/Frameworks` on macOS).
+
+### Troubleshooting dependency installation
+
+The `--no-compile` option skips installation-time bytecode compilation, not
+the later PyInstaller build. It avoids trying to compile PySide6 template
+files such as `__init__.tmpl.py`, which contain template syntax rather than
+ordinary Python code.
+
+If an installation was interrupted by a template `SyntaxError` followed by
+a `TypeError`, some dependencies may be missing. With the build environment
+activated, repair the installation:
+
+```bash
+python -m pip install --no-compile --force-reinstall -r packaging/requirements-build.txt
+python -m pip check
+python packaging/build_standalone.py
+```
+
+No application files or existing development environment need to be changed.
+If downloads fail, resolve network access before building. On Windows, use
+`python -m venv .venv-build` if `python3` is not available, and activate with
+`.venv-build\Scripts\Activate.ps1` in PowerShell.
+
+### Verify before sharing
+
+Test on a clean machine without Python or this repository installed:
+
+1. Open the app and verify the version label.
+2. Analyze a reaction file and each supplied ODE example with its stated options.
+3. Inspect both graphs and auxiliary ODEs in the report.
+4. Save text and structured reports to a user-selected directory and reopen them.
+5. Check the bundle contains no research files or generated research reports.
+
+Unsigned applications may trigger operating-system warnings. Signing and macOS
+notarization are separate release steps. Include project and dependency license
+notices as required before distribution; freezing does not remove those obligations.
 
 ## Quick start
 

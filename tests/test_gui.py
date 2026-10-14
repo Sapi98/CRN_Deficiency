@@ -22,6 +22,13 @@ ROOT = Path(__file__).resolve().parents[1]
 
 @unittest.skipUnless(HAS_QT, 'Install requirements.txt to test the desktop interface')
 class DesktopAnalysisTests(unittest.TestCase):
+    def test_frozen_ui_uses_precompiled_form_without_subprocess(self):
+        with patch.object(gui.sys, 'frozen', True, create=True), \
+                patch.object(gui.subprocess, 'run') as run:
+            ui_class = gui.load_ui_class()
+            self.assertEqual(ui_class.__name__, 'Ui_MainWindow')
+            run.assert_not_called()
+
     @classmethod
     def setUpClass(cls):
         cls.app = QApplication.instance() or QApplication([])
