@@ -155,6 +155,7 @@ activemq-data/
 .envrc
 .venv
 .venv-build/
+.venv-web/
 env/
 venv/
 ENV/

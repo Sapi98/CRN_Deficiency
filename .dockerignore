@@ -1,0 +1,10 @@
+*
+!Dockerfile.web
+!requirements-web.txt
+!LICENSE
+!crntanalysis/
+!crntanalysis/**
+!web/
+!web/**
+**/__pycache__/
+**/*.pyc

@@ -31,6 +31,7 @@ ODE formatting examples demonstrate three approaches:
   - [Using pyenv](#using-pyenv)
 - [Desktop GUI](#desktop-gui)
   - [Editing the interface](#editing-the-interface)
+- [Interactive web application](#interactive-web-application)
 - [Building a standalone executable](#building-a-standalone-executable)
   - [Build environment and commands](#build-environment-and-commands)
   - [Sharing the application](#sharing-the-application)
@@ -337,6 +338,33 @@ Both `python GUI/mainwindow.py` from the repository root and
 `python mainwindow.py` from inside `GUI` work. For an installed version, use
 `crntanalysis-gui`. If the installed GUI directory is read-only, the generated
 interface is loaded in memory instead of writing `ui_form.py`.
+
+## Interactive web application
+
+The `web_app` branch includes a Python Dash workspace with interactive reaction
+and linkage graphs: drag nodes, pan/zoom, change layouts, filter linkage classes,
+search complexes, inspect nodes/edges, and export PNG images. Upload or paste
+models, inspect ODEs and deficiency results, and download reports. The web app
+calls the same scientific service as the CLI and desktop GUI.
+
+```bash
+python3 -m venv .venv-web
+source .venv-web/bin/activate
+python -m pip install -r requirements-web.txt
+python -m web.app
+```
+
+Open **http://127.0.0.1:8050**. On Windows, activate with
+`.venv-web\Scripts\activate.bat` or `.venv-web\Scripts\Activate.ps1` instead.
+The separate web environment needs no Qt installation. Existing desktop and
+standalone workflows are unchanged.
+The top-level `web/` app is excluded from pip distributions; run it from a
+repository checkout. Installing `crntanalysis` does not install the web app.
+
+See [the web application guide](Documentation/web_app.md) for Docker deployment,
+privacy, interaction details, resource limits, and tests. This implementation
+is local, not publicly hosted; configure HTTPS and authentication before
+sharing an internet-facing deployment.
 
 ## Building a standalone executable
 

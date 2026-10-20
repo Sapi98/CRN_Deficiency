@@ -1,0 +1,172 @@
+"""Scientific adapters, process isolation, and optional Dash HTTP integration."""
+import base64
+from importlib.util import find_spec
+import unittest
+import runpy
+from pathlib import Path
+from unittest.mock import patch
+
+from web.service import (AnalysisRunner, EXAMPLES, GraphPresenter,
+                                     analyze_document, decode_upload)
+
+
+class WebServiceTests(unittest.TestCase):
+    def test_pip_package_excludes_web_app_and_dependencies(self):
+        root = Path(__file__).resolve().parents[1]
+        with patch('setuptools.setup') as setup:
+            runpy.run_path(str(root / 'setup.py'))
+        metadata = setup.call_args.kwargs
+        self.assertFalse(any(name == 'web' or name.startswith(('web.', 'crntanalysis.web'))
+                             for name in metadata['packages']))
+        self.assertNotIn('web', metadata['extras_require'])
+        self.assertFalse(any('dash' in item.lower() for item in metadata['install_requires']))
+        self.assertFalse(any('crntanalysis-web' in item
+                             for entries in metadata['entry_points'].values() for item in entries))
+
+    def test_public_examples_use_existing_analysis_and_reports(self):
+        for key, (_, kind, options, text) in EXAMPLES.items():
+            with self.subTest(example=key):
+                payload = analyze_document(text, kind, options)
+                self.assertIn('Whole network', payload['report'])
+                self.assertIn('Indexed complexes', payload['report'])
+                elements = GraphPresenter().elements(payload)
+                nodes = [x for x in elements if 'source' not in x['data']]
+                self.assertEqual(len(nodes), payload['outcome']['deficiency']['n'])
+
+    def test_parallel_reactions_and_reverse_paths_remain_inspectable(self):
+        payload = analyze_document('Reactions:\nA k1-> B\nA k2-> B\nB k3-> A', 'react')
+        directed = GraphPresenter().elements(payload)
+        edges = [x['data'] for x in directed if 'source' in x['data']]
+        self.assertEqual(len(edges), 3)
+        self.assertEqual(len({x['id'] for x in edges}), 3)
+        linkage = [x['data'] for x in GraphPresenter().elements(payload, 'linkage') if 'source' in x['data']]
+        self.assertEqual(len(linkage), 1)
+        self.assertIn('k1', linkage[0]['label'])
+        self.assertIn('k3', linkage[0]['label'])
+
+    def test_linkage_filter_retains_only_its_endpoints(self):
+        payload = analyze_document('Reactions:\nA k1-> B\nC k2-> D', 'react')
+        elements = GraphPresenter().elements(payload, linkage='0')
+        nodes = {x['data']['id'] for x in elements if 'source' not in x['data']}
+        self.assertEqual(len(nodes), 2)
+        self.assertTrue(all(x['data']['source'] in nodes and x['data']['target'] in nodes
+                            for x in elements if 'source' in x['data']))
+
+    def test_upload_validation_and_size_limits(self):
+        text = 'Reactions:\nA k-> B'
+        encoded = 'data:text/plain;base64,' + base64.b64encode(text.encode()).decode()
+        self.assertEqual(decode_upload(encoded, 'model.react'), text)
+        for content, filename in ((encoded, 'model.exe'), ('bad', 'a.ode'),
+                                  ('x'*64001, 'a.ode')):
+            with self.subTest(filename=filename), self.assertRaises(ValueError):
+                decode_upload(content, filename)
+        with self.assertRaises(ValueError):
+            analyze_document('x'*32001)
+        with self.assertRaises(ValueError):
+            analyze_document('')
+
+    def test_worker_result_and_errors_cross_process_boundary(self):
+        runner = AnalysisRunner(timeout=10)
+        payload = runner.run(EXAMPLES['reaction'][3], 'react', [], 'symbolic')
+        self.assertEqual(payload['outcome']['deficiency']['deficiency'], 0)
+        with self.assertRaisesRegex(ValueError, 'ParseError'):
+            runner.run('not a reaction', 'react', [], 'symbolic')
+
+    def test_timeout_terminates_analysis(self):
+        with self.assertRaisesRegex(ValueError, 'limit'):
+            AnalysisRunner(timeout=0).run(EXAMPLES['reaction'][3], 'react', [], 'symbolic')
+
+
+@unittest.skipUnless(find_spec('dash') and find_spec('dash_cytoscape'), 'optional web dependencies')
+class WebAppTests(unittest.TestCase):
+    def setUp(self):
+        from web.app import create_app
+        self.app = create_app()
+        self.client = self.app.server.test_client()
+
+    def post_callback(self, marker, values, triggered):
+        key = next(key for key in self.app.callback_map if marker in key)
+        callback = self.app.callback_map[key]
+        outputs = callback['output']
+        if isinstance(outputs, list):
+            outputs = [{'id': output.component_id, 'property': output.component_property} for output in outputs]
+        else:
+            outputs = {'id': outputs.component_id, 'property': outputs.component_property}
+        inputs = [dict(item, value=values.get(f'{item["id"]}.{item["property"]}')) for item in callback['inputs']]
+        states = [dict(item, value=values.get(f'{item["id"]}.{item["property"]}')) for item in callback['state']]
+        return self.client.post('/_dash-update-component', json={
+            'output': key, 'outputs': outputs, 'changedPropIds': [triggered], 'inputs': inputs, 'state': states})
+
+    def test_routes_layout_assets_and_callbacks(self):
+        self.assertEqual(self.client.get('/').status_code, 200)
+        self.assertEqual(self.client.get('/healthz').get_json(), {'status': 'ok'})
+        layout = self.client.get('/_dash-layout')
+        self.assertEqual(layout.status_code, 200)
+        self.assertIn(b'CRNTAnalysis', layout.data)
+        self.assertIn(b'cytoscape', layout.data.lower())
+        with self.client.get('/assets/workspace.css') as response:
+            self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.client.get('/_dash-dependencies').status_code, 200)
+        self.assertGreaterEqual(len(self.app.callback_map), 8)
+
+    def test_http_analysis_callback(self):
+        key = next(key for key in self.app.callback_map if 'result.data' in key)
+        response = self.client.post('/_dash-update-component', json={
+            'output': key,
+            'outputs': [{'id': 'result', 'property': 'data'}, {'id': 'status', 'property': 'children'}],
+            'changedPropIds': ['analyze.n_clicks'],
+            'inputs': [
+                {'id': 'analyze', 'property': 'n_clicks', 'value': 1},
+                {'id': 'model', 'property': 'value', 'value': EXAMPLES['reaction'][3]},
+                {'id': 'format', 'property': 'value', 'value': 'react'},
+                {'id': 'options', 'property': 'value', 'value': []},
+                {'id': 'unresolved', 'property': 'value', 'value': 'symbolic'},
+            ], 'state': [],
+        })
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()['response']['result']['data']
+        self.assertEqual(payload['outcome']['deficiency']['n'], 2)
+        self.assertIn('Whole network', payload['report'])
+
+    def test_result_render_graph_inspection_and_download_callbacks(self):
+        payload = analyze_document(EXAMPLES['rational'][3], 'ode', ['lift'])
+        response = self.post_callback('metrics.children', {'result.data': payload}, 'result.data')
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.get_json()['response']['download-text']['disabled'])
+        self.assertIn('ds/dt', response.get_json()['response']['report']['children'])
+        response = self.post_callback('graph.elements', {
+            'result.data': payload, 'mode.value': 'reaction', 'linkage.value': 'all'}, 'result.data')
+        self.assertEqual(response.status_code, 200)
+        elements = response.get_json()['response']['graph']['elements']
+        self.assertGreater(len(elements), 0)
+        response = self.post_callback('details.children', {
+            'result.data': payload, 'graph.tapNodeData': elements[0]['data'],
+            'graph.tapEdgeData': None}, 'graph.tapNodeData')
+        self.assertIn('Composition', response.get_json()['response']['details']['children'])
+        for trigger, extension in (('download-text.n_clicks', '.txt'), ('download-json.n_clicks', '.analysis')):
+            response = self.post_callback('download.data', {'result.data': payload, trigger: 1}, trigger)
+            data = response.get_json()['response']['download']['data']
+            self.assertTrue(data['filename'].endswith(extension))
+            if extension == '.analysis':
+                import json
+                self.assertEqual(json.loads(data['content']), payload['outcome'])
+
+    def test_editing_input_clears_stale_result_and_invalid_input_reports_error(self):
+        values = {'analyze.n_clicks': 1, 'model.value': 'bad input', 'format.value': 'react',
+                  'options.value': [], 'unresolved.value': 'symbolic'}
+        response = self.post_callback('result.data', values, 'model.value')
+        self.assertIsNone(response.get_json()['response']['result']['data'])
+        response = self.post_callback('result.data', values, 'analyze.n_clicks')
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.get_json()['response']['result']['data'])
+        self.assertIn('ParseError', str(response.get_json()['response']['status']['children']))
+
+    def test_uploads_and_examples_populate_editor_without_server_files(self):
+        response = self.post_callback('model.value', {'example.value': 'rational'}, 'example.value')
+        data = response.get_json()['response']
+        self.assertEqual(data['model']['value'], EXAMPLES['rational'][3])
+        self.assertEqual(data['options']['value'], ['lift'])
+        encoded = 'data:text/plain;base64,' + base64.b64encode(b"species x\nx'=x").decode()
+        response = self.post_callback('model.value', {'upload.contents': encoded, 'upload.filename': 'model.ode'}, 'upload.contents')
+        self.assertEqual(response.get_json()['response']['format']['value'], 'ode')
+        self.assertEqual(response.get_json()['response']['options']['value'], [])
