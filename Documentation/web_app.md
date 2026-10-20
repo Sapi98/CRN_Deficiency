@@ -5,6 +5,9 @@
 - [Run locally](#run-locally)
 - [Use the workspace](#use-the-workspace)
 - [Deployment](#deployment)
+  - [Managed Docker hosting](#managed-docker-hosting)
+  - [University or private server](#university-or-private-server)
+  - [Pre-launch verification and operations](#pre-launch-verification-and-operations)
 - [Architecture and safeguards](#architecture-and-safeguards)
 - [Tests](#tests)
 - [Developer API](#developer-api)
@@ -70,6 +73,100 @@ For shared access, configure an HTTPS reverse proxy, authentication, request
 rate limits, and container CPU/memory limits. Keep server/proxy timeouts longer
 than the 20-second analysis budget. Do not log request bodies. No hosting
 account is created or service published by this local implementation.
+
+### Managed Docker hosting
+
+Commit and push the intended `web_app` changes first. On a service such as
+Render, create a **Web Service**, connect the repository, and choose Docker.
+
+| Setting | Value |
+|---|---|
+| Git branch | `web_app` |
+| Root / Docker build context | Repository root |
+| Dockerfile path | `Dockerfile.web` |
+| Health-check path | `/healthz` |
+| Port environment variable | `PORT=8050` |
+| Start command | Default Dockerfile command (`web.wsgi:server` via Gunicorn) |
+
+The current command binds to `0.0.0.0:8050`; it does not read `PORT` dynamically.
+Setting `PORT=8050` aligns Render's configuration with that command. If a host
+requires another port, override the Docker command to bind Gunicorn to that
+port, keeping two synchronous workers and a timeout above 20 seconds.
+
+Deploy and open the provider's assigned HTTPS URL. Approximately 2 GB RAM is a
+starting sizing estimate, not a guarantee: measure representative symbolic
+workloads and concurrent use before choosing production capacity. No database
+or persistent storage is needed for the current workflow.
+
+Consult [Render Docker deployment](https://render.com/docs/docker) and
+[Render web-service configuration](https://render.com/docs/web-services).
+Do not use static hosting such as GitHub Pages for this Python backend.
+
+### University or private server
+
+Use a Linux server with Docker installed. Clone the repository and, from its
+root, run:
+
+```bash
+git switch web_app
+docker build -f Dockerfile.web -t crntanalysis-web .
+docker run -d \
+  --name crntanalysis-web \
+  --restart unless-stopped \
+  --memory=2g \
+  --cpus=2 \
+  -p 127.0.0.1:8050:8050 \
+  crntanalysis-web
+curl --fail http://127.0.0.1:8050/healthz
+```
+
+The health endpoint should return `{"status":"ok"}`. Keep the application port
+bound to loopback instead of exposing Gunicorn directly. Install/configure an
+HTTPS reverse proxy on the host. For Caddy, an example Caddyfile is:
+
+```caddyfile
+crnt.your-university.edu {
+    reverse_proxy 127.0.0.1:8050
+}
+```
+
+Replace the example domain, configure DNS to point to the server, and allow
+the necessary reverse-proxy traffic through the firewall. Certificate issuance
+needs appropriate DNS/network access. See [Caddy automatic HTTPS](https://caddyserver.com/docs/automatic-https).
+This minimal proxy example does **not** add authentication or rate limiting.
+If the proxy is itself containerized, its loopback is different: connect it to
+the app using a private Docker network rather than this host-only example.
+
+For unpublished research, prefer an institution-controlled server when available.
+
+### Pre-launch verification and operations
+
+- Configure institutional authentication, an authenticated proxy, or VPN access
+  for collaborator-only use. The app itself has no login; HTTPS is not access control.
+- Add request-rate limits and retain resource limits. Keep server/proxy timeouts
+  longer than the 20-second calculation budget (Gunicorn currently uses 35 seconds).
+- Confirm the deployed image contains no private research inputs or reports;
+  ensure application and proxy logs do not record request bodies.
+- Test `/healthz`, reaction and ODE uploads, auxiliary/fractional options,
+  graph interaction, ODE display, PNG export, and report downloads over HTTPS.
+- Monitor memory, CPU, worker timeouts, and failures under expected concurrency.
+  Health checks verify that the web process is alive, not scientific correctness.
+- Keep dependency security updates and a rollback plan for deployed versions.
+
+Useful private-server commands:
+
+```bash
+docker logs --tail 100 crntanalysis-web
+docker stats --no-stream crntanalysis-web
+docker stop crntanalysis-web
+docker start crntanalysis-web
+```
+
+Running the launch command again with the same container name will fail while
+that container exists. For an update, build a new versioned image and plan a
+controlled container replacement; do not overwrite a running release blindly.
+Docker deployment has to be verified on the intended server; these instructions
+are not evidence of an already hosted or production-certified service.
 
 ## Architecture and safeguards
 

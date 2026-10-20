@@ -32,6 +32,7 @@ ODE formatting examples demonstrate three approaches:
 - [Desktop GUI](#desktop-gui)
   - [Editing the interface](#editing-the-interface)
 - [Interactive web application](#interactive-web-application)
+  - [Hosting the web application](#hosting-the-web-application)
 - [Building a standalone executable](#building-a-standalone-executable)
   - [Build environment and commands](#build-environment-and-commands)
   - [Sharing the application](#sharing-the-application)
@@ -365,6 +366,65 @@ See [the web application guide](Documentation/web_app.md) for Docker deployment,
 privacy, interaction details, resource limits, and tests. This implementation
 is local, not publicly hosted; configure HTTPS and authentication before
 sharing an internet-facing deployment.
+
+### Hosting the web application
+
+Host the repository application as a Python/Docker web service, not a static
+website (GitHub Pages cannot run this backend). No C# conversion or executable
+build is needed. Commit and push the intended changes to `web_app` before
+deploying from Git.
+
+**Managed hosting (for example, Render):** connect the repository as a Docker
+web service and configure:
+
+| Setting | Value |
+|---|---|
+| Branch | `web_app` |
+| Root / build context | Repository root |
+| Dockerfile | `Dockerfile.web` |
+| Health-check path | `/healthz` |
+| Environment variable | `PORT=8050` (matches the current Docker command) |
+
+Use the default command from the Dockerfile. Deploy, then test the assigned
+HTTPS URL. Start with approximately 2 GB RAM and measure actual usage with
+representative models; this is a sizing estimate, not a capacity guarantee.
+See [Render's Docker guide](https://render.com/docs/docker) and
+[web-service configuration](https://render.com/docs/web-services).
+
+**University or private Linux server:** install Docker, clone the repository,
+and run from its root:
+
+```bash
+git switch web_app
+docker build -f Dockerfile.web -t crntanalysis-web .
+docker run -d --name crntanalysis-web --restart unless-stopped \
+  --memory=2g --cpus=2 -p 127.0.0.1:8050:8050 crntanalysis-web
+curl --fail http://127.0.0.1:8050/healthz
+```
+
+Keep port 8050 local to the server. Put an HTTPS reverse proxy in front of it;
+for example, when Caddy runs on the same host, use:
+
+```caddyfile
+crnt.your-university.edu {
+    reverse_proxy 127.0.0.1:8050
+}
+```
+
+Replace the domain with yours, point its DNS to the server, and configure the
+firewall for the reverse proxy. Caddy can provision HTTPS when its domain and
+network prerequisites are met; see [automatic HTTPS](https://caddyserver.com/docs/automatic-https).
+
+**Before sharing:** the app has no built-in login. For collaborator-only access,
+configure institutional sign-in, an authenticated proxy, or VPN access. Add
+rate limits, retain CPU/memory and calculation-time limits, avoid request-body
+logging, and test uploads, graph interactions, downloads, and health checks.
+HTTPS alone does not restrict who can use the app. A university-controlled
+server is preferable for unpublished models when available.
+
+See the [detailed deployment guide](Documentation/web_app.md#deployment) for
+operations, troubleshooting, and verification. These instructions do not
+publish or provision a server automatically.
 
 ## Building a standalone executable
 
