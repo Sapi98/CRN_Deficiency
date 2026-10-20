@@ -85,6 +85,17 @@ class WebServiceTests(unittest.TestCase):
 
 @unittest.skipUnless(find_spec('dash') and find_spec('dash_cytoscape'), 'optional web dependencies')
 class WebAppTests(unittest.TestCase):
+    def test_graph_labels_use_compact_fonts(self):
+        response = self.post_callback('graph.stylesheet', {
+            'mode.value': 'reaction', 'labels.value': ['rates'],
+            'search.value': '', 'graph.elements': [],
+        }, 'mode.value')
+        self.assertEqual(response.status_code, 200)
+        styles = response.get_json()['response']['graph']['stylesheet']
+        by_selector = {item['selector']: item['style'] for item in styles}
+        self.assertEqual(by_selector['node']['font-size'], 9)
+        self.assertEqual(by_selector['edge']['font-size'], 7)
+
     def setUp(self):
         from web.app import create_app
         self.app = create_app()

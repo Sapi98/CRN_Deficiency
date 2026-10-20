@@ -166,12 +166,12 @@ def create_app(runner=None):
     def graph_style(mode, labels, search, elements):
         styles = [
             {'selector': 'node', 'style': {'label': 'data(label)', 'background-color': 'data(color)', 'color': '#143645',
-                                           'font-size': 12, 'text-valign': 'bottom', 'text-margin-y': 9, 'width': 28, 'height': 28}},
+                                           'font-size': 9, 'text-valign': 'bottom', 'text-margin-y': 5, 'width': 28, 'height': 28}},
             {'selector': 'edge', 'style': {'curve-style': 'bezier', 'line-color': '#9babb3', 'target-arrow-color': '#9babb3',
                                            'target-arrow-shape': 'triangle' if mode == 'reaction' else 'none', 'width': 2,
                                            'label': 'data(label)' if 'rates' in (labels or []) else '',
-                                           'font-size': 10, 'text-background-color': '#fff', 'text-background-opacity': 0.9,
-                                           'text-background-padding': 3, 'text-rotation': 'autorotate'}},
+                                           'font-size': 7, 'text-background-color': '#fff', 'text-background-opacity': 0.9,
+                                           'text-background-padding': 2, 'text-rotation': 'autorotate'}},
             {'selector': ':selected', 'style': {'border-width': 4, 'border-color': '#e7a84a', 'line-color': '#e7a84a', 'target-arrow-color': '#e7a84a'}},
         ]
         if search:
