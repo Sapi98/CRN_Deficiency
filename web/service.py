@@ -51,7 +51,9 @@ def analyze_document(text, input_format='auto', options=(), unresolved='symbolic
     )
     if len(outcome.network.complexes) > MAX_COMPLEXES or len(outcome.network.reactions) > MAX_REACTIONS:
         raise ValueError('This network exceeds the interactive limit of 500 complexes or 1500 reactions.')
-    payload = {'outcome': outcome.to_dict(), 'report': ConsoleReportFormatter().format(outcome)}
+    formatter = ConsoleReportFormatter()
+    payload = {'outcome': outcome.to_dict(), 'report': formatter.format(outcome),
+               'equations': formatter.equation_systems(outcome)}
     if len(json.dumps(payload).encode('utf-8')) > 1_000_000:
         raise ValueError('The result exceeds the 1 MB browser limit. Use the desktop tool for this model.')
     return payload

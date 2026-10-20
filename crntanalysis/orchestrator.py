@@ -148,12 +148,42 @@ class CRNAnalysisService:
 class ConsoleReportFormatter:
     """Create a detailed report suitable for terminals and GUI text panes."""
 
+    def equation_systems(self, outcome):
+        """Return original and analyzed ODEs, deriving reaction-input dynamics."""
+        from sympy import Rational, Symbol, expand
+        from crntanalysis.parser_utils import ArithmeticExpressionParser
+        network = outcome.network
+        metadata = network.analysis_metadata
+        original = metadata.get('original_equations', {})
+        analyzed = metadata.get('transformed_equations', {})
+        if not analyzed:
+            equations = {name: Rational(0) for name in outcome.deficiency.species}
+            complexes = {item.index: item for item in network.complexes}
+            parse = ArithmeticExpressionParser.parse
+            for reaction in network.reactions:
+                if reaction.rate_expression is not None:
+                    rate_law = parse(reaction.rate_expression)
+                else:
+                    rate_law = parse(reaction.rate_constant)
+                    orders = (reaction.kinetic_orders if reaction.kinetic_orders is not None
+                              else complexes[reaction.source].species)
+                    for name, power in orders.items():
+                        rate_law *= Symbol(name) ** parse(str(power))
+                source = complexes[reaction.source].species
+                target = complexes[reaction.target].species
+                for name in equations:
+                    change = parse(str(target.get(name, 0))) - parse(str(source.get(name, 0)))
+                    equations[name] += change * rate_law
+            analyzed = {name: str(expand(rhs)) for name, rhs in equations.items()}
+        return {'original': dict(original), 'analyzed': dict(analyzed)}
+
     def format(self, outcome: AnalysisOutcome) -> str:
         result = outcome.deficiency
         network = outcome.network
         metadata = network.analysis_metadata
-        originals = metadata.get('original_equations', {})
-        transformed = metadata.get('transformed_equations', {})
+        systems = self.equation_systems(outcome)
+        originals = systems['original']
+        transformed = systems['analyzed']
         auxiliaries = metadata.get('auxiliary_species', [])
         auxiliary_names = {item['species'] for item in auxiliaries}
         species = sorted(set(result.species) | set(originals) | set(transformed))
@@ -207,7 +237,9 @@ class ConsoleReportFormatter:
             lines.extend(['', 'Original ODE system'])
             lines.extend(f'  d{name}/dt = {rhs}' for name, rhs in originals.items())
         if transformed:
-            lines.extend(['', 'ODE system used for network construction (including auxiliaries)'])
+            heading = ('ODE system used for network construction (including auxiliaries)' if originals
+                       else 'ODE system implied by the reaction network')
+            lines.extend(['', heading])
             lines.extend(f'  d{name}/dt = {rhs}' for name, rhs in transformed.items())
         if auxiliaries:
             lines.extend(['', 'Auxiliary definitions and derived ODEs'])

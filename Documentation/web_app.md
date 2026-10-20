@@ -48,6 +48,10 @@ Matplotlib. Do not expose the development server publicly.
 
 Graph labels round rates; scientific data retains precision. Reports include
 indexed complexes, original/augmented ODEs, auxiliary definitions, and warnings.
+An open **ODEs under consideration** panel displays the original and augmented
+systems directly. Reaction-file inputs display the ODEs implied by their
+stoichiometry and supplied kinetics. These equations also appear in the full
+report and text download; deriving them does not change the network.
 Scientific limitations of selected or augmented realizations remain unchanged.
 
 ## Deployment

@@ -77,7 +77,8 @@ def create_app(runner=None):
                     html.Div(id='legend', className='legend'),
                     html.Pre('Select a complex or reaction to inspect it.', id='details', className='details'),
                     html.Details([html.Summary('Linkage-class results'), html.Div(id='classes')], open=True),
-                    html.Details([html.Summary('Full scientific report & ODEs'), html.Pre(id='report', className='report')]),
+                    html.Details([html.Summary('ODEs under consideration'), html.Pre(id='odes', className='report')], open=True),
+                    html.Details([html.Summary('Full scientific report & ODEs'), html.Pre(id='report', className='report')], open=True),
                     html.Div([html.Button('Download report (.txt)', id='download-text', disabled=True),
                               html.Button('Download result (.analysis)', id='download-json', disabled=True)], className='graph-actions'),
                 ], className='card workspace'),
@@ -137,6 +138,21 @@ def create_app(runner=None):
         from web.service import COLORS
         legend = [html.Span(f'L{x["index"]} · δ={x["deficiency"]}', style={'borderColor': COLORS[x['index'] % len(COLORS)]}) for x in result['linkage_classes']]
         return metrics, payload['report'], html.Table(rows), options, 'all', legend, False, False
+
+    @app.callback(Output('odes', 'children'), Input('result', 'data'))
+    def render_odes(payload):
+        if not payload:
+            return 'Analyze a model to display its ODE system.'
+        systems = payload.get('equations', {})
+        lines = []
+        if systems.get('original'):
+            lines.append('Original ODE system')
+            lines.extend(f'd{name}/dt = {rhs}' for name, rhs in systems['original'].items())
+            lines.extend(['', 'Analyzed ODE system (including auxiliary species)'])
+        else:
+            lines.append('ODE system implied by the reaction network')
+        lines.extend(f'd{name}/dt = {rhs}' for name, rhs in systems.get('analyzed', {}).items())
+        return '\n'.join(lines).replace('**', '^')
 
     @app.callback(Output('graph', 'elements'), Input('result', 'data'), Input('mode', 'value'), Input('linkage', 'value'))
     def graph_elements(payload, mode, linkage):

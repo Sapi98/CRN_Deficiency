@@ -11,6 +11,12 @@ from web.service import (AnalysisRunner, EXAMPLES, GraphPresenter,
 
 
 class WebServiceTests(unittest.TestCase):
+    def test_reaction_input_report_includes_its_ode_system(self):
+        payload = analyze_document(EXAMPLES['reaction'][3], 'react')
+        self.assertIn('ODE system implied by the reaction network', payload['report'])
+        self.assertIn('dA/dt = -A*k1 + B*k2', payload['report'])
+        self.assertEqual(set(payload['equations']['analyzed']), {'A', 'B'})
+
     def test_pip_package_excludes_web_app_and_dependencies(self):
         root = Path(__file__).resolve().parents[1]
         with patch('setuptools.setup') as setup:
@@ -134,6 +140,12 @@ class WebAppTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.get_json()['response']['download-text']['disabled'])
         self.assertIn('ds/dt', response.get_json()['response']['report']['children'])
+        ode_response = self.post_callback('odes.children', {'result.data': payload}, 'result.data')
+        ode_text = ode_response.get_json()['response']['odes']['children']
+        self.assertIn('Original ODE system', ode_text)
+        self.assertIn('Analyzed ODE system', ode_text)
+        self.assertIn('ds/dt', ode_text)
+        self.assertNotIn('**', ode_text)
         response = self.post_callback('graph.elements', {
             'result.data': payload, 'mode.value': 'reaction', 'linkage.value': 'all'}, 'result.data')
         self.assertEqual(response.status_code, 200)
