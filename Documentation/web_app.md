@@ -59,6 +59,12 @@ Scientific limitations of selected or augmented realizations remain unchanged.
 
 ## Deployment
 
+For a detailed inventory suitable for the IT team, see
+[Web_Deployment_Handoff.txt](Web_Deployment_Handoff.txt).
+It distinguishes the observed development environment from the proposed
+production container and lists infrastructure/security decisions still needed.
+Its scope is the IT team hosting and operating the web service only.
+
 ```bash
 docker build -f Dockerfile.web -t crntanalysis-web .
 docker run --rm --memory=2g --cpus=2 -p 127.0.0.1:8050:8050 crntanalysis-web

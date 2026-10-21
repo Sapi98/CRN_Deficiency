@@ -369,6 +369,13 @@ sharing an internet-facing deployment.
 
 ### Hosting the web application
 
+For an institutional software/security review, share the self-contained
+[Web deployment handoff (TXT)](Documentation/Web_Deployment_Handoff.txt).
+It lists direct and transitive Python packages, observed versions, browser
+libraries, server requirements, data handling, limits, and approval checks.
+The handoff requests hosting/operations for the web app only, not desktop
+distribution or Python package publishing.
+
 Host the repository application as a Python/Docker web service, not a static
 website (GitHub Pages cannot run this backend). No C# conversion or executable
 build is needed. Commit and push the intended changes to `web_app` before
