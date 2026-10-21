@@ -1,247 +1,58 @@
-CRNTANALYSIS WEB APPLICATION - IT TEAM HOSTING HANDOFF
-======================================================
-Prepared: 2026-10-20
-Application version: 1.1.0 (displayed as v1.1)
+CRNTANALYSIS - WEB APPLICATION HOSTING HANDOFF
+============================================
+Prepared: 2026-10-20 | Application version: 1.1.0
 Repository: https://github.com/Sapi98/CRN_Deficiency
-Deployment branch: web_app
-Source revision inspected: 6a9bc65
-Purpose: technical inventory and deployment review; not a security certification.
-Scope: host and operate the browser-based application only.
+Branch: web_app
 
-CONTENTS
-1. Application purpose and deployment scope
-2. Architecture and repository files
-3. Required software and direct Python dependencies
-4. Complete observed Python package inventory
-5. Browser-side software and bundled JavaScript
-6. Production installation and startup
-7. Network, storage, and infrastructure requirements
-8. Data handling, confidentiality, and authentication
-9. Resource limits and concurrency
-10. Licensing and supply-chain review
-11. Testing, monitoring, and operational acceptance
-12. Decisions and information requested from the IT team
-13. Inventory provenance and updating this document
+1. PURPOSE AND SCOPE
+-------------------
+Host a Python web application for chemical reaction network analysis.
+Users upload/paste equations or reactions, explore interactive network graphs,
+and download deficiency reports. Only the web service needs hosting; desktop
+distribution and Python package publishing are outside this request.
 
+Deploy from the repository: web/ provides the interface and crntanalysis/
+provides its analysis backend. Use requirements-web.txt, not setup.py or the
+general project's requirements.txt.
 
-1. APPLICATION PURPOSE AND DEPLOYMENT SCOPE
--------------------------------------------
-CRNTAnalysis analyzes chemical reaction networks (CRNs). Users paste a model
-or upload a UTF-8 .react, .ode, or .txt document. The server parses the model,
-constructs a network realization, calculates whole-network and linkage-class
-deficiencies, and returns equations, graph data, and reports. Supported optional
-ODE transformations include reciprocal auxiliary-species embeddings and
-fractional-power real-complex realizations.
+2. SOFTWARE AND DEPENDENCIES
+---------------------------
+Proposed production runtime: Linux, CPython 3.12 (python:3.12-slim), Gunicorn,
+and Docker or an equivalent institution-managed Python hosting environment.
+No database, GPU, Node/npm build, or desktop Qt stack is required.
 
-The browser interface provides interactive reaction/linkage graphs, node/edge
-inspection, layout selection, linkage filtering, text search, PNG export, and
-plain-text/structured report downloads. Calculations run on the server; visitors
-need only a supported browser and the hosted application URL.
+Direct requirements                    Purpose
+-------------------------------------  ----------------------------------------
+sympy>=1.13,<2                         Symbolic calculations and analysis.
+dash>=3.0,<4                           Python web interface and callbacks.
+dash-cytoscape>=1.0,<2                  Interactive browser network graphs.
+gunicorn>=23,<24                       Production Linux/UNIX WSGI server.
 
-the IT team is being asked to provision and operate the web hosting environment:
-deployment, HTTPS/domain configuration, access controls, resource limits,
-monitoring, and infrastructure updates. No desktop installation, executable
-distribution, or Python package publishing is requested. Scientific algorithms
-and application feature development remain with the research/software team,
-subject to an agreed maintenance arrangement.
+Observed Python package inventory (development environment):
+dash 3.4.0; dash-cytoscape 1.0.2; sympy 1.14.0; gunicorn 23.0.0;
+Flask 3.1.3; Werkzeug 3.1.9; plotly 7.1.0; mpmath 1.3.0;
+narwhals 2.21.0; requests 2.32.5; retrying 1.4.2; nest-asyncio 1.6.0;
+typing_extensions 4.16.0; importlib_metadata 8.7.1; zipp 3.23.1;
+packaging 26.3; blinker 1.9.0; click 8.1.8; itsdangerous 2.2.0;
+Jinja2 3.1.6; MarkupSafe 3.0.4; certifi 2026.10.19;
+charset-normalizer 3.5.2; idna 3.20; urllib3 2.6.3.
+Observed installation tools: pip 21.2.4; setuptools 58.0.4.
 
-Deploy the web_app repository branch using Dockerfile.web and
-requirements-web.txt. The hosted service needs two source directories:
-web/ (browser interface/server adapter) and crntanalysis/ (its Python analysis
-backend). The latter is part of the web service, not a separate application
-the IT team must distribute. Do not run setup.py or install the general project
-package to provision this service; the Docker recipe installs only web needs.
+This inventory was captured from macOS/ARM64 with Python 3.9.6, not the proposed
+Linux/Python 3.12 image. It is not a lockfile or recommended production pin set.
+Resolve and record approved versions in the actual hosting environment; use
+supported installation tooling rather than copying the old tool versions.
 
+Browser assets are bundled with Dash/dash-cytoscape and served locally:
+React/ReactDOM 18.3.1, prop-types 15.8.1, Babel polyfill 7.12.1,
+Dash renderer/core components, and Cytoscape.js graph integration.
+Exact embedded JavaScript subdependencies require bundle/SBOM scanning.
+No external CDN/font or external analysis API is configured. No API key is
+required. Node/npm is unnecessary when using these prebuilt Python packages.
 
-2. ARCHITECTURE AND REPOSITORY FILES
-------------------------------------
-Request flow:
-  Browser -> HTTPS reverse proxy -> Gunicorn -> Flask/Dash callback
-          -> spawned Python analysis process -> CRNAnalysisService / SymPy
-          -> JSON result -> browser Cytoscape graph and downloadable reports
-
-The Python backend performs scientific analysis; the browser handles presentation
-and graph interaction. Scientific calculations are not reimplemented in JavaScript.
-
-Relevant paths:
-  web/app.py               Dash app factory, layout, callbacks, local launcher.
-  web/service.py           Upload validation, analysis isolation, graph adapter.
-  web/wsgi.py              Production WSGI entry point: web.wsgi:server.
-  web/assets/workspace.css Local browser stylesheet; no external font import.
-  crntanalysis/            Shared parsers, symbolic models, deficiency, reports.
-  requirements-web.txt    Direct headless web requirements and version ranges.
-  Dockerfile.web          Proposed Linux container deployment recipe.
-  .dockerignore           Allowlist of files sent to Docker builds.
-  tests/test_web.py       Adapter, process, HTTP callback, and packaging tests.
-  README.md               General launch and hosting instructions.
-  Documentation/web_app.md Detailed web operations and developer API.
-  LICENSE                 Project's PolyForm Noncommercial License 1.0.0.
-
-The Dockerfile explicitly copies crntanalysis/, web/, requirements-web.txt,
-and LICENSE. Private Research_Models/, generated research reports, .git/,
-virtual environments, and GUI/ are not included in its build context/image.
-Generic web examples are embedded in web/service.py.
-
-
-3. REQUIRED SOFTWARE AND DIRECT PYTHON DEPENDENCIES
----------------------------------------------------
-Production proposal:
-  - Linux host/container platform approved by the IT team.
-  - CPython 3.12 via the existing python:3.12-slim base image.
-  - pip to install Python distributions during image construction.
-  - Gunicorn WSGI server; no Flask/Dash development server in production.
-  - Docker-compatible build/runtime, OR an equivalent managed Linux Python
-    deployment using a dedicated virtual environment and the same WSGI entry.
-  - An institutional HTTPS reverse proxy, DNS, TLS certificates, and access
-    control. Caddy/Nginx are examples, not mandatory installed app dependencies.
-  - A modern JavaScript-enabled browser. Current Chrome, Edge, Firefox, and
-    Safari should be included in the IT team's acceptance testing. No exhaustive
-    browser compatibility certification has been performed.
-
-Exact direct requirements declared in requirements-web.txt:
-  sympy>=1.13,<2
-  dash>=3.0,<4
-  dash-cytoscape>=1.0,<2
-  gunicorn>=23,<24; platform_system != 'Windows'
-
-Roles:
-  SymPy: restricted arithmetic expressions, symbolic algebra, chain-rule ODE
-         construction, and symbolic/exact stoichiometric rank calculations.
-  Dash: Python-defined web UI, reactive HTTP callbacks, upload/download controls.
-  dash-cytoscape: browser network visualization, graph interaction, PNG export.
-  Gunicorn: production UNIX WSGI serving and worker concurrency.
-
-No additional desktop stack, JavaScript build toolchain, database, task broker,
-or GPU is required. Install only the web requirements and their resolved
-dependencies listed below; unrelated repository requirements are out of scope.
-
-No apt packages are explicitly installed by Dockerfile.web. The slim base
-image supplies its own operating-system libraries and CPython dependencies.
-MarkupSafe can use native extension wheels. If wheels are unavailable for an
-approved architecture/version, a build toolchain may be needed at image build
-time; verify this on the actual platform instead of adding compilers to the
-runtime image by default.
-
-
-4. COMPLETE OBSERVED PYTHON PACKAGE INVENTORY
----------------------------------------------
-This is the observed local .venv-web inventory, captured on 2026-10-20:
-  CPython 3.9.6; macOS (Darwin), ARM64; isolated virtual environment.
-  27 distributions: 4 direct app/server requirements, 21 other distributions,
-  plus pip and setuptools (setuptools is also required by Dash).
-
-IMPORTANT: this is NOT a lockfile and is NOT the measured inventory of the
-proposed Linux/Python 3.12 container. Platform markers, Python version, package
-availability, and unpinned dependency ranges can change resolution. the IT team
-should resolve, pin, scan, and record the final deployment environment.
-
-Name                  Version       Role / reason present
---------------------  ------------  ------------------------------------------
-dash                  3.4.0         Direct: web UI and callback framework.
-dash-cytoscape        1.0.2         Direct: interactive network graph component.
-sympy                 1.14.0        Direct: symbolic scientific calculations.
-gunicorn              23.0.0        Direct: production WSGI server.
-Flask                 3.1.3         Dash web application / HTTP framework.
-Werkzeug              3.1.9         Flask/Dash WSGI and HTTP utilities.
-plotly                7.1.0         Dash dependency; Plotly Python infrastructure.
-mpmath                1.3.0         SymPy arbitrary-precision numerical support.
-narwhals              2.21.0        Plotly dataframe-interoperability dependency;
-                                    no pandas/dataframe processing required here.
-requests              2.32.5        Dash HTTP-client dependency; app code does
-                                    not use it to send research models externally.
-retrying              1.4.2         Dash retry utility dependency.
-nest-asyncio          1.6.0         Dash async-loop compatibility dependency.
-typing_extensions     4.16.0        Backported typing features used by Dash.
-importlib_metadata    8.7.1         Distribution-metadata compatibility layer.
-zipp                  3.23.1        importlib_metadata archive/path dependency.
-packaging             26.3          Gunicorn/Plotly package-version utilities.
-blinker               1.9.0         Flask signals.
-click                 8.1.8         Flask command-line support.
-itsdangerous          2.2.0         Flask signing utilities; presence does not
-                                    mean app authentication is implemented.
-Jinja2                3.1.6         Flask template infrastructure.
-MarkupSafe            3.0.4         Flask/Jinja/Werkzeug escaping support.
-certifi               2026.10.19    Requests CA-certificate bundle.
-charset-normalizer    3.5.2         Requests text-encoding support.
-idna                  3.20          Requests internationalized hostname support.
-urllib3               2.6.3         Requests underlying HTTP connection library.
-pip                   21.2.4        Observed environment installation tool.
-setuptools            58.0.4        Packaging/build utilities; Dash dependency.
-
-The old local pip/setuptools versions above are observations, not recommended
-production pins. Use IT-approved supported tooling, then regenerate
-the inventory. Optional upstream extras (testing, notebooks, async, Celery,
-compression, cloud, dataframe engines, etc.) were not requested for this app.
-
-Principal dependency relationships (not including unselected extras):
-  app -> SymPy -> mpmath
-  app -> Dash -> Flask, Werkzeug, Plotly, importlib_metadata,
-                 typing_extensions, requests, retrying, nest-asyncio, setuptools
-  app -> dash-cytoscape -> Dash
-  app -> Gunicorn -> packaging
-  Flask -> blinker, click, itsdangerous, Jinja2, MarkupSafe, Werkzeug
-           (and importlib_metadata on applicable Python versions)
-  Werkzeug -> MarkupSafe
-  Jinja2 -> MarkupSafe
-  Plotly -> narwhals, packaging
-  importlib_metadata -> zipp
-  requests -> certifi, charset-normalizer, idna, urllib3
-
-Python standard library usage includes argparse, ast, base64, binascii,
-dataclasses, importlib, json, math, multiprocessing, pathlib, re, resource
-(Linux children), sys, typing, and unittest. These are not separately installed
-pip distributions. The application parses a restricted arithmetic AST rather
-than evaluating uploaded Python programs.
-
-
-5. BROWSER-SIDE SOFTWARE AND BUNDLED JAVASCRIPT
------------------------------------------------
-The browser UI is authored in Python with Dash components and local CSS.
-Prebuilt JavaScript is supplied by installed Python distributions. No custom
-Node/npm build, JavaScript package server, or external font/CDN is configured.
-
-Observed browser libraries/assets:
-  - React 18.3.1 and ReactDOM 18.3.1, shipped by Dash.
-  - prop-types 15.8.1, shipped by Dash.
-  - Babel polyfill 7.12.1, shipped by Dash.
-  - Dash renderer 3.4.0.
-  - Dash core components / shared components bundled with Dash 3.4.0.
-  - dash_html_components browser bundle 3.0.6.
-  - dash_table browser bundle 6.0.6 (framework asset; app does not use a Dash
-    DataTable widget).
-  - dash_cytoscape.min.js supplied by dash-cytoscape 1.0.2, including its
-    Cytoscape.js/React graph integration.
-
-The installed dash-cytoscape package.json declares these npm dependency ranges:
-  @ungap/custom-elements ^1.3.0; cytoscape-cola ^2.5.1;
-  cytoscape-context-menus ^4.1.0; cytoscape-cose-bilkent ^4.1.0;
-  cytoscape-dagre ^2.5.0; cytoscape-euler ^1.2.2; cytoscape-fcose ^2.2.0;
-  cytoscape-klay ^3.1.4; cytoscape-spread ^3.0.0; cytoscape-svg 0.4.0;
-  lodash ^4.17.21; ramda ^0.29.1; react-cytoscapejs 2.0.0; uuid ^9.0.1.
-
-These are upstream declarations, NOT confirmed exact resolved versions or proof
-that every listed library is in the active standard bundle. Extra-layout
-bundles are not explicitly enabled by this application. The configured layouts
-are cose, circle, breadthfirst, and grid. Exact embedded Cytoscape/core and
-subdependency versions require upstream bundle/source-map/SBOM analysis.
-
-the IT team should scan vendored JavaScript as well as Python distributions:
-a pip package list alone is not a complete browser-library security inventory.
-
-Local verification using the generated page showed:
-  - Dash serve_locally=True.
-  - Script URLs under /_dash-component-suites/ on the same application origin.
-  - No absolute external src/href resources in the generated initial page.
-  - No configured external JavaScript/CSS URLs or external font import in app.
-
-This observation is not a network-capture audit. Verify all lazy-loaded browser
-assets in staging and ensure security headers/CSP permit the actual Dash
-scripts/styles. Do not impose an untested CSP that breaks required components.
-
-
-6. PRODUCTION INSTALLATION AND STARTUP
---------------------------------------
-Preferred deployment uses the repository Dockerfile:
+3. DEPLOYMENT
+-------------
+From the repository root on a Docker-capable Linux server:
 
   git switch web_app
   docker build -f Dockerfile.web -t crntanalysis-web .
@@ -249,274 +60,70 @@ Preferred deployment uses the repository Dockerfile:
     --memory=2g --cpus=2 -p 127.0.0.1:8050:8050 crntanalysis-web
   curl --fail http://127.0.0.1:8050/healthz
 
-The proposed image:
-  - Base: python:3.12-slim (floating tag; not pinned to an immutable digest).
-  - Working directory: /app.
-  - Build install: pip install --no-cache-dir -r requirements-web.txt.
-  - Runtime user: crnt, UID 10001, not root.
-  - Runtime port: 8050.
+Expected health response: {"status":"ok"}.
 
-Exact default server command:
+The image runs as unprivileged user crnt (UID 10001). Its startup command is:
+
   gunicorn --bind 0.0.0.0:8050 --workers 2 --threads 1 --timeout 35 \
     web.wsgi:server
 
-If containers are not approved, use an IT-managed Linux CPython 3.12 virtual
-environment, install requirements-web.txt, and run the same Gunicorn command
-from the repository root under systemd or an equivalent process supervisor.
-Provide Python multiprocessing/process-spawn support. Gunicorn is not the
-Windows production-server option; the intended production target is Linux.
+Put an institutional HTTPS reverse proxy in front of port 8050. Keep that port
+private; expose the approved HTTPS endpoint instead. Do not use the development
+server for production. Managed Docker hosting should use Dockerfile.web,
+repository-root build context, web_app branch, and health path /healthz.
+The current command binds to fixed port 8050; set PORT=8050 if the platform
+requires a matching environment variable, or override the startup command.
 
-Do not use the Flask/Dash development server as the public production service.
-the IT team's hosted runtime should use the Gunicorn WSGI entry point above.
+4. CAPACITY, DATA HANDLING, AND ACCESS
+------------------------------------
+Start evaluation at approximately 2 vCPU and 2 GB RAM, then benchmark realistic
+concurrent workloads. This is an estimate, not a capacity guarantee: two large
+analysis children plus web workers can exceed the example 2 GB container cap.
 
-Managed Docker hosting can use branch web_app, repository-root build context,
-Dockerfile.web, and /healthz. If the platform uses a PORT environment setting,
-set PORT=8050 to match the current fixed server command. The Dockerfile does
-NOT dynamically substitute PORT. Override its command if the host requires a
-different listening port.
+Current limits:
+  Input: 32,000 bytes; HTTP body: 2,500,000 bytes; result: 1,000,000 bytes.
+  Graph: 500 complexes / 1,500 reactions.
+  Analysis: 20 seconds in a separate spawned process.
+  Linux child address space: 1 GiB. Gunicorn timeout: 35 seconds.
+  Two synchronous web workers; requests can queue during analysis.
 
+Models are processed in server memory and may contain unpublished research.
+The app does not save uploads/reports to disk or maintain a user-result cache.
+Results use browser memory; downloads are user-initiated. There is no database.
+Infrastructure logs, swap, dumps, and browser behavior remain subject to IT
+policies; these statements do not guarantee secure erasure.
 
-7. NETWORK, STORAGE, AND INFRASTRUCTURE REQUIREMENTS
------------------------------------------------------
-Inbound:
-  - Public/authorized-user HTTPS on port 443 through an approved reverse proxy.
-  - Internal proxy-to-app HTTP on port 8050; keep it private/loopback.
-  - Port 80 only if required by the chosen HTTPS redirect/certificate setup.
+There is NO built-in login, SSO, or rate limiter. For restricted use, provide
+institutional sign-in, an authenticated proxy, or VPN access. HTTPS alone is
+not access control. Add request-rate limits and enforce CPU/memory limits.
+Avoid request-body logging. This is not a general-purpose execution sandbox.
+No private research inputs or generated reports are copied by Dockerfile.web.
 
-Application routes:
-  /                         Browser application.
-  /healthz                  Returns {"status":"ok"}; HTTP liveness only.
-  /_dash-layout             UI component layout.
-  /_dash-dependencies       Callback dependency configuration.
-  /_dash-update-component   HTTP POST callback/analysis requests.
-  /_dash-component-suites/  Locally served JavaScript/component assets.
-  /assets/                  Local application CSS.
+5. APPROVAL AND ACCEPTANCE
+-------------------------
+Please confirm the hostname, intended audience, authentication, data category,
+expected concurrency, resource budget, and infrastructure maintenance owner.
+Scientific feature development remains with the research/software team.
 
-No application-specific WebSocket service is configured. Configure reverse
-proxy body limits and timeouts to accommodate the limits in section 9.
+Before release:
+  - Build/test the actual Linux/Python 3.12 image and record its source revision.
+  - Pin approved dependencies/base-image digest; scan OS, Python, and bundled
+    JavaScript. Current version ranges/base-image tag are not immutable.
+  - Review repository LICENSE: PolyForm Noncommercial License 1.0.0, plus
+    dependency licenses/notices. No licensing/security clearance is implied.
+  - Verify HTTPS/access controls, /healthz, uploads, graphs, ODE display,
+    downloads, concurrent users, errors/timeouts, and absence of private files.
+  - Configure monitoring, log retention, patching, rollback, and incident response.
 
-Outbound at build time:
-  - Approved container registry for the base image.
-  - PyPI/package artifact hosts or the IT team's internal Python package mirror.
-  - Git repository access for source retrieval if deploying from Git.
-
-At runtime, app code does not intentionally contact external analysis APIs,
-AI services, databases, or external model-processing services. No API keys are
-required by the current app. TLS/identity/monitoring infrastructure may have
-its own institution-managed outbound requirements. Validate restricted egress
-in staging; transitive dependencies alone do not establish an egress policy.
-
-Persistence:
-  - No database, Redis, message broker, account store, or object store required.
-  - No app-level upload/report persistence or shared filesystem required.
-  - Runtime may need OS temporary space, Python bytecode/cache space, and
-    multiprocessing IPC facilities. A read-only filesystem policy requires
-    testing with appropriately writable temporary locations.
-  - Build/image disk capacity must accommodate Python dependencies and browser
-    bundles. Final image size has not been measured; allow IT capacity planning.
-  - Server access/error logs and infrastructure backups follow IT policy.
-
-
-8. DATA HANDLING, CONFIDENTIALITY, AND AUTHENTICATION
------------------------------------------------------
-Potential content: unpublished scientific model equations, parameters, reaction
-networks, initial values, and derived analysis. The app does not intentionally
-request personal, clinical, financial, or credential data. User uploads can
-nevertheless contain confidential text; agree on an appropriate data category
-with the researchers before opening the service.
-
-Processing:
-  - The model leaves the browser and is processed in server memory.
-  - Base64 upload decoding and validation do not save model files to disk.
-  - Results are returned to the browser and stored using dcc.Store in memory.
-  - No app-level server result cache or persistent browser localStorage is used.
-  - Browser refresh clears the app's result state; tabs use independent stores.
-  - Downloads create user-requested local files on the user's computer.
-  - Client-side graph layout/PNG export does not require an external renderer.
-
-Do not treat these behaviors as guaranteed secure erasure. Browser memory,
-server swap/core dumps, debugging/proxy logs, crash reporting, and endpoint
-security systems may retain information outside the app's control. the IT team
-must set retention, logging, backup, and incident-response policies accordingly.
-
-Current authentication: NONE. There is no application user account system,
-SSO integration, role-based authorization, or built-in request-rate limiter.
-HTTPS alone does not restrict access. For collaborator-only use, the IT team
-should provide institutional SSO/authenticated reverse proxy, VPN, or another
-approved access restriction before granting external access.
-
-Other required review points:
-  - TLS termination, allowed hosts, security headers and compatible CSP.
-  - Institutional identity/session controls, CSRF/origin policy and rate limits.
-  - Disable debug/reloader in production; do not log model bodies.
-  - Scope internal app-port access to the reverse proxy.
-  - Scan and patch OS, Python, and bundled JavaScript dependencies.
-  - No eval/exec of uploaded model programs is intended, but symbolic parsing
-    and algebra still need resource controls and hostile-input testing.
-  - The app is not a general-purpose code-execution sandbox.
-
-
-9. RESOURCE LIMITS AND CONCURRENCY
------------------------------------
-Current hardcoded application defaults:
-  UTF-8 model text:           <= 32,000 bytes.
-  Decoded upload:             <= 32,000 bytes.
-  HTTP request body:          <= 2,500,000 bytes.
-  Serialized web result:      <= 1,000,000 bytes.
-  Interactive graph:          <= 500 complexes and <= 1,500 reactions.
-  Per-analysis wall time:     20 seconds (includes worker startup/wait).
-  Linux child address space:  1 GiB via resource.RLIMIT_AS.
-  Gunicorn timeout:           35 seconds.
-  Gunicorn workers/threads:   2 synchronous workers, 1 thread each.
-
-Each analysis gets a fresh spawned process, with results sent over a local
-multiprocessing pipe. The child is terminated/reaped after completion, failure,
-or timeout. The per-child Linux limit is address-space, not a guarantee about
-RSS usage or total container memory. Graph/result-size limits are checked
-after scientific construction, not a substitute for analysis-time limits.
-
-Two synchronous workers can occupy two analysis slots per instance. Additional
-requests can queue; graph callbacks also share the web worker capacity. This
-is not a dedicated distributed job-queue architecture. Public deployments
-need rate/concurrency controls; increase capacity only after measurement.
-
-Suggested starting allocation: about 2 vCPU and at least 2 GB RAM for evaluation,
-with additional headroom as measured. Two large children plus parent workers
-can exceed 2 GB; the example container ceiling is not a guarantee that every
-allowed calculation succeeds concurrently. Benchmark representative models.
-No GPU is required. Modern browsers need adequate resources for interactive
-graphs; models exceeding the hosted limits should be declined with the existing
-error response rather than automatically increasing server resource exposure.
-
-
-10. LICENSING AND SUPPLY-CHAIN REVIEW
---------------------------------------
-Project: PolyForm Noncommercial License 1.0.0, provided in repository LICENSE.
-Do not classify the project as MIT/BSD or assume unrestricted commercial use.
-Institutional counsel/license review should determine permitted hosting and
-redistribution conditions. This document is an inventory, not a legal opinion.
-
-Observed upstream package metadata labels (informational, not legal clearance):
-  MIT: Dash, dash-cytoscape, Gunicorn, Plotly, zipp, urllib3,
-       charset-normalizer; narwhals metadata starts with "MIT License".
-  BSD / BSD-3-Clause: SymPy, mpmath, nest-asyncio (generic BSD labels);
-       Flask, Werkzeug, MarkupSafe, idna (BSD-3-Clause metadata).
-  Apache-2.0: requests, retrying, importlib_metadata.
-  MPL-2.0: certifi.
-  PSF-2.0: typing_extensions.
-  Apache-2.0 OR BSD-2-Clause: packaging.
-  MIT metadata: pip.
-  click, Jinja2, itsdangerous, blinker: license field not populated in the
-       queried metadata; inspect their distributed LICENSE files/classifiers.
-  setuptools: queried License field says UNKNOWN; inspect its license files.
-
-For final approval, collect actual license/notice files from the selected
-Python distributions, all bundled JavaScript, and the container OS. Preserve
-required notices. Do not rely exclusively on a package's License metadata.
-
-The current requirements use ranges and the Docker base uses a floating tag.
-No hash-pinned production lock, immutable base-image digest, formal SBOM,
-container CVE scan, browser-bundle SCA report, or penetration-test report is
-included. the IT team should create those for the final approved environment.
-The local inventory here is not a substitute for an image-specific SBOM.
-
-
-11. TESTING, MONITORING, AND OPERATIONAL ACCEPTANCE
----------------------------------------------------
-Run from the repository root in the relevant environment:
+Web acceptance commands:
   python -m pip check
   python -m unittest discover -s tests -p test_web.py
 
-Tests cover web examples, upload validation, scientific output, graph filters,
-parallel reaction channels, worker timeout/error handling, Dash HTTP callbacks,
-node inspection, equation display, report downloads, graph styling, and package
-exclusion. The web test suite should run with the web dependencies installed;
-review any skips instead of interpreting them as verified features. Unrelated
-desktop/application packaging suites are not hosting acceptance requirements.
+Python/HTTP tests exist. Browser interactions and the production Docker image
+still require validation on the intended platform; no public deployment is
+claimed. /healthz checks liveness, not scientific correctness.
 
-Before accepting production:
-  [ ] Build/test the actual Linux/Python 3.12 image (local inventory is 3.9.6).
-  [ ] Record source commit, base digest, all package versions and hashes.
-  [ ] Scan OS/Python/JavaScript dependencies and review licenses/notices.
-  [ ] Confirm no private files are in image layers/build context/logs.
-  [ ] Test HTTPS, DNS, identity/access control, request limits and headers.
-  [ ] Verify /healthz; it checks liveness, not mathematical correctness.
-  [ ] Test reaction, polynomial ODE, reciprocal, fractional and nested-auxiliary
-        cases; inspect original/augmented ODEs and scientific warnings.
-  [ ] Test graph dragging, zooming, layouts, filters, inspection and PNG export
-        in institutional supported browsers.
-  [ ] Test text/structured report download and verify equations/results are included.
-  [ ] Exercise simultaneous users, input limits, failures and timeout recovery.
-  [ ] Check that no cross-user state/cache exposure occurs.
-  [ ] Monitor CPU, memory, HTTP error rates, latency and worker restarts.
-  [ ] Establish service ownership, updates, retention, incident response,
-        maintenance windows, rollback and eventual decommissioning.
-
-Verification limits: initial app work was tested with Python/HTTP unit tests.
-End-to-end browser operation and a production Docker deployment were not
-verified in the original development environment. This document does not claim
-that the IT team hosting, domain provisioning, or a public release has occurred.
-
-
-12. DECISIONS AND INFORMATION REQUESTED FROM IT TEAM
---------------------------------------------------------
-Please confirm with the IT team:
-  - Public/open service or authenticated collaborators only?
-  - Approved institutional hostname and DNS/TLS ownership?
-  - Approved hosting platform, Linux/CPU architecture and Python version?
-  - Data classification and whether unpublished model content may be uploaded?
-  - Expected user count, simultaneous analyses, model sizes and availability?
-  - Acceptable resource limits, queuing behavior and capacity budget?
-  - SSO/VPN/reverse-proxy access-control requirements?
-  - Dependency/base-image approval, SBOM format and scan/pinning process?
-  - Log retention, privacy notices, support contacts and incident procedures?
-  - Responsibility for application updates versus infrastructure maintenance?
-
-The architecture supports institutional hosting without cloud-vendor APIs or
-mandatory external databases. A managed container service is also possible
-if it satisfies institutional data/access policies. Caddy, Nginx, Render,
-Docker-engine releases, and SSO products are deployment choices; their exact
-versions are NOT observed installed application dependencies in this inventory.
-
-
-13. INVENTORY PROVENANCE AND UPDATING THIS DOCUMENT
-----------------------------------------------------
-Information was collected from:
-  - requirements-web.txt, Dockerfile.web, .dockerignore.
-  - web/app.py, web/service.py, web/wsgi.py and local CSS.
-  - crntanalysis source, setup.py and project LICENSE.
-  - Local .venv-web: pip list, Python distribution metadata/Requires-Dist,
-    Dash renderer dependency declarations and dash-cytoscape/package.json.
-  - A generated Dash page checked for locally served asset URLs.
-
-No credentials, actual research models, user uploads, or private parameter
-values are included in this handoff. The revision above identifies the
-inspected source before this handoff document was added. the IT team should
-record the final deployment commit independently.
-
-Commands for an updated inventory INSIDE the chosen deployment environment:
-  python --version
-  python -m pip list --format=json
-  python -m pip freeze --all
-  python -m pip check
-
-If supported by the approved pip version, also capture:
-  python -m pip inspect
-
-Build-time and runtime inventories can differ. The old observed pip version
-does not necessarily support newer inspection commands. Use approved tools
-to produce a full dependency graph and container/browser SBOM. Record scan
-dates, mitigations, approved exceptions and immutable release identifiers.
-
-Reference documentation (for IT review):
-  https://dash.plotly.com/
-  https://dash.plotly.com/cytoscape
-  https://flask.palletsprojects.com/
-  https://docs.sympy.org/
-  https://docs.gunicorn.org/
-  https://www.python.org/
-  https://docs.docker.com/
-  https://render.com/docs/docker
-  https://caddyserver.com/docs/automatic-https
-
-END OF HANDOFF
+Detailed operations: Documentation/web_app.md
+Hosting overview: README.md, "Hosting the web application"
+Updated inventory: run python -m pip list --format=json and
+python -m pip freeze --all inside the final deployment environment.
