@@ -365,6 +365,13 @@ Model uploads/pasted text support up to 1 MiB by default. Hosts can increase
 this with `CRNT_WEB_MAX_INPUT_BYTES` before startup; see the
 [larger-model settings](Documentation/web_app.md#larger-models-and-deployment-settings)
 for graph/result limits, timeouts, and server-capacity considerations.
+Large networks use sparse adjacency and exact sparse stoichiometric rank.
+The default analysis budget is 10,000 complexes / 50,000 reactions / 60 seconds;
+browser diagrams are paged separately (300 complexes / 1,000 edges per page).
+Use graph pages, linkage filters, or a complex neighborhood to explore larger
+systems. Full reports/downloads retain every accepted reaction; PNG exports
+show only the current graph view. Large structured reports use a tagged sparse
+adjacency object instead of a dense nested list and require an updated reader.
 
 See [the web application guide](Documentation/web_app.md) for Docker deployment,
 privacy, interaction details, resource limits, and tests. This implementation

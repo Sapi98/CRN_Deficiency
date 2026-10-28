@@ -65,7 +65,7 @@ Expected health response: {"status":"ok"}.
 
 The image runs as unprivileged user crnt (UID 10001). Its startup command is:
 
-  gunicorn --bind 0.0.0.0:8050 --workers 2 --threads 1 --timeout 35 \
+  gunicorn --bind 0.0.0.0:8050 --workers 2 --threads 1 --timeout 90 \
     web.wsgi:server
 
 Put an institutional HTTPS reverse proxy in front of port 8050. Keep that port
@@ -83,17 +83,23 @@ analysis children plus web workers can exceed the example 2 GB container cap.
 
 Current limits:
   Input: 1 MiB; HTTP body: 24 MiB by default; result: 8 MiB.
-  Graph: 500 complexes / 1,500 reactions.
-  Analysis: 20 seconds in a separate spawned process.
-  Linux child address space: 1 GiB. Gunicorn timeout: 35 seconds.
+  Full network: 10,000 complexes / 50,000 reactions.
+  Browser graph page: 300 complexes / 1,000 rendered edges; calculations and
+    downloads retain the complete network. Graph page/neighborhood controls
+    explicitly report hidden cross-page/extra edges.
+  Analysis: 60 seconds in a separate spawned process.
+  Linux child address space: 1 GiB. Gunicorn timeout: 90 seconds.
   Two synchronous web workers; requests can queue during analysis.
 
 Limits are deployment-configurable using CRNT_WEB_MAX_INPUT_BYTES,
 CRNT_WEB_MAX_RESULT_BYTES, CRNT_WEB_MAX_COMPLEXES, CRNT_WEB_MAX_REACTIONS,
+CRNT_WEB_MAX_RENDER_COMPLEXES, CRNT_WEB_MAX_RENDER_REACTIONS,
 CRNT_WEB_TIMEOUT_SECONDS, and CRNT_WEB_MAX_REQUEST_BYTES. The HTTP limit
 automatically allows encoding/callback overhead. Match proxy body/time limits;
-benchmark memory and browser behavior before increasing graph size, since the
-current adjacency matrix scales quadratically. See Documentation/web_app.md.
+benchmark memory and browser behavior before increasing graph size. Adjacency
+automatically uses sparse storage for large networks; exact rank uses sparse
+linkage-class generators. Dense conversion remains quadratic and guarded.
+See Documentation/web_app.md.
 
 Models are processed in server memory and may contain unpublished research.
 The app does not save uploads/reports to disk or maintain a user-result cache.

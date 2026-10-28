@@ -47,7 +47,12 @@ Matplotlib. Do not expose the development server publicly.
    linkage classes, or highlight complexes using the search field.
 5. Click nodes or edges for composition or reaction details. Parallel channels
    retain distinct IDs; linkage edges aggregate channel labels.
-6. Download the current graph as PNG or the full report as `.txt` / `.analysis`.
+6. Large diagrams are paged (300 complexes / 1000 rendered edges by default).
+   Choose a graph page or enter a complex index such as `C123` to inspect its
+   one-hop neighborhood. Linkage filtering works with either view. The status
+   line explicitly reports hidden cross-page or excess edges. The calculation
+   and report downloads always retain the complete accepted network.
+7. Download the current graph page as PNG or the full report as `.txt` / `.analysis`.
    Structured downloads can be opened in the desktop application.
 
 Graph labels round rates; scientific data retains precision. Reports include
@@ -78,7 +83,7 @@ embedded in the web adapter, not research files loaded from disk.
 
 For shared access, configure an HTTPS reverse proxy, authentication, request
 rate limits, and container CPU/memory limits. Keep server/proxy timeouts longer
-than the 20-second analysis budget. Do not log request bodies. No hosting
+than the 60-second analysis budget. Do not log request bodies. No hosting
 account is created or service published by this local implementation.
 
 ### Managed Docker hosting
@@ -98,7 +103,7 @@ Render, create a **Web Service**, connect the repository, and choose Docker.
 The current command binds to `0.0.0.0:8050`; it does not read `PORT` dynamically.
 Setting `PORT=8050` aligns Render's configuration with that command. If a host
 requires another port, override the Docker command to bind Gunicorn to that
-port, keeping two synchronous workers and a timeout above 20 seconds.
+port, keeping two synchronous workers and a timeout above 60 seconds.
 
 Deploy and open the provider's assigned HTTPS URL. Approximately 2 GB RAM is a
 starting sizing estimate, not a guarantee: measure representative symbolic
@@ -151,7 +156,7 @@ For unpublished research, prefer an institution-controlled server when available
 - Configure institutional authentication, an authenticated proxy, or VPN access
   for collaborator-only use. The app itself has no login; HTTPS is not access control.
 - Add request-rate limits and retain resource limits. Keep server/proxy timeouts
-  longer than the 20-second calculation budget (Gunicorn currently uses 35 seconds).
+  longer than the 60-second calculation budget (Gunicorn currently uses 90 seconds).
 - Confirm the deployed image contains no private research inputs or reports;
   ensure application and proxy logs do not record request bodies.
 - Test `/healthz`, reaction and ODE uploads, auxiliary/fractional options,
@@ -187,7 +192,7 @@ is reimplemented in JavaScript. Browser graph layouts do not change the CRN.
   Refresh clears results; tabs have independent stores.
 - Models are processed on the server. Use localhost or an institution-controlled
   host for unpublished research. Hosting/proxy logs are outside app control.
-- Default limits: 1 MiB model input, 20 seconds per analysis, 500 complexes, 1500
+- Default analysis limits: 1 MiB model input, 60 seconds per analysis, 10000 complexes, 50000
   reactions, and 8 MiB serialized results. HTTP bodies default to 24 MiB to
   accommodate bounded result state sent back to graph callbacks.
 - Linux analysis children have a 1 GiB address-space ceiling. Other operating
@@ -198,8 +203,9 @@ is reimplemented in JavaScript. Browser graph layouts do not change the CRN.
   deployment needs operational hardening, dependency auditing, and version pins.
 
 This version does not include logins, saved-project accounts, collaborative
-editing, or retained server-side reports. Large networks belong in the desktop
-or Python workflow. Web build requirements use compatible ranges, not a lockfile.
+editing, or retained server-side reports. Networks beyond the deployment's
+configured budget can still use an appropriately provisioned Python workflow.
+Web build requirements use compatible ranges, not a lockfile.
 
 ## Tests
 
@@ -223,9 +229,11 @@ all workers. Limits apply to pasted text and uploads of every supported extensio
 |---|---|---|
 | `CRNT_WEB_MAX_INPUT_BYTES` | `1048576` | Decoded UTF-8 model limit (1 MiB). |
 | `CRNT_WEB_MAX_RESULT_BYTES` | `8388608` | Serialized result limit (8 MiB). |
-| `CRNT_WEB_MAX_COMPLEXES` | `500` | Network-complex limit. |
-| `CRNT_WEB_MAX_REACTIONS` | `1500` | Network-reaction limit. |
-| `CRNT_WEB_TIMEOUT_SECONDS` | `20` | Analysis wall-clock budget. |
+| `CRNT_WEB_MAX_COMPLEXES` | `10000` | Full calculation network-complex limit. |
+| `CRNT_WEB_MAX_REACTIONS` | `50000` | Full calculation network-reaction limit. |
+| `CRNT_WEB_MAX_RENDER_COMPLEXES` | `300` | Complexes per browser graph page. |
+| `CRNT_WEB_MAX_RENDER_REACTIONS` | `1000` | Rendered edges per graph page. |
+| `CRNT_WEB_TIMEOUT_SECONDS` | `60` | Analysis wall-clock budget. |
 | `CRNT_WEB_MAX_REQUEST_BYTES` | automatic | HTTP request limit; at least max(8 x input limit, 3 x result limit). |
 
 Example (macOS/Linux):
@@ -240,12 +248,24 @@ HTTP limit automatically scales for base64/JSON and result callback overhead.
 Match the reverse proxy/platform body-size limits as well. Invalid or undersized
 settings fail at startup instead of silently discarding larger requests.
 
-For longer calculations, also increase Gunicorn's 35-second timeout and proxy
+For longer calculations, also increase Gunicorn's 90-second timeout and proxy
 timeouts beyond the chosen analysis timeout. Input size alone does not measure
-complexity: dense adjacency matrices scale quadratically with complex count,
-and symbolic rank calculations can be costly. Raise graph/result/time limits
+complexity: adjacency is automatically sparse above 256 complexes, and rank
+uses exact sparse domain elimination on linkage-class complex differences.
+Do not explicitly densify large matrices. Symbolic rank can still be costly;
+large reports/results and dense intermediate elimination can consume memory.
+Raise analysis/result/time limits
 only after benchmarking server memory, browser responsiveness, and concurrent
 users. These changes do not provide unlimited-network support.
+
+Sparse adjacency reports use a tagged object with `format: "sparse"`,
+`shape: [n,n]`, and `entries: [[row,column,weight], ...]`. Absent cells mean
+zero; row/column positions follow the serialized complexes list. Rate symbols,
+reverse channels, and lists of parallel weights are preserved. Small networks
+retain dense nested lists. Updated report readers accept both formats; older
+versions may not read new sparse reports. Python matrix-style indexing remains
+available without materializing zeros. See the scientific guide for exact-rank
+methodology.
 
 ## Developer API
 
@@ -307,7 +327,7 @@ def run(self, text, input_format, options, unresolved)
 
 | Name | Type | Default | Purpose |
 |---|---|---|---|
-| `timeout` | `float` | `20` | Child-process wall-clock budget in seconds. |
+| `timeout` | `float` | deployment default (`60`) | Child-process wall-clock budget in seconds. |
 | `text` | `str` | required | Model input to `run`. |
 | `input_format` | `str` | required | Format selector. |
 | `options` | `Sequence[str]` | required | ODE options. |
@@ -324,7 +344,8 @@ def run(self, text, input_format, options, unresolved)
 ### `GraphPresenter.elements` — public
 
 ```python
-def elements(self, payload, mode='reaction', linkage='all')
+def elements(self, payload, mode='reaction', linkage='all', page=1, focus=None)
+def view(self, payload, mode='reaction', linkage='all', page=1, focus=None)
 ```
 
 #### Parameters
@@ -334,10 +355,13 @@ def elements(self, payload, mode='reaction', linkage='all')
 | `payload` | `dict` or `None` | required | Serialized web result. |
 | `mode` | `str` | `'reaction'` | Directed reactions or undirected linkage graph. |
 | `linkage` | `str` | `'all'` | Linkage-class index or all classes. |
+| `page` | `int` | `1` | Graph page (clamped to the selected view). |
+| `focus` | `str` or `None` | `None` | Complex ID/index for a one-hop neighborhood. |
 
 #### Returns
 
 - `elements` (`list[dict]`): Cytoscape node and edge data, including details and colors.
+- `view` (`tuple`): `elements`, explicit rendering-status message, and page count.
 
 ### `format_rate` — public
 
