@@ -381,7 +381,7 @@ all-class view; this affects only visualization, never deficiency calculations.
 The linkage view draws actual disconnected, color-coded graphs for every
 selected class, with a fast separated layout and pan/zoom, rather than summary
 boxes. Large selections can still demand substantial browser resources.
-Use **Open saved result…** in the web page header, beside the version badge, to restore
+Use **Open saved result…** at the top of the Section 2 results tile to restore
 a past network and its rendering without a new model analysis. Saved structured
 reports can be up to 8 MiB by default; plain text summaries are not restorable.
 After updating the source, restart the server and refresh the browser. For a

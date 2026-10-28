@@ -207,7 +207,7 @@ class WebServiceTests(unittest.TestCase):
 
 @unittest.skipUnless(find_spec('dash') and find_spec('dash_cytoscape'), 'optional web dependencies')
 class WebAppTests(unittest.TestCase):
-    def test_open_saved_result_is_in_initial_page_header(self):
+    def test_open_saved_result_is_at_top_of_results_tile(self):
         from crntanalysis import __version__
         layout = self.client.get('/_dash-layout').get_json()
         def walk(value):
@@ -223,8 +223,15 @@ class WebAppTests(unittest.TestCase):
         self.assertEqual(len(headers), 1)
         header_ids = {item.get('props', {}).get('id') for item in walk(headers[0])
                       if isinstance(item.get('props', {}).get('id'), str)}
-        self.assertIn('saved-upload', header_ids)
-        self.assertIn('open-saved-button', header_ids)
+        self.assertNotIn('saved-upload', header_ids)
+        sections = [item for item in components if item.get('type') == 'Section']
+        workspace = next(item for item in sections if 'workspace' in item.get('props', {}).get('className', ''))
+        heading = workspace['props']['children'][0]
+        self.assertEqual(heading['props']['className'], 'workspace-heading')
+        heading_ids = {item.get('props', {}).get('id') for item in walk(heading)
+                       if isinstance(item.get('props', {}).get('id'), str)}
+        self.assertIn('saved-upload', heading_ids)
+        self.assertIn('open-saved-button', heading_ids)
         self.assertEqual(sum(item.get('props', {}).get('id') == 'saved-upload' for item in components), 1)
         self.assertIn(f'v{__version__}', str(headers[0]))
 

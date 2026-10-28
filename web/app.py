@@ -32,9 +32,6 @@ def create_app(runner=None):
             html.Header([html.Div([html.Div('CR / NT', className='brand-mark'),
                                   html.Div([html.H1('CRNTAnalysis'), html.P('A workspace for chemical reaction networks')])], className='brand'),
                          html.Div([
-                             dcc.Upload(id='saved-upload', children=html.Button('Open saved result…', id='open-saved-button',
-                                        title='Restore a .analysis or .output file without running a new analysis.'),
-                                        accept='.analysis,.output', multiple=False),
                              html.Span(f'WEB LAB · v{__version__}', className='badge'),
                          ], className='header-actions')]),
             html.Main([
@@ -68,8 +65,13 @@ def create_app(runner=None):
                     html.P('Privacy: models are processed on this server. This app does not write them to disk. Results stay in this tab until refreshed; downloads are explicit.', className='privacy'),
                 ], className='card input-panel'),
                 html.Section([
-                    html.P('02 / EXPLORE THE NETWORK', className='eyebrow'),
-                    html.H2('Structure, made visible.'),
+                    html.Div([
+                        html.Div([html.P('02 / EXPLORE THE NETWORK', className='eyebrow'),
+                                  html.H2('Structure, made visible.')]),
+                        dcc.Upload(id='saved-upload', children=html.Button('Open saved result…', id='open-saved-button',
+                                   title='Restore a .analysis or .output file without running a new analysis.'),
+                                   accept='.analysis,.output', multiple=False),
+                    ], className='workspace-heading'),
                     dcc.Loading(html.Div(id='metrics', className='metrics'), type='circle'),
                     html.Div([
                         html.Div([html.Label('Graph'), dcc.RadioItems(id='mode', options=[{'label': ' Reactions', 'value': 'reaction'},

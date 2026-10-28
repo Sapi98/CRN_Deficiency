@@ -1,5 +1,6 @@
 :root{--ink:#143645;--teal:#167d8d;--muted:#637d88;--line:#d9e3e5;--paper:#f1f5f4}
 .header-actions{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:12px}
+.workspace-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:12px}
 #open-saved-button{background:#167d8d;color:#fff;border-color:#167d8d;padding:12px 18px;white-space:nowrap}
 #open-saved-button:hover{background:#106676}
 @media(max-width:760px){header{flex-wrap:wrap;gap:16px}.header-actions{width:100%;justify-content:flex-start}.header-actions .badge{display:inline-block}}
