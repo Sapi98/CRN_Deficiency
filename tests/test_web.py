@@ -13,6 +13,23 @@ from web.service import (AnalysisRunner, EXAMPLES, GraphPresenter,
 
 
 class WebServiceTests(unittest.TestCase):
+    def test_large_network_analysis_is_complete_but_graph_is_paged(self):
+        count = 420
+        text = 'Reactions:\n' + '\n'.join(f'X{i} k{i}-> X{i+1}' for i in range(count))
+        payload = analyze_document(text, 'react')
+        self.assertEqual(len(payload['outcome']['network']['reactions']), count)
+        self.assertEqual(payload['outcome']['deficiency']['n'], count+1)
+        presenter = GraphPresenter()
+        first, message, pages = presenter.view(payload)
+        self.assertEqual(pages, 2)
+        self.assertIn('All reactions remain', message)
+        self.assertEqual(len([x for x in first if 'source' not in x['data']]), 300)
+        last = presenter.elements(payload, page=2)
+        self.assertEqual(len([x for x in last if 'source' not in x['data']]), 121)
+        focused = presenter.elements(payload, focus='C310')
+        self.assertEqual({x['data']['id'] for x in focused if 'source' not in x['data']},
+                         {'C309', 'C310', 'C311'})
+        self.assertEqual(len(payload['outcome']['network']['reactions']), count)
     def test_reaction_input_report_includes_its_ode_system(self):
         payload = analyze_document(EXAMPLES['reaction'][3], 'react')
         self.assertIn('ODE system implied by the reaction network', payload['report'])

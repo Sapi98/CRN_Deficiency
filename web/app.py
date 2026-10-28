@@ -136,7 +136,11 @@ def create_app(runner=None):
                    for key, label in [('n', 'Complexes'), ('l', 'Linkage classes'), ('s', 'Stoich. rank'), ('deficiency', 'Deficiency δ')]]
         rows = [html.Tr([html.Th(label) for label in ['Class', 'Complexes', 'n', 's', 'δ']])]
         for item in result['linkage_classes']:
-            rows.append(html.Tr([html.Td(f'L{item["index"]}'), html.Td(', '.join(f'C{x}' for x in item['complex_indices'])),
+            indices = item['complex_indices']
+            preview = ', '.join(f'C{x}' for x in indices[:24])
+            if len(indices) > 24:
+                preview += f' … (+{len(indices)-24}; all indices in full report)'
+            rows.append(html.Tr([html.Td(f'L{item["index"]}'), html.Td(preview),
                                  html.Td(item['n']), html.Td(item['s']), html.Td(item['deficiency'])]))
         options = [{'label': 'All classes', 'value': 'all'}] + [
             {'label': f'L{x["index"]} · δ={x["deficiency"]}', 'value': str(x['index'])} for x in result['linkage_classes']]
@@ -160,10 +164,18 @@ def create_app(runner=None):
         return '\n'.join(lines).replace('**', '^')
 
     @app.callback(Output('graph', 'elements'), Output('graph-status', 'children'), Output('graph-page', 'max'),
+                  Output('graph-page', 'value'),
                   Input('result', 'data'), Input('mode', 'value'), Input('linkage', 'value'),
                   Input('graph-page', 'value'), Input('focus', 'value'))
     def graph_elements(payload, mode, linkage, page, focus):
-        return presenter.view(payload, mode, linkage, page, focus)
+        if ctx.triggered_id in {'result', 'linkage', 'focus'}:
+            page = 1
+        elements, message, pages = presenter.view(payload, mode, linkage, page, focus)
+        try:
+            page = min(pages, max(1, int(page or 1)))
+        except (TypeError, ValueError, OverflowError):
+            page = 1
+        return elements, message, pages, page
 
     @app.callback(Output('graph', 'layout'), Input('layout', 'value'), Input('fit', 'n_clicks'), Input('graph', 'elements'))
     def graph_layout(name, clicks, elements):

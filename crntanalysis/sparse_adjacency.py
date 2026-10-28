@@ -11,7 +11,7 @@ class _SparseRow(Sequence):
 
     def __getitem__(self, column):
         if isinstance(column, slice):
-            return [self[index] for index in range(*column.indices(len(self))) ]
+            return [self[index] for index in range(*column.indices(len(self)))]
         if column < 0:
             column += len(self)
         if not 0 <= column < len(self):

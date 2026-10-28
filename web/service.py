@@ -49,12 +49,13 @@ def analyze_document(text, input_format='auto', options=(), unresolved='symbolic
         source='<web input>',
     )
     if len(outcome.network.complexes) > MAX_COMPLEXES or len(outcome.network.reactions) > MAX_REACTIONS:
-        raise ValueError(f'This network exceeds the interactive limit of {MAX_COMPLEXES} complexes '
+        raise ValueError(f'This network exceeds the analysis limit of {MAX_COMPLEXES} complexes '
                          f'or {MAX_REACTIONS} reactions. The server administrator can adjust '
                          'CRNT_WEB_MAX_COMPLEXES / CRNT_WEB_MAX_REACTIONS after checking capacity.')
     formatter = ConsoleReportFormatter()
-    payload = {'outcome': outcome.to_dict(), 'report': formatter.format(outcome),
-               'equations': formatter.equation_systems(outcome)}
+    equations = formatter.equation_systems(outcome)
+    payload = {'outcome': outcome.to_dict(), 'report': formatter.format(outcome, equation_systems=equations),
+               'equations': equations}
     if len(json.dumps(payload).encode('utf-8')) > MAX_RESULT_BYTES:
         raise ValueError(f'The result exceeds the {MAX_RESULT_BYTES / 1048576:g} MiB browser limit. '
                          'The server administrator can adjust CRNT_WEB_MAX_RESULT_BYTES.')

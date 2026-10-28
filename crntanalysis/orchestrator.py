@@ -181,11 +181,11 @@ class ConsoleReportFormatter:
             analyzed = {name: str(expand(Add(*terms))) for name, terms in equations.items()}
         return {'original': dict(original), 'analyzed': dict(analyzed)}
 
-    def format(self, outcome: AnalysisOutcome) -> str:
+    def format(self, outcome: AnalysisOutcome, *, equation_systems=None) -> str:
         result = outcome.deficiency
         network = outcome.network
         metadata = network.analysis_metadata
-        systems = self.equation_systems(outcome)
+        systems = self.equation_systems(outcome) if equation_systems is None else equation_systems
         originals = systems['original']
         transformed = systems['analyzed']
         auxiliaries = metadata.get('auxiliary_species', [])
