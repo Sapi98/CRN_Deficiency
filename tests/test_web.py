@@ -70,7 +70,7 @@ class WebServiceTests(unittest.TestCase):
         restored = analyze_document(text, 'saved-result')
         self.assertEqual(restored['outcome']['deficiency']['deficiency'], 0)
         with self.assertRaises(ValueError):
-            decode_saved_upload('data:text/plain;base64,YQ==', 'past.txt')
+            decode_saved_upload('data:text/plain;base64,YQ==', 'past.csv')
         for report in ('bad JSON', '{}', '[]'):
             with self.subTest(report=report), self.assertRaises(ValueError):
                 analyze_document(report, 'saved-result')
@@ -383,11 +383,12 @@ class WebAppTests(unittest.TestCase):
             'result.data': payload, 'graph.tapNodeData': elements[0]['data'],
             'graph.tapEdgeData': None}, 'graph.tapNodeData')
         self.assertIn('Composition', response.get_json()['response']['details']['children'])
-        for trigger, extension in (('download-text.n_clicks', '.txt'), ('download-json.n_clicks', '.analysis')):
+        for trigger, extension in (('download-text.n_clicks', '.txt'), ('download-json.n_clicks', '.analysis'),
+                                   ('download-output.n_clicks', '.output')):
             response = self.post_callback('download.data', {'result.data': payload, trigger: 1}, trigger)
             data = response.get_json()['response']['download']['data']
             self.assertTrue(data['filename'].endswith(extension))
-            if extension == '.analysis':
+            if extension in {'.analysis', '.output'}:
                 import json
                 self.assertEqual(json.loads(data['content']), payload['outcome'])
 
