@@ -332,6 +332,14 @@ def decode_upload(contents, filename)
 
 ### `decode_saved_upload` — public
 
+`web.report_formats` supplies `build_download(payload, extension)` for the three
+download formats and `read_report_document(text)` for JSON, appended JSON, or
+complete legacy text reports. These return a download dictionary and a parsed
+report dictionary respectively; malformed/incomplete text raises `ValueError`.
+Legacy parsing uses restricted complex parsing and `ast.literal_eval` for
+literal kinetic-order/auxiliary fields, never `eval` or uploaded Python code.
+The bounded worker then reconstructs the domain network and verifies deficiency.
+
 ```python
 def decode_saved_upload(contents, filename)
 ```

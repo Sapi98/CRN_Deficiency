@@ -42,7 +42,10 @@ def read_report_document(text):
         if trailing.strip():
             raise ValueError('Unexpected content after the saved report data.')
         return json.loads(data)
-    return _read_legacy_text(text)
+    try:
+        return _read_legacy_text(text)
+    except (SyntaxError, TypeError, KeyError) as error:
+        raise ValueError(f'Invalid detailed text report: {error}') from None
 
 
 def _read_legacy_text(text):
