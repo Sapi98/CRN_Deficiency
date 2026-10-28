@@ -383,7 +383,11 @@ selected class, with a fast separated layout and pan/zoom, rather than summary
 boxes. Large selections can still demand substantial browser resources.
 Use **Open saved result…** beside the Section 2 insights message/metrics to restore
 a past network and its rendering without a new model analysis. Saved structured
-reports can be up to 8 MiB by default; plain text summaries are not restorable.
+reports can be up to 8 MiB by default. Download buttons offer `.txt`, `.analysis`,
+and `.output`. Web TXT downloads include a readable report and a structured
+appendix so they reopen without losing data; `.txr` is accepted as a text alias.
+Older detailed TXT reports can be imported when their complex/reaction tables
+are complete; summary-only files cannot restore a network.
 After updating the source, restart the server and refresh the browser. For a
 hosted/container deployment, deploy or rebuild the updated image; the header
 should display **v1.3.0**. Refreshing alone does not update an older server.
@@ -1016,7 +1020,9 @@ AnalysisReportWriter().write(outcome, "output")
 `AnalysisOutcome` provides the parsed network, global and linkage-class
 deficiencies, source metadata, and parser warnings. Structured `.analysis` and
 `.output` reports use JSON and can be reopened in the GUI. `.txt` reports store
-the same concise summary shown in the report pane but cannot restore graphs.
+human-readable reports. The desktop reader requires structured reports;
+the web reader also imports complete detailed text reports. New web TXT
+downloads carry a structured appendix for lossless graph restoration.
 
 Complex compositions are stored once and indexed. Reactions refer to source
 and target complex indices. An adjacency cell is `0` when no connection exists,

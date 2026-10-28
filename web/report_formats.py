@@ -28,16 +28,20 @@ def build_download(payload, extension):
 
 def read_report_document(text):
     """Read JSON, embedded lossless JSON, or a complete older detailed report."""
-    if BEGIN_DATA in text:
-        _, _, structured = text.rpartition(BEGIN_DATA)
-        if END_DATA not in structured:
+    text = text.lstrip('\ufeff')
+    if text.lstrip().startswith(('{', '[')):
+        return json.loads(text)
+    normalized = '\n' + text.replace('\r\n', '\n')
+    marker = '\n' + BEGIN_DATA + '\n'
+    if marker in normalized:
+        _, _, structured = normalized.rpartition(marker)
+        end_marker = '\n' + END_DATA
+        if end_marker not in structured:
             raise ValueError('The saved text report is incomplete: missing structured-data end marker.')
-        data, _, trailing = structured.partition(END_DATA)
+        data, _, trailing = structured.partition(end_marker)
         if trailing.strip():
             raise ValueError('Unexpected content after the saved report data.')
         return json.loads(data)
-    if text.lstrip().startswith(('{', '[')):
-        return json.loads(text)
     return _read_legacy_text(text)
 
 

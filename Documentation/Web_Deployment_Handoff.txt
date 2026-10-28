@@ -103,9 +103,11 @@ See Documentation/web_app.md.
 
 Models are processed in server memory and may contain unpublished research.
 The app does not save uploads/reports to disk or maintain a user-result cache.
-Results use browser memory; downloads are user-initiated. Saved .analysis/.output
-uploads can be restored in memory (up to 8 MiB by default) using the bounded
-worker. Plain text summaries cannot restore networks. There is no database.
+Results use browser memory; downloads are user-initiated in .txt/.analysis/.output.
+Saved reports can be restored in memory (up to 8 MiB by default) using the
+bounded worker. New TXT exports include structured data; complete older detailed
+text reports can also be imported. Summary-only files cannot restore networks.
+There is no database.
 Infrastructure logs, swap, dumps, and browser behavior remain subject to IT
 policies; these statements do not guarantee secure erasure.
 

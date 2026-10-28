@@ -8,6 +8,7 @@ from unittest.mock import patch
 import os
 import json
 from web.limits import MAX_INPUT_BYTES, MAX_RESULT_BYTES
+from web.report_formats import build_download
 
 from web.service import (AnalysisRunner, EXAMPLES, GraphPresenter,
                                      analyze_document, decode_upload, decode_saved_upload, linkage_color, toggle_linkage_selection)
@@ -254,6 +255,11 @@ class WebAppTests(unittest.TestCase):
             'result.data': restored, 'mode.value': 'linkage', 'linkage.value': []}, 'result.data')
         elements = graph_response.get_json()['response']['graph']['elements']
         self.assertEqual(sum('source' not in x['data'] for x in elements), restored['outcome']['deficiency']['n'])
+        text_download = build_download(original, 'txt')['content']
+        encoded_text = 'data:text/plain;base64,' + base64.b64encode(text_download.encode()).decode()
+        response = self.post_callback('result.data', {
+            'saved-upload.contents': encoded_text, 'saved-upload.filename': 'past.txt'}, 'saved-upload.contents')
+        self.assertEqual(response.get_json()['response']['result']['data'], original)
         bad = 'data:application/json;base64,' + base64.b64encode(b'not JSON').decode()
         response = self.post_callback('result.data', {
             'saved-upload.contents': bad, 'saved-upload.filename': 'bad.output'}, 'saved-upload.contents')

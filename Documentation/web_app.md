@@ -68,14 +68,24 @@ Matplotlib. Do not expose the development server publicly.
    Browser memory/performance still limits practical rendering size. The graph
    page control is disabled in linkage mode; the calculation and downloads
    remain complete in both modes.
-7. Download the current graph view as PNG or the full report as `.txt` / `.analysis`.
+7. Download the current graph view as PNG or choose any of the three result
+   downloads: `.txt`, `.analysis`, and `.output`. The latter two are compact
+   structured JSON. New web TXT downloads contain the readable report followed
+   by a clearly marked structured-data appendix for lossless reopening; its
+   JSON data is authoritative when reopened. Editing the readable part alone
+   does not edit the stored network. The displayed report still uses `^` for
+   powers; the machine-readable appendix preserves Python/SymPy expressions.
 8. Use **Open saved result…** on the same row as the Section 2 insights message/metrics to reopen
-   a previous `.analysis` or `.output` report without entering a model or clicking Analyze.
+   a previous `.txt`, `.analysis`, or `.output` report without entering a model or clicking Analyze.
    The reader reconstructs the network, validates/recalculates deficiency, and
    regenerates reports, ODEs, colors, and interactive graph elements. It does not
    rerun the model parser or re-infer an ODE realization. The model editor is
    unchanged, and layout/camera positions from a past session are not stored.
-   Plain `.txt` summaries cannot restore a network. Saved reports have their
+   `.txr` is accepted as an alias for text reports. Older complete detailed TXT
+   reports with indexed complexes and reactions can also be imported; they get
+   a warning that fields absent from the text cannot be recovered. Truncated
+   reports and summary-only files without network details cannot be restored.
+   Saved reports have their
    own decoded size limit (8 MiB by default, `CRNT_WEB_MAX_RESULT_BYTES`), not
    the 1 MiB model limit. Restoring uses the bounded analysis worker and no
    uploaded files are written to disk. Invalid uploads leave the current
@@ -331,7 +341,7 @@ def decode_saved_upload(contents, filename)
 | Name | Type | Default | Purpose |
 |---|---|---|---|
 | `contents` | `str` | required | Base64 data URL of a structured saved report. |
-| `filename` | `str` | required | `.analysis` or `.output` filename. |
+| `filename` | `str` | required | `.txt`, `.txr`, `.analysis`, or `.output` saved report. |
 
 #### Returns
 
