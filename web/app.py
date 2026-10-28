@@ -1,10 +1,10 @@
 """Dash application factory and local web launcher."""
 import argparse
-import json
 from pathlib import Path
 
 from crntanalysis import __version__
 from crntanalysis.orchestrator import CRNAnalysisService, InputFormatError
+from web.report_formats import build_download
 from web.limits import MAX_REQUEST_BYTES, MAX_INPUT_BYTES
 from web.service import (AnalysisRunner, EXAMPLES, GraphPresenter, decode_upload, decode_saved_upload,
                          linkage_color, selected_linkages, toggle_linkage_selection)
@@ -72,8 +72,8 @@ def create_app(runner=None):
                     html.Div([
                         dcc.Loading(html.Div(id='metrics', className='metrics'), type='circle'),
                         dcc.Upload(id='saved-upload', children=html.Button('Open saved result…', id='open-saved-button',
-                                   title='Restore a .analysis or .output file without running a new analysis.'),
-                                   accept='.analysis,.output', multiple=False),
+                                   title='Restore a .txt, .analysis, or .output saved result.'),
+                                   accept='.txt,.txr,.analysis,.output', multiple=False),
                     ], className='insights-row'),
                     html.Div([
                         html.Div([html.Label('Graph'), dcc.RadioItems(id='mode', options=[{'label': ' Reactions', 'value': 'reaction'},
@@ -99,7 +99,8 @@ def create_app(runner=None):
                     html.Details([html.Summary('ODEs under consideration'), html.Pre(id='odes', className='report')], open=True),
                     html.Details([html.Summary('Full scientific report & ODEs'), html.Pre(id='report', className='report')], open=True),
                     html.Div([html.Button('Download report (.txt)', id='download-text', disabled=True),
-                              html.Button('Download result (.analysis)', id='download-json', disabled=True)], className='graph-actions'),
+                              html.Button('Download result (.analysis)', id='download-json', disabled=True),
+                              html.Button('Download result (.output)', id='download-output', disabled=True)], className='graph-actions'),
                 ], className='card workspace'),
             ]),
             html.Footer('CRNTAnalysis · Interpret augmented and real-complex realizations using the assumptions recorded in the report.'),
@@ -153,10 +154,10 @@ def create_app(runner=None):
 
     @app.callback(Output('metrics', 'children'), Output('report', 'children'), Output('classes', 'children'),
                   Output('linkage', 'options'), Output('linkage', 'value'),
-                  Output('download-text', 'disabled'), Output('download-json', 'disabled'), Input('result', 'data'))
+                  Output('download-text', 'disabled'), Output('download-json', 'disabled'), Output('download-output', 'disabled'), Input('result', 'data'))
     def render_result(payload):
         if not payload:
-            return html.P('Your network insights will appear here.', className='muted'), '', '', [], [], True, True
+            return html.P('Your network insights will appear here.', className='muted'), '', '', [], [], True, True, True
         result = payload['outcome']['deficiency']
         metrics = [html.Div([html.Strong(str(result[key])), html.Span(label)], className='metric')
                    for key, label in [('n', 'Complexes'), ('l', 'Linkage classes'), ('s', 'Stoich. rank'), ('deficiency', 'Deficiency δ')]]
@@ -170,7 +171,7 @@ def create_app(runner=None):
                                  html.Td(item['n']), html.Td(item['s']), html.Td(item['deficiency'])]))
         options = [
             {'label': f'L{x["index"]} · δ={x["deficiency"]}', 'value': str(x['index'])} for x in result['linkage_classes']]
-        return metrics, payload['report'], html.Table(rows), options, [], False, False
+        return metrics, payload['report'], html.Table(rows), options, [], False, False, False
 
     @app.callback(Output('legend', 'children'), Input('result', 'data'), Input('linkage', 'value'))
     def render_legend(payload, selected):
@@ -275,13 +276,12 @@ def create_app(runner=None):
         return {'type': 'png', 'action': 'download', 'filename': 'crntanalysis-network', 'options': {'bg': '#ffffff', 'scale': 2}}
 
     @app.callback(Output('download', 'data'), Input('download-text', 'n_clicks'), Input('download-json', 'n_clicks'),
-                  State('result', 'data'), prevent_initial_call=True)
-    def download(text_clicks, json_clicks, payload):
+                  Input('download-output', 'n_clicks'), State('result', 'data'), prevent_initial_call=True)
+    def download(text_clicks, json_clicks, output_clicks, payload):
         if not payload:
             raise PreventUpdate
-        if ctx.triggered_id == 'download-text':
-            return {'content': payload['report'] + '\n', 'filename': 'network_analysis.txt', 'type': 'text/plain'}
-        return {'content': json.dumps(payload['outcome'], indent=2), 'filename': 'network.analysis', 'type': 'application/json'}
+        extension = {'download-text': 'txt', 'download-json': 'analysis', 'download-output': 'output'}[ctx.triggered_id]
+        return build_download(payload, extension)
 
     return app
 

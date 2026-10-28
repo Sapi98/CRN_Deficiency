@@ -8,6 +8,7 @@ from math import ceil, cos, sin, sqrt
 from pathlib import PurePath
 
 from crntanalysis.orchestrator import CRNAnalysisService, ConsoleReportFormatter, AnalysisReportReader
+from web.report_formats import read_report_document
 from web.limits import (MAX_INPUT_BYTES, MAX_RESULT_BYTES, MAX_COMPLEXES,
                         MAX_REACTIONS, MAX_RENDER_COMPLEXES, MAX_RENDER_REACTIONS,
                         ANALYSIS_TIMEOUT, WORKER_MEMORY_MB)
@@ -59,13 +60,13 @@ def decode_upload(contents, filename):
 
 def decode_saved_upload(contents, filename):
     """Saved structured reports have their own (larger) result-size budget."""
-    return _decode_text_upload(contents, filename, {'.analysis', '.output'}, MAX_RESULT_BYTES)
+    return _decode_text_upload(contents, filename, {'.analysis', '.output', '.txt', '.txr'}, MAX_RESULT_BYTES)
 
 
 def _decode_text_upload(contents, filename, extensions, limit):
     if not filename or PurePath(filename).suffix.lower() not in extensions:
         raise ValueError('Upload a supported file: ' + ', '.join(sorted(extensions)) +
-                         '. Plain-text summaries cannot restore a saved network.')
+                         '.')
     if not isinstance(contents, str) or len(contents) > limit * 2:
         raise ValueError(f'This upload must be at most {limit / 1048576:g} MiB.')
     try:
@@ -86,7 +87,7 @@ def analyze_document(text, input_format='auto', options=(), unresolved='symbolic
         raise ValueError(f'Input must be at most {limit / 1048576:g} MiB.')
     if input_format == 'saved-result':
         try:
-            document = json.loads(text)
+            document = read_report_document(text)
             network = document['network']
             if len(network['complexes']) > MAX_COMPLEXES or len(network['reactions']) > MAX_REACTIONS:
                 raise ValueError('Saved network exceeds this deployment\'s analysis limits.')
