@@ -73,6 +73,9 @@ def create_app(runner=None):
                     html.Div([dcc.Input(id='search', placeholder='Highlight a complex or species…', type='search'),
                               dcc.Checklist(id='labels', options=[{'label': ' Show rates', 'value': 'rates'}], value=['rates']),
                               html.Button('Fit graph', id='fit'), html.Button('Download PNG', id='png')], className='graph-actions'),
+                    html.Div([html.Label('Graph page'), dcc.Input(id='graph-page', type='number', value=1, min=1, step=1),
+                              dcc.Input(id='focus', type='text', placeholder='Neighborhood of C123 (optional)', debounce=True)], className='graph-actions'),
+                    html.P(id='graph-status', role='status', className='muted small'),
                     cyto.Cytoscape(id='graph', elements=[], layout={'name': 'cose'}, responsive=True,
                                    style={'width': '100%', 'height': '540px'}, minZoom=0.08, maxZoom=5),
                     html.P('Drag nodes to arrange • scroll to zoom • drag the background to pan • click a node or edge to inspect', className='muted small'),
@@ -156,9 +159,11 @@ def create_app(runner=None):
         lines.extend(f'd{name}/dt = {rhs}' for name, rhs in systems.get('analyzed', {}).items())
         return '\n'.join(lines).replace('**', '^')
 
-    @app.callback(Output('graph', 'elements'), Input('result', 'data'), Input('mode', 'value'), Input('linkage', 'value'))
-    def graph_elements(payload, mode, linkage):
-        return presenter.elements(payload, mode, linkage)
+    @app.callback(Output('graph', 'elements'), Output('graph-status', 'children'), Output('graph-page', 'max'),
+                  Input('result', 'data'), Input('mode', 'value'), Input('linkage', 'value'),
+                  Input('graph-page', 'value'), Input('focus', 'value'))
+    def graph_elements(payload, mode, linkage, page, focus):
+        return presenter.view(payload, mode, linkage, page, focus)
 
     @app.callback(Output('graph', 'layout'), Input('layout', 'value'), Input('fit', 'n_clicks'), Input('graph', 'elements'))
     def graph_layout(name, clicks, elements):

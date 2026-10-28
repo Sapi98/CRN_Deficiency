@@ -151,14 +151,14 @@ class ConsoleReportFormatter:
 
     def equation_systems(self, outcome):
         """Return original and analyzed ODEs, deriving reaction-input dynamics."""
-        from sympy import Rational, Symbol, expand
+        from sympy import Add, Rational, Symbol, expand
         from crntanalysis.parser_utils import ArithmeticExpressionParser
         network = outcome.network
         metadata = network.analysis_metadata
         original = metadata.get('original_equations', {})
         analyzed = metadata.get('transformed_equations', {})
         if not analyzed:
-            equations = {name: Rational(0) for name in outcome.deficiency.species}
+            equations = {name: [] for name in outcome.deficiency.species}
             complexes = {item.index: item for item in network.complexes}
             parse = ArithmeticExpressionParser.parse
             for reaction in network.reactions:
@@ -169,13 +169,16 @@ class ConsoleReportFormatter:
                     orders = (reaction.kinetic_orders if reaction.kinetic_orders is not None
                               else complexes[reaction.source].species)
                     for name, power in orders.items():
-                        rate_law *= Symbol(name) ** parse(str(power))
+                        rate_law *= Symbol(name) ** (parse(power) if isinstance(power, str) else Rational(str(power)))
                 source = complexes[reaction.source].species
                 target = complexes[reaction.target].species
-                for name in equations:
-                    change = parse(str(target.get(name, 0))) - parse(str(source.get(name, 0)))
-                    equations[name] += change * rate_law
-            analyzed = {name: str(expand(rhs)) for name, rhs in equations.items()}
+                for name in source.keys() | target.keys():
+                    first, second = target.get(name, 0), source.get(name, 0)
+                    change = ((parse(first) if isinstance(first, str) else Rational(str(first)))
+                              - (parse(second) if isinstance(second, str) else Rational(str(second))))
+                    if change != 0:
+                        equations[name].append(change * rate_law)
+            analyzed = {name: str(expand(Add(*terms))) for name, terms in equations.items()}
         return {'original': dict(original), 'analyzed': dict(analyzed)}
 
     def format(self, outcome: AnalysisOutcome) -> str:

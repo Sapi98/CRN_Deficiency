@@ -7,7 +7,8 @@ from pathlib import PurePath
 
 from crntanalysis.orchestrator import CRNAnalysisService, ConsoleReportFormatter
 from web.limits import (MAX_INPUT_BYTES, MAX_RESULT_BYTES, MAX_COMPLEXES,
-                        MAX_REACTIONS, ANALYSIS_TIMEOUT, input_size_message)
+                        MAX_REACTIONS, MAX_RENDER_COMPLEXES, MAX_RENDER_REACTIONS,
+                        ANALYSIS_TIMEOUT, input_size_message)
 COLORS = ('#167d8d', '#ae6235', '#6671bc', '#b34d76', '#559451', '#937545')
 EXAMPLES = {
     'reaction': ('Reversible conversion', 'react', [],
@@ -125,15 +126,42 @@ def format_rate(value):
 class GraphPresenter:
     """Map serialized networks to Cytoscape elements and inspectable details."""
 
-    def elements(self, payload, mode='reaction', linkage='all'):
+    def elements(self, payload, mode='reaction', linkage='all', page=1, focus=None):
+        return self.view(payload, mode, linkage, page, focus)[0]
+
+    def view(self, payload, mode='reaction', linkage='all', page=1, focus=None):
+        """Bound rendering only; never truncate the calculated/downloaded network."""
         if not payload:
-            return []
+            return [], 'Analyze a model to explore its graph.', 1
         outcome = payload['outcome']
         network = outcome['network']
         classes = outcome['deficiency']['linkage_classes']
         membership = {index: item['index'] for item in classes for index in item['complex_indices']}
         selected = {item['index'] for item in network['complexes']
                     if linkage == 'all' or str(membership[item['index']]) == str(linkage)}
+        if focus:
+            try:
+                index = int(str(focus).strip().removeprefix('C').removeprefix('c'))
+            except ValueError:
+                return [], 'Enter a valid complex index such as C123.', 1
+            if index not in selected:
+                return [], 'That complex is not in the selected linkage class/network.', 1
+            neighbors = {index}
+            for reaction in network['reactions']:
+                source, target = reaction['source_complex'], reaction['target_complex']
+                if source == index:
+                    neighbors.add(target)
+                if target == index:
+                    neighbors.add(source)
+            selected &= neighbors
+        total = len(selected)
+        pages = max(1, (total + MAX_RENDER_COMPLEXES - 1) // MAX_RENDER_COMPLEXES)
+        try:
+            page = min(pages, max(1, int(page or 1)))
+        except (ValueError, TypeError, OverflowError):
+            page = 1
+        start = (page - 1) * MAX_RENDER_COMPLEXES
+        selected = set(sorted(selected)[start:start + MAX_RENDER_COMPLEXES])
         elements = []
         for item in network['complexes']:
             index = item['index']
@@ -164,6 +192,14 @@ class GraphPresenter:
                 pairs.setdefault(tuple(sorted((source, target))), []).append((label, details))
         for (source, target), entries in pairs.items():
             elements.append({'data': {'id': f'L{source}-{target}', 'source': f'C{source}',
-                                     'target': f'C{target}', 'label': ', '.join(x[0] for x in entries),
-                                     'details': '\n\n'.join(x[1] for x in entries).replace('**', '^')}})
-        return elements
+                                     'target': f'C{target}',
+                                     'label': ', '.join(x[0] for x in entries[:3]) + (f' (+{len(entries)-3} channels)' if len(entries)>3 else ''),
+                                     'details': ('\n\n'.join(x[1] for x in entries[:50]) +
+                                                 ('\nAdditional channels are in the full report.' if len(entries)>50 else '')).replace('**', '^')}})
+        nodes = [item for item in elements if 'source' not in item['data']]
+        edges = [item for item in elements if 'source' in item['data']]
+        shown = edges[:MAX_RENDER_REACTIONS]
+        message = f'Graph page {page}/{pages}: {len(nodes)} of {total} selected complexes; {len(shown)} of {len(edges)} within-page edges shown.'
+        if pages > 1 or len(shown) < len(edges):
+            message += ' Rendering is limited: cross-page/extra edges are hidden. All reactions remain in the calculation and downloads. Use linkage filters or a complex neighborhood.'
+        return nodes + shown, message, pages

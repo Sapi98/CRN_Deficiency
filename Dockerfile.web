@@ -9,4 +9,4 @@ COPY LICENSE ./LICENSE
 RUN useradd --create-home --uid 10001 crnt
 USER crnt
 EXPOSE 8050
-CMD ["gunicorn", "--bind", "0.0.0.0:8050", "--workers", "2", "--threads", "1", "--timeout", "35", "web.wsgi:server"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8050", "--workers", "2", "--threads", "1", "--timeout", "90", "web.wsgi:server"]
