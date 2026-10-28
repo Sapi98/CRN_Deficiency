@@ -234,6 +234,7 @@ all workers. Limits apply to pasted text and uploads of every supported extensio
 | `CRNT_WEB_MAX_RENDER_COMPLEXES` | `300` | Complexes per browser graph page. |
 | `CRNT_WEB_MAX_RENDER_REACTIONS` | `1000` | Rendered edges per graph page. |
 | `CRNT_WEB_TIMEOUT_SECONDS` | `60` | Analysis wall-clock budget. |
+| `CRNT_WEB_MEMORY_MB` | `1024` | Per-child Linux address-space ceiling, in MiB; provision container headroom separately. |
 | `CRNT_WEB_MAX_REQUEST_BYTES` | automatic | HTTP request limit; at least max(8 x input limit, 3 x result limit). |
 
 Example (macOS/Linux):

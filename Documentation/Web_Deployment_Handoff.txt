@@ -94,7 +94,7 @@ Current limits:
 Limits are deployment-configurable using CRNT_WEB_MAX_INPUT_BYTES,
 CRNT_WEB_MAX_RESULT_BYTES, CRNT_WEB_MAX_COMPLEXES, CRNT_WEB_MAX_REACTIONS,
 CRNT_WEB_MAX_RENDER_COMPLEXES, CRNT_WEB_MAX_RENDER_REACTIONS,
-CRNT_WEB_TIMEOUT_SECONDS, and CRNT_WEB_MAX_REQUEST_BYTES. The HTTP limit
+CRNT_WEB_TIMEOUT_SECONDS, CRNT_WEB_MEMORY_MB, and CRNT_WEB_MAX_REQUEST_BYTES. The HTTP limit
 automatically allows encoding/callback overhead. Match proxy body/time limits;
 benchmark memory and browser behavior before increasing graph size. Adjacency
 automatically uses sparse storage for large networks; exact rank uses sparse

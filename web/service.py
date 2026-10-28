@@ -8,7 +8,7 @@ from pathlib import PurePath
 from crntanalysis.orchestrator import CRNAnalysisService, ConsoleReportFormatter
 from web.limits import (MAX_INPUT_BYTES, MAX_RESULT_BYTES, MAX_COMPLEXES,
                         MAX_REACTIONS, MAX_RENDER_COMPLEXES, MAX_RENDER_REACTIONS,
-                        ANALYSIS_TIMEOUT, input_size_message)
+                        ANALYSIS_TIMEOUT, WORKER_MEMORY_MB, input_size_message)
 COLORS = ('#167d8d', '#ae6235', '#6671bc', '#b34d76', '#559451', '#937545')
 EXAMPLES = {
     'reaction': ('Reversible conversion', 'react', [],
@@ -69,7 +69,8 @@ def _analysis_worker(connection, arguments):
         import sys
         if sys.platform.startswith('linux'):
             import resource
-            resource.setrlimit(resource.RLIMIT_AS, (1024**3, 1024**3))
+            memory_bytes = WORKER_MEMORY_MB * 1024**2
+            resource.setrlimit(resource.RLIMIT_AS, (memory_bytes, memory_bytes))
         connection.send((True, analyze_document(*arguments)))
     except Exception as error:
         connection.send((False, f'{type(error).__name__}: {error}'))
