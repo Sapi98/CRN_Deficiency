@@ -3,13 +3,42 @@ import base64
 import binascii
 import multiprocessing
 import json
+import colorsys
 from pathlib import PurePath
 
 from crntanalysis.orchestrator import CRNAnalysisService, ConsoleReportFormatter
 from web.limits import (MAX_INPUT_BYTES, MAX_RESULT_BYTES, MAX_COMPLEXES,
                         MAX_REACTIONS, MAX_RENDER_COMPLEXES, MAX_RENDER_REACTIONS,
                         ANALYSIS_TIMEOUT, WORKER_MEMORY_MB, input_size_message)
-COLORS = ('#167d8d', '#ae6235', '#6671bc', '#b34d76', '#559451', '#937545')
+COLORS = ('#167d8d', '#ae6235', '#6671bc', '#b34d76', '#559451', '#937545',
+          '#3479c0', '#80509b', '#c34c38', '#41877b', '#a57c17', '#526477')
+
+
+def linkage_color(index):
+    """Stable class colors shared by graphs and legends, without a six-color cycle."""
+    if index < len(COLORS):
+        return COLORS[index]
+    rgb = colorsys.hls_to_rgb((index * 0.61803398875) % 1, 0.43, 0.6)
+    return '#' + ''.join(f'{round(value * 255):02x}' for value in rgb)
+
+
+def selected_linkages(value):
+    """None means all classes; accept legacy scalar and multi-select values."""
+    if not value or value == 'all':
+        return None
+    values = value if isinstance(value, (list, tuple)) else [value]
+    selected = {str(item) for item in values if item != 'all'}
+    return selected or None
+
+
+def toggle_linkage_selection(value, index):
+    selected = selected_linkages(value) or set()
+    index = str(index)
+    if index in selected:
+        selected.remove(index)
+    else:
+        selected.add(index)
+    return sorted(selected, key=int)
 EXAMPLES = {
     'reaction': ('Reversible conversion', 'react', [],
                  'Reactions:\nA k1-> B\nB k2-> A\n\nRate Constants:\nk1=0.4\nk2=0.2'),
@@ -138,9 +167,35 @@ class GraphPresenter:
         outcome = payload['outcome']
         network = outcome['network']
         classes = outcome['deficiency']['linkage_classes']
+        selected_classes = selected_linkages(linkage)
+        classes_in_view = [item for item in classes if selected_classes is None or str(item['index']) in selected_classes]
+        if (mode == 'linkage' and not focus
+                and (selected_classes is None or len(classes_in_view) > 1)
+                and sum(item['n'] for item in classes_in_view) > MAX_RENDER_COMPLEXES):
+            # A complex-index page is not an overview of connected components.
+            # Contract each true linkage class into one explicitly labeled node.
+            total = len(classes_in_view)
+            pages = max(1, (total + MAX_RENDER_COMPLEXES - 1) // MAX_RENDER_COMPLEXES)
+            try:
+                page = min(pages, max(1, int(page or 1)))
+            except (TypeError, ValueError, OverflowError):
+                page = 1
+            visible = classes_in_view[(page - 1) * MAX_RENDER_COMPLEXES:page * MAX_RENDER_COMPLEXES]
+            elements = [{'data': {
+                'id': f'LC{item["index"]}', 'kind': 'linkage-class',
+                'linkage_index': str(item['index']),
+                'label': f'L{item["index"]}\n{item["n"]} complexes · δ={item["deficiency"]}',
+                'color': linkage_color(item['index']),
+                'details': (f'Linkage class L{item["index"]}\nComplexes: {item["n"]}\n'
+                            f'Reactions: {len(item["reaction_indices"])}\nStoichiometric rank: {item["s"]}\n'
+                            f'Deficiency: {item["deficiency"]}\nClick this class to explore its complexes.'),
+            }} for item in visible]
+            return elements, (f'Linkage-class overview: {len(visible)} of {total} classes, page {page}/{pages}. '
+                              'Each node represents one complete linkage class, NOT one complex. '
+                              'Classes are disconnected by definition. Click a class to explore its complex graph.'), pages
         membership = {index: item['index'] for item in classes for index in item['complex_indices']}
         selected = {item['index'] for item in network['complexes']
-                    if linkage == 'all' or str(membership[item['index']]) == str(linkage)}
+                    if selected_classes is None or str(membership[item['index']]) in selected_classes}
         if focus:
             try:
                 index = int(str(focus).strip().removeprefix('C').removeprefix('c'))
@@ -173,7 +228,7 @@ class GraphPresenter:
             elements.append({'data': {
                 'id': f'C{index}', 'label': f'C{index}: {item["label"]}',
                 'species': item['species'], 'linkage': f'L{group}',
-                'color': COLORS[group % len(COLORS)],
+                'color': linkage_color(group),
                 'details': f'C{index}: {item["label"]}\nLinkage class L{group}\nComposition: {item["species"]}',
             }})
         pairs = {}
@@ -189,12 +244,14 @@ class GraphPresenter:
             if mode == 'reaction':
                 elements.append({'data': {'id': f'r{reaction["index"]}', 'source': f'C{source}',
                                          'target': f'C{target}', 'label': label,
+                                         'color': linkage_color(membership[source]),
                                          'details': details.replace('**', '^')}})
             else:
                 pairs.setdefault(tuple(sorted((source, target))), []).append((label, details))
         for (source, target), entries in pairs.items():
             elements.append({'data': {'id': f'L{source}-{target}', 'source': f'C{source}',
                                      'target': f'C{target}',
+                                     'color': linkage_color(membership[source]),
                                      'label': ', '.join(x[0] for x in entries[:3]) + (f' (+{len(entries)-3} channels)' if len(entries)>3 else ''),
                                      'details': ('\n\n'.join(x[1] for x in entries[:50]) +
                                                  ('\nAdditional channels are in the full report.' if len(entries)>50 else '')).replace('**', '^')}})

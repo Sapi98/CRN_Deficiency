@@ -52,6 +52,14 @@ Matplotlib. Do not expose the development server publicly.
    one-hop neighborhood. Linkage filtering works with either view. The status
    line explicitly reports hidden cross-page or excess edges. The calculation
    and report downloads always retain the complete accepted network.
+   In the large-network **Linkage graph / All classes** view, the default is
+   instead a linkage-class overview: one colored summary node per actual class,
+   including its complex count and deficiency. These nodes are not complexes
+   and have no inter-class edges. Click one to open its complex graph; choose
+   All classes to return. More than 300 classes are paged. Node/edge colors
+   match the class legend, with distinct colors for the first twelve classes
+   and deterministic generated colors beyond that; labels identify classes
+   independently of color. Detailed complex graphs still use bounded pages.
 7. Download the current graph page as PNG or the full report as `.txt` / `.analysis`.
    Structured downloads can be opened in the desktop application.
 

@@ -9,10 +9,26 @@ import os
 from web.limits import MAX_INPUT_BYTES
 
 from web.service import (AnalysisRunner, EXAMPLES, GraphPresenter,
-                                     analyze_document, decode_upload)
+                                     analyze_document, decode_upload, linkage_color)
 
 
 class WebServiceTests(unittest.TestCase):
+    def test_large_linkage_overview_shows_all_nine_distinct_classes(self):
+        text = 'Reactions:\n' + '\n'.join(f'X{i} k{i}-> X{i+1}' for i in range(310))
+        text += '\n' + '\n'.join(f'A{i} q{i}-> B{i}' for i in range(8))
+        payload = analyze_document(text, 'react')
+        self.assertEqual(payload['outcome']['deficiency']['l'], 9)
+        overview, message, pages = GraphPresenter().view(payload, mode='linkage')
+        self.assertEqual(len(overview), 9)
+        self.assertEqual(len({x['data']['color'] for x in overview}), 9)
+        self.assertTrue(all(x['data']['kind'] == 'linkage-class' for x in overview))
+        self.assertIn('9 of 9 classes', message)
+        self.assertIn('NOT one complex', message)
+        detail = GraphPresenter().elements(payload, mode='linkage', linkage='1')
+        self.assertEqual(len(detail), 3)
+        self.assertTrue(all(x['data']['color'] == linkage_color(1) for x in detail))
+        self.assertEqual(len(payload['outcome']['network']['complexes']), 327)
+
     def test_large_network_analysis_is_complete_but_graph_is_paged(self):
         count = 420
         text = 'Reactions:\n' + '\n'.join(f'X{i} k{i}-> X{i+1}' for i in range(count))
@@ -145,6 +161,22 @@ class WebServiceTests(unittest.TestCase):
 
 @unittest.skipUnless(find_spec('dash') and find_spec('dash_cytoscape'), 'optional web dependencies')
 class WebAppTests(unittest.TestCase):
+    def test_linkage_class_click_and_color_styles(self):
+        response = self.post_callback('linkage.value@', {
+            'graph.tapNodeData': {'kind': 'linkage-class', 'linkage_index': '8'},
+            'mode.value': 'linkage'}, 'graph.tapNodeData')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()['response']['linkage']['value'], '8')
+        response = self.post_callback('graph.stylesheet', {
+            'mode.value': 'linkage', 'labels.value': [], 'search.value': '',
+            'graph.elements': []}, 'mode.value')
+        styles = {x['selector']: x['style'] for x in response.get_json()['response']['graph']['stylesheet']}
+        self.assertEqual(styles['edge']['line-color'], 'data(color)')
+        response = self.post_callback('graph.layout', {
+            'layout.value': 'cose', 'fit.n_clicks': 0,
+            'graph.elements': [{'data': {'kind': 'linkage-class', 'id': 'LC0'}}]}, 'graph.elements')
+        self.assertEqual(response.get_json()['response']['graph']['layout']['name'], 'grid')
+
     def test_graph_labels_use_compact_fonts(self):
         response = self.post_callback('graph.stylesheet', {
             'mode.value': 'reaction', 'labels.value': ['rates'],

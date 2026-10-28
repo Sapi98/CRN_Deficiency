@@ -5,12 +5,13 @@ from pathlib import Path
 
 from crntanalysis import __version__
 from web.limits import MAX_REQUEST_BYTES, MAX_INPUT_BYTES
-from web.service import AnalysisRunner, EXAMPLES, GraphPresenter, decode_upload
+from web.service import (AnalysisRunner, EXAMPLES, GraphPresenter, decode_upload,
+                         linkage_color, selected_linkages, toggle_linkage_selection)
 
 
 def create_app(runner=None):
     """Create an independent app; no analysis data is held in module globals."""
-    from dash import Dash, Input, Output, State, ctx, dcc, html, no_update
+    from dash import ALL, Dash, Input, Output, State, ctx, dcc, html, no_update
     from dash.exceptions import PreventUpdate
     import dash_cytoscape as cyto
 
@@ -68,7 +69,8 @@ def create_app(runner=None):
                         html.Div([html.Label('Graph'), dcc.RadioItems(id='mode', options=[{'label': ' Reactions', 'value': 'reaction'},
                                                                                                     {'label': ' Linkage graph', 'value': 'linkage'}], value='reaction', inline=True)]),
                         html.Div([html.Label('Layout'), dcc.Dropdown(id='layout', options=['cose', 'circle', 'breadthfirst', 'grid'], value='cose', clearable=False)]),
-                        html.Div([html.Label('Linkage class'), dcc.Dropdown(id='linkage', options=[{'label': 'All classes', 'value': 'all'}], value='all', clearable=False)]),
+                        html.Div([html.Label('Linkage classes'), dcc.Dropdown(id='linkage', options=[], value=[],
+                                  multi=True, placeholder='All classes', clearable=True)]),
                     ], className='toolbar'),
                     html.Div([dcc.Input(id='search', placeholder='Highlight a complex or species…', type='search'),
                               dcc.Checklist(id='labels', options=[{'label': ' Show rates', 'value': 'rates'}], value=['rates']),
@@ -79,7 +81,9 @@ def create_app(runner=None):
                     cyto.Cytoscape(id='graph', elements=[], layout={'name': 'cose'}, responsive=True,
                                    style={'width': '100%', 'height': '540px'}, minZoom=0.08, maxZoom=5),
                     html.P('Drag nodes to arrange • scroll to zoom • drag the background to pan • click a node or edge to inspect', className='muted small'),
+                    html.Button('All classes / reset selection', id='linkage-all', n_clicks=0),
                     html.Div(id='legend', className='legend'),
+                    html.P('Click a legend class to isolate it; click others to add/remove classes. Clear the selection to show all.', className='muted small'),
                     html.Pre('Select a complex or reaction to inspect it.', id='details', className='details'),
                     html.Details([html.Summary('Linkage-class results'), html.Div(id='classes')], open=True),
                     html.Details([html.Summary('ODEs under consideration'), html.Pre(id='odes', className='report')], open=True),
@@ -126,11 +130,11 @@ def create_app(runner=None):
             return None, html.Pre(message, className='error')
 
     @app.callback(Output('metrics', 'children'), Output('report', 'children'), Output('classes', 'children'),
-                  Output('linkage', 'options'), Output('linkage', 'value'), Output('legend', 'children'),
+                  Output('linkage', 'options'), Output('linkage', 'value'),
                   Output('download-text', 'disabled'), Output('download-json', 'disabled'), Input('result', 'data'))
     def render_result(payload):
         if not payload:
-            return html.P('Your network insights will appear here.', className='muted'), '', '', [{'label': 'All classes', 'value': 'all'}], 'all', [], True, True
+            return html.P('Your network insights will appear here.', className='muted'), '', '', [], [], True, True
         result = payload['outcome']['deficiency']
         metrics = [html.Div([html.Strong(str(result[key])), html.Span(label)], className='metric')
                    for key, label in [('n', 'Complexes'), ('l', 'Linkage classes'), ('s', 'Stoich. rank'), ('deficiency', 'Deficiency δ')]]
@@ -142,11 +146,22 @@ def create_app(runner=None):
                 preview += f' … (+{len(indices)-24}; all indices in full report)'
             rows.append(html.Tr([html.Td(f'L{item["index"]}'), html.Td(preview),
                                  html.Td(item['n']), html.Td(item['s']), html.Td(item['deficiency'])]))
-        options = [{'label': 'All classes', 'value': 'all'}] + [
+        options = [
             {'label': f'L{x["index"]} · δ={x["deficiency"]}', 'value': str(x['index'])} for x in result['linkage_classes']]
-        from web.service import COLORS
-        legend = [html.Span(f'L{x["index"]} · δ={x["deficiency"]}', style={'borderColor': COLORS[x['index'] % len(COLORS)]}) for x in result['linkage_classes']]
-        return metrics, payload['report'], html.Table(rows), options, 'all', legend, False, False
+        return metrics, payload['report'], html.Table(rows), options, [], False, False
+
+    @app.callback(Output('legend', 'children'), Input('result', 'data'), Input('linkage', 'value'))
+    def render_legend(payload, selected):
+        if not payload:
+            return []
+        selection = selected_linkages(selected)
+        return [html.Button(f'L{x["index"]} · δ={x["deficiency"]}',
+                id={'type': 'linkage-toggle', 'index': str(x['index'])}, n_clicks=0,
+                style={'borderLeft': f'5px solid {linkage_color(x["index"])}',
+                       'opacity': 1 if selection is None or str(x['index']) in selection else 0.4,
+                       'backgroundColor': '#edf7f5' if selection is None or str(x['index']) in selection else '#fff'},
+                **{'aria-pressed': 'true' if selection is None or str(x['index']) in selection else 'false'})
+                for x in payload['outcome']['deficiency']['linkage_classes']]
 
     @app.callback(Output('odes', 'children'), Input('result', 'data'))
     def render_odes(payload):
@@ -168,7 +183,7 @@ def create_app(runner=None):
                   Input('result', 'data'), Input('mode', 'value'), Input('linkage', 'value'),
                   Input('graph-page', 'value'), Input('focus', 'value'))
     def graph_elements(payload, mode, linkage, page, focus):
-        if ctx.triggered_id in {'result', 'linkage', 'focus'}:
+        if ctx.triggered_id in {'result', 'linkage', 'focus', 'mode'}:
             page = 1
         elements, message, pages = presenter.view(payload, mode, linkage, page, focus)
         try:
@@ -177,20 +192,43 @@ def create_app(runner=None):
             page = 1
         return elements, message, pages, page
 
+    @app.callback(Output('linkage', 'value', allow_duplicate=True), Input('graph', 'tapNodeData'),
+                  Input({'type': 'linkage-toggle', 'index': ALL}, 'n_clicks'),
+                  Input('linkage-all', 'n_clicks'), State('mode', 'value'), State('linkage', 'value'),
+                  prevent_initial_call=True)
+    def open_linkage(data, legend_clicks, reset_clicks, mode, selected):
+        if ctx.triggered_id == 'linkage-all':
+            return []
+        if isinstance(ctx.triggered_id, dict):
+            index = ctx.triggered_id.get('index')
+            if isinstance(index, str) and any(legend_clicks or []):
+                return toggle_linkage_selection(selected, index)
+        if ctx.triggered_id == 'graph' and mode == 'linkage' and data and data.get('kind') == 'linkage-class':
+            return [data['linkage_index']]
+        raise PreventUpdate
+
     @app.callback(Output('graph', 'layout'), Input('layout', 'value'), Input('fit', 'n_clicks'), Input('graph', 'elements'))
     def graph_layout(name, clicks, elements):
-        return {'name': name, 'fit': True, 'padding': 45, 'animate': False, 'nodeRepulsion': 12000}
+        overview = elements and all(x['data'].get('kind') == 'linkage-class' for x in elements)
+        if overview and name == 'cose':
+            name = 'grid'
+        return {'name': name, 'fit': True, 'padding': 55, 'animate': False,
+                'nodeRepulsion': 12000, 'componentSpacing': 160}
 
     @app.callback(Output('graph', 'stylesheet'), Input('mode', 'value'), Input('labels', 'value'), Input('search', 'value'), Input('graph', 'elements'))
     def graph_style(mode, labels, search, elements):
         styles = [
             {'selector': 'node', 'style': {'label': 'data(label)', 'background-color': 'data(color)', 'color': '#143645',
                                            'font-size': 9, 'text-valign': 'bottom', 'text-margin-y': 5, 'width': 28, 'height': 28}},
-            {'selector': 'edge', 'style': {'curve-style': 'bezier', 'line-color': '#9babb3', 'target-arrow-color': '#9babb3',
+            {'selector': 'edge', 'style': {'curve-style': 'bezier', 'line-color': 'data(color)', 'target-arrow-color': 'data(color)',
                                            'target-arrow-shape': 'triangle' if mode == 'reaction' else 'none', 'width': 2,
                                            'label': 'data(label)' if 'rates' in (labels or []) else '',
                                            'font-size': 7, 'text-background-color': '#fff', 'text-background-opacity': 0.9,
                                            'text-background-padding': 2, 'text-rotation': 'autorotate'}},
+            {'selector': 'node[kind = "linkage-class"]', 'style': {
+                'shape': 'round-rectangle', 'width': 170, 'height': 64,
+                'label': 'data(label)', 'text-wrap': 'wrap', 'text-valign': 'center',
+                'text-margin-y': 0, 'color': '#ffffff', 'font-size': 10}},
             {'selector': ':selected', 'style': {'border-width': 4, 'border-color': '#e7a84a', 'line-color': '#e7a84a', 'target-arrow-color': '#e7a84a'}},
         ]
         if search:
