@@ -73,7 +73,7 @@ def create_app(runner=None):
                         dcc.Loading(html.Div(id='metrics', className='metrics'), type='circle'),
                         dcc.Upload(id='saved-upload', children=html.Button('Open saved result…', id='open-saved-button',
                                    title='Restore a .txt, .analysis, or .output saved result.'),
-                                   accept='.txt,.txr,.analysis,.output', multiple=False),
+                                   accept='.txt,.analysis,.output', multiple=False),
                     ], className='insights-row'),
                     html.Div([
                         html.Div([html.Label('Graph'), dcc.RadioItems(id='mode', options=[{'label': ' Reactions', 'value': 'reaction'},

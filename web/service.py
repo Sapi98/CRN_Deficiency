@@ -60,7 +60,7 @@ def decode_upload(contents, filename):
 
 def decode_saved_upload(contents, filename):
     """Saved structured reports have their own (larger) result-size budget."""
-    return _decode_text_upload(contents, filename, {'.analysis', '.output', '.txt', '.txr'}, MAX_RESULT_BYTES)
+    return _decode_text_upload(contents, filename, {'.analysis', '.output', '.txt'}, MAX_RESULT_BYTES)
 
 
 def _decode_text_upload(contents, filename, extensions, limit):

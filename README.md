@@ -385,7 +385,7 @@ Use **Open saved result…** beside the Section 2 insights message/metrics to re
 a past network and its rendering without a new model analysis. Saved structured
 reports can be up to 8 MiB by default. Download buttons offer `.txt`, `.analysis`,
 and `.output`. Web TXT downloads include a readable report and a structured
-appendix so they reopen without losing data; `.txr` is accepted as a text alias.
+appendix so they reopen without losing data.
 Older detailed TXT reports can be imported when their complex/reaction tables
 are complete; summary-only files cannot restore a network.
 After updating the source, restart the server and refresh the browser. For a

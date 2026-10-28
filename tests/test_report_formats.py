@@ -22,7 +22,8 @@ class ReportFormatTests(unittest.TestCase):
                 self.assertEqual(analyze_document(decoded, 'saved-result'), self.payload)
         download = build_download(self.payload, 'txt')
         encoded = 'data:text/plain;base64,' + base64.b64encode(download['content'].encode()).decode()
-        self.assertEqual(decode_saved_upload(encoded, 'past.txr'), download['content'])
+        with self.assertRaises(ValueError):
+            decode_saved_upload(encoded, 'past.txr')
 
     def test_complete_older_text_reports_recover_network_and_equations(self):
         for key in EXAMPLES:

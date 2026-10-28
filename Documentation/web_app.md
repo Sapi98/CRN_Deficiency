@@ -81,7 +81,7 @@ Matplotlib. Do not expose the development server publicly.
    regenerates reports, ODEs, colors, and interactive graph elements. It does not
    rerun the model parser or re-infer an ODE realization. The model editor is
    unchanged, and layout/camera positions from a past session are not stored.
-   `.txr` is accepted as an alias for text reports. Older complete detailed TXT
+   Older complete detailed TXT
    reports with indexed complexes and reactions can also be imported; they get
    a warning that fields absent from the text cannot be recovered. Truncated
    reports and summary-only files without network details cannot be restored.
@@ -349,7 +349,7 @@ def decode_saved_upload(contents, filename)
 | Name | Type | Default | Purpose |
 |---|---|---|---|
 | `contents` | `str` | required | Base64 data URL of a structured saved report. |
-| `filename` | `str` | required | `.txt`, `.txr`, `.analysis`, or `.output` saved report. |
+| `filename` | `str` | required | `.txt`, `.analysis`, or `.output` saved report. |
 
 #### Returns
 
