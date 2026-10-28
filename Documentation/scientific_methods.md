@@ -155,6 +155,22 @@ ordering.
 The calculation uses exact SymPy rationals for numerical coefficients. It does
 not use floating-point tolerance to determine rank.
 
+For scalability, calculation uses sparse generators: within each linkage
+class, choose a reference complex $y_0$ and form $y-y_0$ for every other
+complex. Connectedness ensures that these differences span exactly the same
+subspace as that class's reaction vectors (paths telescope, and every edge
+vector is a difference of two generators). This reduces the number of rows
+from the reaction count to $n-\ell$ without changing the subspace.
+Global rank is taken over the union of all class generators, not the sum of
+class ranks. Rational-coefficient matrices use SymPy DomainMatrix elimination
+over $\mathbb{Q}$; symbolic coefficients retain generic symbolic-rank handling.
+There is no floating-point or probabilistic rank estimate.
+
+Adjacency is dense for up to 256 complexes and sparse above that threshold.
+The sparse format preserves all nonzero cells and weighted parallel channels;
+this changes storage, not graph topology, kinetics, or deficiency. Browser
+paging/neighborhood rendering never restricts the network used for calculation.
+
 ## Linkage classes
 
 A linkage class is a connected component of the underlying undirected complex

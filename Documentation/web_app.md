@@ -40,6 +40,9 @@ Matplotlib. Do not expose the development server publicly.
 
 1. Choose a public example, paste a document, or upload a UTF-8 `.react`, `.ode`,
    or `.txt` file. Uploads replace the editor content.
+   Text uploads automatically select Reaction network or ODE system from the
+   document's headings or XPP-style derivatives. If content is not recognized,
+   it remains in the editor with a prompt to select the format manually.
 2. Select format, unresolved-parameter policy, and applicable ODE options.
    Examples select their options automatically; uploads do not silently opt in.
 3. Click **Analyze network**. Editing input invalidates earlier results.
@@ -47,8 +50,46 @@ Matplotlib. Do not expose the development server publicly.
    linkage classes, or highlight complexes using the search field.
 5. Click nodes or edges for composition or reaction details. Parallel channels
    retain distinct IDs; linkage edges aggregate channel labels.
-6. Download the current graph as PNG or the full report as `.txt` / `.analysis`.
-   Structured downloads can be opened in the desktop application.
+   Click a legend button to isolate its class. Click other classes to add them,
+   or selected classes to remove them. **All classes / reset selection** and
+   clearing the multi-select dropdown restore all classes; removing the last
+   selected class also restores all. The legend and dropdown stay synchronized.
+   Class changes clear the optional neighborhood focus and reset the graph page.
+6. Reaction diagrams are paged (300 complexes / 1000 rendered edges by default).
+   The **Linkage graph** instead draws all actual complexes and undirected
+   connections in the selected classes, including multiple large classes.
+   It does not replace classes with rectangular summary nodes or hide their
+   connections behind paging. The default **separated** layout puts each class
+   in its own non-overlapping region using a linear-time position calculation.
+   These positions are visual coordinates, not chemical or physical distances.
+   Pan and zoom to inspect the graph; labels appear when sufficiently zoomed in.
+   Node/edge colors match the legend. Choose fewer classes or a complex
+   neighborhood for very large graphs; alternate force layouts may be slow.
+   Browser memory/performance still limits practical rendering size. The graph
+   page control is disabled in linkage mode; the calculation and downloads
+   remain complete in both modes.
+7. Download the current graph view as PNG or choose any of the three result
+   downloads: `.txt`, `.analysis`, and `.output`. The latter two are compact
+   structured JSON. New web TXT downloads contain the readable report followed
+   by a clearly marked structured-data appendix for lossless reopening; its
+   JSON data is authoritative when reopened. Editing the readable part alone
+   does not edit the stored network. The displayed report still uses `^` for
+   powers; the machine-readable appendix preserves Python/SymPy expressions.
+8. Use **Open saved result…** on the same row as the Section 2 insights message/metrics to reopen
+   a previous `.txt`, `.analysis`, or `.output` report without entering a model or clicking Analyze.
+   The reader reconstructs the network, validates/recalculates deficiency, and
+   regenerates reports, ODEs, colors, and interactive graph elements. It does not
+   rerun the model parser or re-infer an ODE realization. The model editor is
+   unchanged, and layout/camera positions from a past session are not stored.
+   Older complete detailed TXT
+   reports with indexed complexes and reactions can also be imported; they get
+   a warning that fields absent from the text cannot be recovered. Truncated
+   reports and summary-only files without network details cannot be restored.
+   Saved reports have their
+   own decoded size limit (8 MiB by default, `CRNT_WEB_MAX_RESULT_BYTES`), not
+   the 1 MiB model limit. Restoring uses the bounded analysis worker and no
+   uploaded files are written to disk. Invalid uploads leave the current
+   displayed result intact. Both desktop and web structured reports are accepted.
 
 Graph labels round rates; scientific data retains precision. Reports include
 indexed complexes, original/augmented ODEs, auxiliary definitions, and warnings.
@@ -78,7 +119,7 @@ embedded in the web adapter, not research files loaded from disk.
 
 For shared access, configure an HTTPS reverse proxy, authentication, request
 rate limits, and container CPU/memory limits. Keep server/proxy timeouts longer
-than the 20-second analysis budget. Do not log request bodies. No hosting
+than the 60-second analysis budget. Do not log request bodies. No hosting
 account is created or service published by this local implementation.
 
 ### Managed Docker hosting
@@ -98,7 +139,7 @@ Render, create a **Web Service**, connect the repository, and choose Docker.
 The current command binds to `0.0.0.0:8050`; it does not read `PORT` dynamically.
 Setting `PORT=8050` aligns Render's configuration with that command. If a host
 requires another port, override the Docker command to bind Gunicorn to that
-port, keeping two synchronous workers and a timeout above 20 seconds.
+port, keeping two synchronous workers and a timeout above 60 seconds.
 
 Deploy and open the provider's assigned HTTPS URL. Approximately 2 GB RAM is a
 starting sizing estimate, not a guarantee: measure representative symbolic
@@ -151,7 +192,7 @@ For unpublished research, prefer an institution-controlled server when available
 - Configure institutional authentication, an authenticated proxy, or VPN access
   for collaborator-only use. The app itself has no login; HTTPS is not access control.
 - Add request-rate limits and retain resource limits. Keep server/proxy timeouts
-  longer than the 20-second calculation budget (Gunicorn currently uses 35 seconds).
+  longer than the 60-second calculation budget (Gunicorn currently uses 90 seconds).
 - Confirm the deployed image contains no private research inputs or reports;
   ensure application and proxy logs do not record request bodies.
 - Test `/healthz`, reaction and ODE uploads, auxiliary/fractional options,
@@ -187,7 +228,7 @@ is reimplemented in JavaScript. Browser graph layouts do not change the CRN.
   Refresh clears results; tabs have independent stores.
 - Models are processed on the server. Use localhost or an institution-controlled
   host for unpublished research. Hosting/proxy logs are outside app control.
-- Default limits: 1 MiB model input, 20 seconds per analysis, 500 complexes, 1500
+- Default analysis limits: 1 MiB model input, 60 seconds per analysis, 10000 complexes, 50000
   reactions, and 8 MiB serialized results. HTTP bodies default to 24 MiB to
   accommodate bounded result state sent back to graph callbacks.
 - Linux analysis children have a 1 GiB address-space ceiling. Other operating
@@ -198,8 +239,9 @@ is reimplemented in JavaScript. Browser graph layouts do not change the CRN.
   deployment needs operational hardening, dependency auditing, and version pins.
 
 This version does not include logins, saved-project accounts, collaborative
-editing, or retained server-side reports. Large networks belong in the desktop
-or Python workflow. Web build requirements use compatible ranges, not a lockfile.
+editing, or retained server-side reports. Networks beyond the deployment's
+configured budget can still use an appropriately provisioned Python workflow.
+Web build requirements use compatible ranges, not a lockfile.
 
 ## Tests
 
@@ -223,9 +265,12 @@ all workers. Limits apply to pasted text and uploads of every supported extensio
 |---|---|---|
 | `CRNT_WEB_MAX_INPUT_BYTES` | `1048576` | Decoded UTF-8 model limit (1 MiB). |
 | `CRNT_WEB_MAX_RESULT_BYTES` | `8388608` | Serialized result limit (8 MiB). |
-| `CRNT_WEB_MAX_COMPLEXES` | `500` | Network-complex limit. |
-| `CRNT_WEB_MAX_REACTIONS` | `1500` | Network-reaction limit. |
-| `CRNT_WEB_TIMEOUT_SECONDS` | `20` | Analysis wall-clock budget. |
+| `CRNT_WEB_MAX_COMPLEXES` | `10000` | Full calculation network-complex limit. |
+| `CRNT_WEB_MAX_REACTIONS` | `50000` | Full calculation network-reaction limit. |
+| `CRNT_WEB_MAX_RENDER_COMPLEXES` | `300` | Complexes per reaction-graph page; linkage view draws all selected complexes. |
+| `CRNT_WEB_MAX_RENDER_REACTIONS` | `1000` | Edges per reaction-graph page; linkage view draws all selected connections. |
+| `CRNT_WEB_TIMEOUT_SECONDS` | `60` | Analysis wall-clock budget. |
+| `CRNT_WEB_MEMORY_MB` | `1024` | Per-child Linux address-space ceiling, in MiB; provision container headroom separately. |
 | `CRNT_WEB_MAX_REQUEST_BYTES` | automatic | HTTP request limit; at least max(8 x input limit, 3 x result limit). |
 
 Example (macOS/Linux):
@@ -240,12 +285,24 @@ HTTP limit automatically scales for base64/JSON and result callback overhead.
 Match the reverse proxy/platform body-size limits as well. Invalid or undersized
 settings fail at startup instead of silently discarding larger requests.
 
-For longer calculations, also increase Gunicorn's 35-second timeout and proxy
+For longer calculations, also increase Gunicorn's 90-second timeout and proxy
 timeouts beyond the chosen analysis timeout. Input size alone does not measure
-complexity: dense adjacency matrices scale quadratically with complex count,
-and symbolic rank calculations can be costly. Raise graph/result/time limits
+complexity: adjacency is automatically sparse above 256 complexes, and rank
+uses exact sparse domain elimination on linkage-class complex differences.
+Do not explicitly densify large matrices. Symbolic rank can still be costly;
+large reports/results and dense intermediate elimination can consume memory.
+Raise analysis/result/time limits
 only after benchmarking server memory, browser responsiveness, and concurrent
 users. These changes do not provide unlimited-network support.
+
+Sparse adjacency reports use a tagged object with `format: "sparse"`,
+`shape: [n,n]`, and `entries: [[row,column,weight], ...]`. Absent cells mean
+zero; row/column positions follow the serialized complexes list. Rate symbols,
+reverse channels, and lists of parallel weights are preserved. Small networks
+retain dense nested lists. Updated report readers accept both formats; older
+versions may not read new sparse reports. Python matrix-style indexing remains
+available without materializing zeros. See the scientific guide for exact-rank
+methodology.
 
 ## Developer API
 
@@ -273,6 +330,35 @@ def decode_upload(contents, filename)
 
 - `ValueError`: Invalid extension, encoding, data URL, or input size.
 
+### `decode_saved_upload` — public
+
+`web.report_formats` supplies `build_download(payload, extension)` for the three
+download formats and `read_report_document(text)` for JSON, appended JSON, or
+complete legacy text reports. These return a download dictionary and a parsed
+report dictionary respectively; malformed/incomplete text raises `ValueError`.
+Legacy parsing uses restricted complex parsing and `ast.literal_eval` for
+literal kinetic-order/auxiliary fields, never `eval` or uploaded Python code.
+The bounded worker then reconstructs the domain network and verifies deficiency.
+
+```python
+def decode_saved_upload(contents, filename)
+```
+
+#### Parameters
+
+| Name | Type | Default | Purpose |
+|---|---|---|---|
+| `contents` | `str` | required | Base64 data URL of a structured saved report. |
+| `filename` | `str` | required | `.txt`, `.analysis`, or `.output` saved report. |
+
+#### Returns
+
+- `text` (`str`): Decoded UTF-8 report, bounded by `MAX_RESULT_BYTES`.
+
+#### Raises
+
+- `ValueError`: Unsupported extension, encoding, or oversized upload.
+
 ### `analyze_document` — public
 
 ```python
@@ -284,7 +370,7 @@ def analyze_document(text, input_format='auto', options=(), unresolved='symbolic
 | Name | Type | Default | Purpose |
 |---|---|---|---|
 | `text` | `str` | required | Model document. |
-| `input_format` | `str` | `'auto'` | `auto`, `react`, or `ode`. |
+| `input_format` | `str` | `'auto'` | `auto`, `react`, `ode`, or internal `saved-result` restoration. |
 | `options` | `Sequence[str]` | `()` | `lift` and/or `fractional`. |
 | `unresolved` | `str` | `'symbolic'` | Existing unresolved-value policy. |
 
@@ -307,7 +393,7 @@ def run(self, text, input_format, options, unresolved)
 
 | Name | Type | Default | Purpose |
 |---|---|---|---|
-| `timeout` | `float` | `20` | Child-process wall-clock budget in seconds. |
+| `timeout` | `float` | deployment default (`60`) | Child-process wall-clock budget in seconds. |
 | `text` | `str` | required | Model input to `run`. |
 | `input_format` | `str` | required | Format selector. |
 | `options` | `Sequence[str]` | required | ODE options. |
@@ -324,7 +410,8 @@ def run(self, text, input_format, options, unresolved)
 ### `GraphPresenter.elements` — public
 
 ```python
-def elements(self, payload, mode='reaction', linkage='all')
+def elements(self, payload, mode='reaction', linkage='all', page=1, focus=None)
+def view(self, payload, mode='reaction', linkage='all', page=1, focus=None)
 ```
 
 #### Parameters
@@ -333,11 +420,14 @@ def elements(self, payload, mode='reaction', linkage='all')
 |---|---|---|---|
 | `payload` | `dict` or `None` | required | Serialized web result. |
 | `mode` | `str` | `'reaction'` | Directed reactions or undirected linkage graph. |
-| `linkage` | `str` | `'all'` | Linkage-class index or all classes. |
+| `linkage` | `str` or `list[str]` | `'all'` | One or multiple linkage-class indices; `'all'`, `[]`, or `None` selects all. |
+| `page` | `int` | `1` | Graph page (clamped to the selected view). |
+| `focus` | `str` or `None` | `None` | Complex ID/index for a one-hop neighborhood. |
 
 #### Returns
 
 - `elements` (`list[dict]`): Cytoscape node and edge data, including details and colors.
+- `view` (`tuple`): `elements`, explicit rendering-status message, and page count.
 
 ### `format_rate` — public
 
@@ -384,3 +474,6 @@ the Linux memory limit. The nested `app` callbacks manage loading, analysis,
 metrics, graph rendering/layout/style, inspection, and downloads. They are not
 a stable external API; HTTP callback tests cover their contracts. No application
 state is stored in shared mutable module-level result objects.
+`_decode_text_upload` shares model/report decoding with separate size budgets;
+`GraphPresenter._separated_positions` builds deterministic disjoint class-disk
+coordinates in linear time, without a force solver or synthetic class nodes.

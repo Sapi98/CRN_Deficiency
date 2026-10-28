@@ -6,7 +6,7 @@ Network Theory (CRNT) deficiency. It accepts explicit reaction files and
 mass-action polynomial ODE files, provides typed and dictionary APIs, and
 includes a command-line analysis pipeline that writes structured reports.
 
-The current application version is **v1.1** (package version `1.1.0`).
+The current application version is **v1.3.0** (package version `1.3.0`).
 
 ODE formatting examples demonstrate three approaches:
 
@@ -73,7 +73,7 @@ repository also includes machine-readable citation metadata in
 Plain text:
 
 > Biswas, Saptarshi (2026). *CRNTAnalysis: Chemical Reaction Network Theory
-> Analysis* (version 1.1.0) [Software].
+> Analysis* (version 1.3.0) [Software].
 > https://github.com/Sapi98/CRN_Deficiency
 
 BibTeX:
@@ -83,7 +83,7 @@ BibTeX:
   author  = {Biswas, Saptarshi},
   title   = {CRNTAnalysis: Chemical Reaction Network Theory Analysis},
   year    = {2026},
-  version = {1.1.0},
+  version = {1.3.0},
   url     = {https://github.com/Sapi98/CRN_Deficiency}
 }
 ```
@@ -359,12 +359,38 @@ Open **http://127.0.0.1:8050**. On Windows, activate with
 `.venv-web\Scripts\activate.bat` or `.venv-web\Scripts\Activate.ps1` instead.
 The separate web environment needs no Qt installation. Existing desktop and
 standalone workflows are unchanged.
+`.txt` uploads are accepted: their content automatically selects reaction or
+ODE mode, including XPP-style equations. The desktop file picker and CLI/API
+file analysis also detect supported `.txt` contents; no renaming is required.
 The top-level `web/` app is excluded from pip distributions; run it from a
 repository checkout. Installing `crntanalysis` does not install the web app.
 Model uploads/pasted text support up to 1 MiB by default. Hosts can increase
 this with `CRNT_WEB_MAX_INPUT_BYTES` before startup; see the
 [larger-model settings](Documentation/web_app.md#larger-models-and-deployment-settings)
 for graph/result limits, timeouts, and server-capacity considerations.
+Large networks use sparse adjacency and exact sparse stoichiometric rank.
+The default analysis budget is 10,000 complexes / 50,000 reactions / 60 seconds;
+reaction diagrams are paged separately (300 complexes / 1,000 edges per page).
+Use graph pages, linkage filters, or a complex neighborhood to explore larger
+systems. Full reports/downloads retain every accepted reaction; PNG exports
+show only the current graph view. Large structured reports use a tagged sparse
+adjacency object instead of a dense nested list and require an updated reader.
+The clickable legend and multi-select dropdown can show one or several linkage
+classes together. Click **All classes / reset selection** to restore the default
+all-class view; this affects only visualization, never deficiency calculations.
+The linkage view draws actual disconnected, color-coded graphs for every
+selected class, with a fast separated layout and pan/zoom, rather than summary
+boxes. Large selections can still demand substantial browser resources.
+Use **Open saved result…** beside the Section 2 insights message/metrics to restore
+a past network and its rendering without a new model analysis. Saved structured
+reports can be up to 8 MiB by default. Download buttons offer `.txt`, `.analysis`,
+and `.output`. Web TXT downloads include a readable report and a structured
+appendix so they reopen without losing data.
+Older detailed TXT reports can be imported when their complex/reaction tables
+are complete; summary-only files cannot restore a network.
+After updating the source, restart the server and refresh the browser. For a
+hosted/container deployment, deploy or rebuild the updated image; the header
+should display **v1.3.0**. Refreshing alone does not update an older server.
 
 See [the web application guide](Documentation/web_app.md) for Docker deployment,
 privacy, interaction details, resource limits, and tests. This implementation
@@ -994,7 +1020,9 @@ AnalysisReportWriter().write(outcome, "output")
 `AnalysisOutcome` provides the parsed network, global and linkage-class
 deficiencies, source metadata, and parser warnings. Structured `.analysis` and
 `.output` reports use JSON and can be reopened in the GUI. `.txt` reports store
-the same concise summary shown in the report pane but cannot restore graphs.
+human-readable reports. The desktop reader requires structured reports;
+the web reader also imports complete detailed text reports. New web TXT
+downloads carry a structured appendix for lossless graph restoration.
 
 Complex compositions are stored once and indexed. Reactions refer to source
 and target complex indices. An adjacency cell is `0` when no connection exists,

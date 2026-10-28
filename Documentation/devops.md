@@ -226,6 +226,9 @@ contains the source equations, reconstructed network, and warnings.
 `ComplexRegistry` assigns stable indices in first-appearance order.
 `ReactionGraphBuilder` constructs the graph view and weighted symmetric
 adjacency matrix. Multiple paths occupy a list within one matrix cell.
+Above 256 complexes, adjacency uses `SparseAdjacencyMatrix`; only nonzero cells
+are stored and serialized. Small networks retain nested lists. Matrix positions
+follow the complexes list. Sparse reports require the updated dual-format reader.
 
 ### `deficiency_utils.py`
 
@@ -718,7 +721,7 @@ def complexes(self) -> List[Complex]
 ```python
 def build(
     self, complexes: List[Complex], reactions: List[Reaction]
-) -> Tuple[ReactionGraph, List[List[AdjacencyCell]]]
+) -> Tuple[ReactionGraph, Union[List[List[AdjacencyCell]], SparseAdjacencyMatrix]]
 ```
 
 ##### Parameters
@@ -731,11 +734,45 @@ def build(
 ##### Returns
 
 - `return_1` (`ReactionGraph`): Graph view reusing supplied objects.
-- `return_2` (`list[list[AdjacencyCell]]`): Symmetric weighted adjacency matrix.
+- `return_2` (`list[list[AdjacencyCell]] | SparseAdjacencyMatrix`): Symmetric weighted adjacency, sparse above the configured threshold.
 
 ##### Raises
 
-- `IndexError`: A reaction contains an invalid complex index.
+- `KeyError`: A reaction contains an unknown complex index.
+
+#### `SparseAdjacencyMatrix` — public
+
+```python
+def __init__(self, size, entries=None)
+def to_dict(self)
+@classmethod
+def from_dict(cls, data)
+def to_dense(self, max_cells=1_000_000)
+```
+
+Provides lazy `matrix[row][column]` lookup, sparse serialization, and guarded
+explicit dense conversion. `_SparseRow` and indexing helpers are private
+sequence implementations; ordinary lookup never allocates a dense matrix.
+
+##### Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `size` | `int` | required | Square matrix dimension. |
+| `entries` | `dict[tuple[int,int], AdjacencyCell]` or `None` | `None` | Nonzero cells. |
+| `data` | `dict` | required | Tagged sparse report object for `from_dict`. |
+| `max_cells` | `int` | `1000000` | Maximum permitted cells for explicit dense conversion. |
+
+##### Returns
+
+- `to_dict` (`dict`): `format='sparse'`, square `shape`, and nonzero `[row,column,weight]` entries.
+- `from_dict` (`SparseAdjacencyMatrix`): Restored matrix with validated shape/positions.
+- `to_dense` (`list[list[AdjacencyCell]]`): Explicit materialized matrix.
+
+##### Raises
+
+- `ValueError`: Invalid sparse shape/positions, duplicate cells, or dense conversion exceeds the requested limit.
+- `IndexError`: Row or column lookup is outside the matrix.
 
 
 #### `ReactionGraphBuilder._add_weight` — private
@@ -1598,6 +1635,8 @@ def _rank(
     species: Sequence[str]
 ) -> int
 
+def _difference_rank(self, differences, species) -> int
+
 def _reaction_vector(
     self, reaction: Reaction, complexes: Mapping[int, Complex],
     species: Sequence[str]
@@ -1619,6 +1658,7 @@ def _contains_symbols(complexes: Sequence[Complex]) -> bool
 | `species` | `Sequence[str]` | required | Consistent vector coordinate order. |
 | `reaction` | `Reaction` | required | Edge for one vector. |
 | `value` | `Scalar` | required | Numeric or symbolic coefficient. |
+| `differences` | `Sequence[tuple[Complex, Complex]]` | required | Sparse complex-difference generators. |
 
 ##### Returns
 
@@ -1626,6 +1666,11 @@ def _contains_symbols(complexes: Sequence[Complex]) -> bool
 - `reaction_vector` (`list[Expr]`): Product-minus-reactant vector.
 - `scalar_expression` (`Expr`): SymPy rational or symbol.
 - `contains_symbols` (`bool`): Whether any complex coefficient is symbolic.
+
+Numeric rank uses sparse DomainMatrix elimination over exact rationals.
+Calculation forms complex-minus-reference generators within each linkage
+class and computes global rank over their union. Symbolic coefficients retain
+generic symbolic rank; class ranks are not added to obtain the global rank.
 
 ##### Raises
 
@@ -1732,11 +1777,11 @@ def analyze_text(
 - `DeficiencyError`: The resulting network is invalid for deficiency analysis.
 
 
-#### `CRNAnalysisService._resolve_format` — private
+#### `CRNAnalysisService.detect_format` — public
 
 ```python
-def _resolve_format(
-    self, requested: str, *, path: Optional[Path] = None,
+def detect_format(
+    self, requested: str = 'auto', *, path: Optional[Path] = None,
     text: Optional[str] = None
 ) -> str
 ```
@@ -1745,7 +1790,7 @@ def _resolve_format(
 
 | Parameter | Type | Default | Description |
 |---|---|---:|---|
-| `requested` | `str` | required | `auto`, `react`, or `ode`. |
+| `requested` | `str` | `'auto'` | `auto`, `react`, or `ode`. |
 | `path` | `Path \| None` | `None` | Optional suffix source. |
 | `text` | `str \| None` | `None` | Optional heading source. |
 
@@ -1761,7 +1806,7 @@ def _resolve_format(
 #### `ConsoleReportFormatter.format` — public
 
 ```python
-def format(self, outcome: AnalysisOutcome) -> str
+def format(self, outcome: AnalysisOutcome, *, equation_systems=None) -> str
 ```
 
 ##### Parameters
@@ -1769,6 +1814,7 @@ def format(self, outcome: AnalysisOutcome) -> str
 | Parameter | Type | Default | Description |
 |---|---|---:|---|
 | `outcome` | `AnalysisOutcome` | required | Complete analysis result. |
+| `equation_systems` | `dict` or `None` | `None` | Precomputed original/analyzed ODE maps; the web service reuses them to avoid duplicate large-expression work. |
 
 ##### Returns
 
@@ -1779,7 +1825,38 @@ def format(self, outcome: AnalysisOutcome) -> str
 - `KeyError`: Outcome contains inconsistent complex indices.
 
 
-#### `AnalysisReportWriter.write` — public
+#### `AnalysisReportReader` — public restoration methods
+
+The reader supports file and in-memory restoration:
+
+```python
+def read(self, path: Union[str, Path]) -> AnalysisOutcome
+def read_text(self, text: str) -> AnalysisOutcome
+def from_dict(self, payload: dict) -> AnalysisOutcome
+```
+
+These reconstruct the stored network and recompute deficiency, accepting dense
+or sparse adjacency. The web adapter calls the in-memory path in a bounded
+worker; no temporary upload file is required and no original model is re-parsed.
+
+##### Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `path` | `str` or `Path` | required | Structured `.analysis` or `.output` file for `read`. |
+| `text` | `str` | required | JSON report for `read_text`. |
+| `payload` | `dict` | required | Parsed structured report for `from_dict`. |
+
+##### Returns
+
+- `outcome` (`AnalysisOutcome`): Restored network, recalculated deficiency, warnings and metadata.
+
+##### Raises
+
+- `ValueError`: Unsupported extension or invalid report/schema/network data.
+- `OSError`: File access fails in `read`.
+
+#### `AnalysisReportWriter.write` — public method definition
 
 ```python
 def write(

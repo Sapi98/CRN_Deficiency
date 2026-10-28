@@ -24,6 +24,18 @@ k1 = 2
 
 
 class OrchestratorTests(unittest.TestCase):
+    def test_txt_files_detect_content_instead_of_extension(self):
+        cases = [('Reactions : # network\nA k-> B', 'react'),
+                 ('ODE Model:\ndx/dt=x', 'ode'),
+                 ("param k=2\nx'=-k*x", 'ode')]
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'model.txt'
+            for text, expected in cases:
+                with self.subTest(expected=expected):
+                    path.write_text('\ufeff' + text, encoding='utf-8')
+                    outcome = CRNAnalysisService().analyze_file(path)
+                    self.assertEqual(outcome.input_format, expected)
+
     def test_report_uses_caret_powers_without_changing_saved_expressions(self):
         outcome = CRNAnalysisService().analyze_text(
             'ODE Model:\ndx/dt=-x/(1+x)\nAuxiliary Species:\ns=1/(1+x)',

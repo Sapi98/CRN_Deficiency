@@ -138,7 +138,7 @@ class MainWindow(QMainWindow):
         self.ui = load_ui_class()()
         self.ui.setupUi(self)
         self.setWindowTitle(f'CRNTAnalysis v{__version__} • Model workspace')
-        self.ui.previewBadge.setText(f'Desktop App v{__version__.removesuffix(".0")}')
+        self.ui.previewBadge.setText(f'Desktop App v{__version__}')
         # Keep saved-result actions above the empty-state content, independent
         # of the report/graph tabs' visibility.
         self.ui.resultsLayout.removeItem(self.ui.resultActionsLayout)
@@ -217,6 +217,13 @@ class MainWindow(QMainWindow):
         self.ui.removeButton.setEnabled(True)
         if path.suffix.lower() in {'.react', '.ode'}:
             self.ui.formatCombo.setCurrentIndex(1 if path.suffix.lower() == '.ode' else 0)
+        elif path.suffix.lower() == '.txt':
+            try:
+                detected = CRNAnalysisService().detect_format(text=path.read_text(encoding='utf-8-sig'))
+                self.ui.formatCombo.setCurrentIndex(1 if detected == 'ode' else 0)
+            except (OSError, ValueError):
+                # Unknown text remains available for an explicit format choice.
+                pass
         self.ui.inputTabs.setCurrentIndex(1)
         self.input_changed()
 

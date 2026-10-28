@@ -22,6 +22,15 @@ ROOT = Path(__file__).resolve().parents[1]
 
 @unittest.skipUnless(HAS_QT, 'Install requirements.txt to test the desktop interface')
 class DesktopAnalysisTests(unittest.TestCase):
+    def test_txt_file_content_automatically_selects_mode(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'model.txt'
+            for text, expected_index in [('ODE Model:\ndx/dt=x', 1),
+                                         ('Reactions:\nA k-> B', 0)]:
+                path.write_text(text, encoding='utf-8')
+                self.window.select_file(path)
+                self.assertEqual(self.window.ui.formatCombo.currentIndex(), expected_index)
+
     def test_frozen_ui_uses_precompiled_form_without_subprocess(self):
         with patch.object(gui.sys, 'frozen', True, create=True), \
                 patch.object(gui.subprocess, 'run') as run:
@@ -55,7 +64,7 @@ class DesktopAnalysisTests(unittest.TestCase):
 
     def test_text_analysis_and_input_invalidation(self):
         ui = self.window.ui
-        self.assertEqual(ui.previewBadge.text(), 'Desktop App v1.1')
+        self.assertEqual(ui.previewBadge.text(), 'Desktop App v1.3.0')
         self.assertFalse(ui.analyzeButton.isEnabled())
         ui.exampleButton.click()
         self.assertTrue(ui.analyzeButton.isEnabled())
