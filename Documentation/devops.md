@@ -1825,7 +1825,38 @@ def format(self, outcome: AnalysisOutcome, *, equation_systems=None) -> str
 - `KeyError`: Outcome contains inconsistent complex indices.
 
 
-#### `AnalysisReportWriter.write` — public
+#### `AnalysisReportReader` — public restoration methods
+
+The reader supports file and in-memory restoration:
+
+```python
+def read(self, path: Union[str, Path]) -> AnalysisOutcome
+def read_text(self, text: str) -> AnalysisOutcome
+def from_dict(self, payload: dict) -> AnalysisOutcome
+```
+
+These reconstruct the stored network and recompute deficiency, accepting dense
+or sparse adjacency. The web adapter calls the in-memory path in a bounded
+worker; no temporary upload file is required and no original model is re-parsed.
+
+##### Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `path` | `str` or `Path` | required | Structured `.analysis` or `.output` file for `read`. |
+| `text` | `str` | required | JSON report for `read_text`. |
+| `payload` | `dict` | required | Parsed structured report for `from_dict`. |
+
+##### Returns
+
+- `outcome` (`AnalysisOutcome`): Restored network, recalculated deficiency, warnings and metadata.
+
+##### Raises
+
+- `ValueError`: Unsupported extension or invalid report/schema/network data.
+- `OSError`: File access fails in `read`.
+
+#### `AnalysisReportWriter.write` — public method definition
 
 ```python
 def write(

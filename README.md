@@ -370,7 +370,7 @@ this with `CRNT_WEB_MAX_INPUT_BYTES` before startup; see the
 for graph/result limits, timeouts, and server-capacity considerations.
 Large networks use sparse adjacency and exact sparse stoichiometric rank.
 The default analysis budget is 10,000 complexes / 50,000 reactions / 60 seconds;
-browser diagrams are paged separately (300 complexes / 1,000 edges per page).
+reaction diagrams are paged separately (300 complexes / 1,000 edges per page).
 Use graph pages, linkage filters, or a complex neighborhood to explore larger
 systems. Full reports/downloads retain every accepted reaction; PNG exports
 show only the current graph view. Large structured reports use a tagged sparse
@@ -378,6 +378,12 @@ adjacency object instead of a dense nested list and require an updated reader.
 The clickable legend and multi-select dropdown can show one or several linkage
 classes together. Click **All classes / reset selection** to restore the default
 all-class view; this affects only visualization, never deficiency calculations.
+The linkage view draws actual disconnected, color-coded graphs for every
+selected class, with a fast separated layout and pan/zoom, rather than summary
+boxes. Large selections can still demand substantial browser resources.
+Use **Open saved result (.analysis / .output)** above the web results to restore
+a past network and its rendering without a new model analysis. Saved structured
+reports can be up to 8 MiB by default; plain text summaries are not restorable.
 
 See [the web application guide](Documentation/web_app.md) for Docker deployment,
 privacy, interaction details, resource limits, and tests. This implementation

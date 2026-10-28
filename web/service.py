@@ -4,12 +4,13 @@ import binascii
 import multiprocessing
 import json
 import colorsys
+from math import ceil, cos, sin, sqrt
 from pathlib import PurePath
 
-from crntanalysis.orchestrator import CRNAnalysisService, ConsoleReportFormatter
+from crntanalysis.orchestrator import CRNAnalysisService, ConsoleReportFormatter, AnalysisReportReader
 from web.limits import (MAX_INPUT_BYTES, MAX_RESULT_BYTES, MAX_COMPLEXES,
                         MAX_REACTIONS, MAX_RENDER_COMPLEXES, MAX_RENDER_REACTIONS,
-                        ANALYSIS_TIMEOUT, WORKER_MEMORY_MB, input_size_message)
+                        ANALYSIS_TIMEOUT, WORKER_MEMORY_MB)
 COLORS = ('#167d8d', '#ae6235', '#6671bc', '#b34d76', '#559451', '#937545',
           '#3479c0', '#80509b', '#c34c38', '#41877b', '#a57c17', '#526477')
 
@@ -53,14 +54,24 @@ EXAMPLES = {
 
 def decode_upload(contents, filename):
     """Decode a single bounded UTF-8 model upload without writing it to disk."""
-    if not filename or PurePath(filename).suffix.lower() not in {'.react', '.ode', '.txt'}:
-        raise ValueError('Upload one .react, .ode, or .txt model file.')
-    if not isinstance(contents, str) or len(contents) > MAX_INPUT_BYTES * 2:
-        raise ValueError(input_size_message())
+    return _decode_text_upload(contents, filename, {'.react', '.ode', '.txt'}, MAX_INPUT_BYTES)
+
+
+def decode_saved_upload(contents, filename):
+    """Saved structured reports have their own (larger) result-size budget."""
+    return _decode_text_upload(contents, filename, {'.analysis', '.output'}, MAX_RESULT_BYTES)
+
+
+def _decode_text_upload(contents, filename, extensions, limit):
+    if not filename or PurePath(filename).suffix.lower() not in extensions:
+        raise ValueError('Upload a supported file: ' + ', '.join(sorted(extensions)) +
+                         '. Plain-text summaries cannot restore a saved network.')
+    if not isinstance(contents, str) or len(contents) > limit * 2:
+        raise ValueError(f'This upload must be at most {limit / 1048576:g} MiB.')
     try:
         raw = base64.b64decode(contents.split(',', 1)[1], validate=True)
-        if len(raw) > MAX_INPUT_BYTES:
-            raise ValueError(input_size_message())
+        if len(raw) > limit:
+            raise ValueError(f'This upload must be at most {limit / 1048576:g} MiB.')
         return raw.decode('utf-8-sig')
     except (binascii.Error, UnicodeDecodeError, IndexError) as error:
         raise ValueError('The upload must be a UTF-8 text model.') from error
@@ -70,13 +81,24 @@ def analyze_document(text, input_format='auto', options=(), unresolved='symbolic
     """Analyze a model and create JSON-safe output; called inside a child process."""
     if not isinstance(text, str) or not text.strip():
         raise ValueError('Paste a model or upload a file before analyzing.')
-    if len(text.encode('utf-8')) > MAX_INPUT_BYTES:
-        raise ValueError(input_size_message())
-    outcome = CRNAnalysisService().analyze_text(
-        text, input_format=input_format, unresolved=unresolved,
-        allow_fractional='fractional' in options, lift_rational='lift' in options,
-        source='<web input>',
-    )
+    limit = MAX_RESULT_BYTES if input_format == 'saved-result' else MAX_INPUT_BYTES
+    if len(text.encode('utf-8')) > limit:
+        raise ValueError(f'Input must be at most {limit / 1048576:g} MiB.')
+    if input_format == 'saved-result':
+        try:
+            document = json.loads(text)
+            network = document['network']
+            if len(network['complexes']) > MAX_COMPLEXES or len(network['reactions']) > MAX_REACTIONS:
+                raise ValueError('Saved network exceeds this deployment\'s analysis limits.')
+            outcome = AnalysisReportReader().from_dict(document)
+        except (KeyError, TypeError, json.JSONDecodeError) as error:
+            raise ValueError(f'Invalid saved analysis report: {error}') from None
+    else:
+        outcome = CRNAnalysisService().analyze_text(
+            text, input_format=input_format, unresolved=unresolved,
+            allow_fractional='fractional' in options, lift_rational='lift' in options,
+            source='<web input>',
+        )
     if len(outcome.network.complexes) > MAX_COMPLEXES or len(outcome.network.reactions) > MAX_REACTIONS:
         raise ValueError(f'This network exceeds the analysis limit of {MAX_COMPLEXES} complexes '
                          f'or {MAX_REACTIONS} reactions. The server administrator can adjust '
@@ -114,8 +136,9 @@ class AnalysisRunner:
         self.timeout = timeout
 
     def run(self, text, input_format, options, unresolved):
-        if not isinstance(text, str) or len(text.encode('utf-8')) > MAX_INPUT_BYTES:
-            raise ValueError(input_size_message())
+        limit = MAX_RESULT_BYTES if input_format == 'saved-result' else MAX_INPUT_BYTES
+        if not isinstance(text, str) or len(text.encode('utf-8')) > limit:
+            raise ValueError(f'Input must be text and at most {limit / 1048576:g} MiB.')
         context = multiprocessing.get_context('spawn')
         receiver, sender = context.Pipe(duplex=False)
         process = context.Process(target=_analysis_worker,
@@ -169,30 +192,6 @@ class GraphPresenter:
         classes = outcome['deficiency']['linkage_classes']
         selected_classes = selected_linkages(linkage)
         classes_in_view = [item for item in classes if selected_classes is None or str(item['index']) in selected_classes]
-        if (mode == 'linkage' and not focus
-                and (selected_classes is None or len(classes_in_view) > 1)
-                and sum(item['n'] for item in classes_in_view) > MAX_RENDER_COMPLEXES):
-            # A complex-index page is not an overview of connected components.
-            # Contract each true linkage class into one explicitly labeled node.
-            total = len(classes_in_view)
-            pages = max(1, (total + MAX_RENDER_COMPLEXES - 1) // MAX_RENDER_COMPLEXES)
-            try:
-                page = min(pages, max(1, int(page or 1)))
-            except (TypeError, ValueError, OverflowError):
-                page = 1
-            visible = classes_in_view[(page - 1) * MAX_RENDER_COMPLEXES:page * MAX_RENDER_COMPLEXES]
-            elements = [{'data': {
-                'id': f'LC{item["index"]}', 'kind': 'linkage-class',
-                'linkage_index': str(item['index']),
-                'label': f'L{item["index"]}\n{item["n"]} complexes · δ={item["deficiency"]}',
-                'color': linkage_color(item['index']),
-                'details': (f'Linkage class L{item["index"]}\nComplexes: {item["n"]}\n'
-                            f'Reactions: {len(item["reaction_indices"])}\nStoichiometric rank: {item["s"]}\n'
-                            f'Deficiency: {item["deficiency"]}\nClick this class to explore its complexes.'),
-            }} for item in visible]
-            return elements, (f'Linkage-class overview: {len(visible)} of {total} classes, page {page}/{pages}. '
-                              'Each node represents one complete linkage class, NOT one complex. '
-                              'Classes are disconnected by definition. Click a class to explore its complex graph.'), pages
         membership = {index: item['index'] for item in classes for index in item['complex_indices']}
         selected = {item['index'] for item in network['complexes']
                     if selected_classes is None or str(membership[item['index']]) in selected_classes}
@@ -212,13 +211,17 @@ class GraphPresenter:
                     neighbors.add(source)
             selected &= neighbors
         total = len(selected)
-        pages = max(1, (total + MAX_RENDER_COMPLEXES - 1) // MAX_RENDER_COMPLEXES)
+        full_linkage = mode == 'linkage'
+        pages = 1 if full_linkage else max(1, (total + MAX_RENDER_COMPLEXES - 1) // MAX_RENDER_COMPLEXES)
         try:
             page = min(pages, max(1, int(page or 1)))
         except (ValueError, TypeError, OverflowError):
             page = 1
         start = (page - 1) * MAX_RENDER_COMPLEXES
-        selected = set(sorted(selected)[start:start + MAX_RENDER_COMPLEXES])
+        if not full_linkage:
+            selected = set(sorted(selected)[start:start + MAX_RENDER_COMPLEXES])
+        positions = self._separated_positions(selected, classes_in_view)
+        class_sizes = {item['index']: item['n'] for item in classes}
         elements = []
         for item in network['complexes']:
             index = item['index']
@@ -229,8 +232,10 @@ class GraphPresenter:
                 'id': f'C{index}', 'label': f'C{index}: {item["label"]}',
                 'species': item['species'], 'linkage': f'L{group}',
                 'color': linkage_color(group),
+                'render_size': 8 if full_linkage and class_sizes[group] > 300 else 28,
                 'details': f'C{index}: {item["label"]}\nLinkage class L{group}\nComposition: {item["species"]}',
             }})
+            elements[-1]['position'] = positions[index]
         pairs = {}
         for reaction in network['reactions']:
             source, target = reaction['source_complex'], reaction['target_complex']
@@ -257,8 +262,32 @@ class GraphPresenter:
                                                  ('\nAdditional channels are in the full report.' if len(entries)>50 else '')).replace('**', '^')}})
         nodes = [item for item in elements if 'source' not in item['data']]
         edges = [item for item in elements if 'source' in item['data']]
-        shown = edges[:MAX_RENDER_REACTIONS]
+        shown = edges if full_linkage else edges[:MAX_RENDER_REACTIONS]
+        if full_linkage:
+            count = len({membership[index] for index in selected})
+            return nodes + shown, (f'Complete selected linkage graph: {len(nodes)} complexes and {len(shown)} '
+                                   f'undirected connections across {count} linkage classes. '
+                                   'All selected complexes/connections are shown; colors match the legend. '
+                                   'The default separated layout places disconnected classes in distinct regions. '
+                                   'Zoom to read labels or select fewer classes for detail.'), 1
         message = f'Graph page {page}/{pages}: {len(nodes)} of {total} selected complexes; {len(shown)} of {len(edges)} within-page edges shown.'
         if pages > 1 or len(shown) < len(edges):
             message += ' Rendering is limited: cross-page/extra edges are hidden. All reactions remain in the calculation and downloads. Use linkage filters or a complex neighborhood.'
         return nodes + shown, message, pages
+
+    @staticmethod
+    def _separated_positions(selected, classes):
+        """Linear-time, non-overlapping class disks; actual complexes, no boxes."""
+        groups = [sorted(selected.intersection(item['complex_indices'])) for item in classes]
+        groups = [group for group in groups if group]
+        columns = max(1, ceil(sqrt(len(groups))))
+        positions = {}
+        for group_index, indices in enumerate(groups):
+            center_x, center_y = (group_index % columns) * 1000, (group_index // columns) * 1000
+            radius = max(65, min(400, 18 * sqrt(len(indices))))
+            for index, complex_index in enumerate(indices):
+                distance = 0 if len(indices) == 1 else radius * sqrt((index + 0.5) / len(indices))
+                angle = index * 2.399963229728653
+                positions[complex_index] = {'x': center_x + distance * cos(angle),
+                                            'y': center_y + distance * sin(angle)}
+        return positions

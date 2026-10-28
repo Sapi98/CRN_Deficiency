@@ -6,10 +6,11 @@ import runpy
 from pathlib import Path
 from unittest.mock import patch
 import os
-from web.limits import MAX_INPUT_BYTES
+import json
+from web.limits import MAX_INPUT_BYTES, MAX_RESULT_BYTES
 
 from web.service import (AnalysisRunner, EXAMPLES, GraphPresenter,
-                                     analyze_document, decode_upload, linkage_color, toggle_linkage_selection)
+                                     analyze_document, decode_upload, decode_saved_upload, linkage_color, toggle_linkage_selection)
 
 
 class WebServiceTests(unittest.TestCase):
@@ -28,21 +29,51 @@ class WebServiceTests(unittest.TestCase):
         self.assertEqual(toggle_linkage_selection(selected, '2'), [])
         self.assertEqual(len(GraphPresenter().elements(payload, linkage=[])), 9)
 
-    def test_large_linkage_overview_shows_all_nine_distinct_classes(self):
+    def test_large_linkage_view_shows_actual_disconnected_graphs_not_boxes(self):
         text = 'Reactions:\n' + '\n'.join(f'X{i} k{i}-> X{i+1}' for i in range(310))
         text += '\n' + '\n'.join(f'A{i} q{i}-> B{i}' for i in range(8))
         payload = analyze_document(text, 'react')
         self.assertEqual(payload['outcome']['deficiency']['l'], 9)
         overview, message, pages = GraphPresenter().view(payload, mode='linkage')
-        self.assertEqual(len(overview), 9)
+        nodes = [x for x in overview if 'source' not in x['data']]
+        edges = [x for x in overview if 'source' in x['data']]
+        self.assertEqual(len(nodes), 327)
+        self.assertEqual(len(edges), 318)
+        self.assertTrue(all(x['data']['id'].startswith('C') and 'position' in x for x in nodes))
         self.assertEqual(len({x['data']['color'] for x in overview}), 9)
-        self.assertTrue(all(x['data']['kind'] == 'linkage-class' for x in overview))
-        self.assertIn('9 of 9 classes', message)
-        self.assertIn('NOT one complex', message)
+        self.assertFalse(any(x['data'].get('kind') == 'linkage-class' for x in overview))
+        self.assertIn('9 linkage classes', message)
+        self.assertEqual(pages, 1)
+        multi = GraphPresenter().elements(payload, mode='linkage', linkage=['0', '1'])
+        self.assertEqual(sum('source' not in x['data'] for x in multi), 313)
         detail = GraphPresenter().elements(payload, mode='linkage', linkage='1')
         self.assertEqual(len(detail), 3)
         self.assertTrue(all(x['data']['color'] == linkage_color(1) for x in detail))
         self.assertEqual(len(payload['outcome']['network']['complexes']), 327)
+
+    def test_saved_report_restores_equations_kinetics_and_graph(self):
+        _, kind, options, text = EXAMPLES['fractional']
+        original = analyze_document(text, kind, options)
+        report = json.dumps(original['outcome'])
+        encoded = 'data:application/json;base64,' + base64.b64encode(report.encode()).decode()
+        self.assertEqual(decode_saved_upload(encoded, 'past.analysis'), report)
+        restored = AnalysisRunner(timeout=10).run(report, 'saved-result', [], 'symbolic')
+        self.assertEqual(restored, original)
+        self.assertEqual(GraphPresenter().elements(restored), GraphPresenter().elements(original))
+
+    def test_saved_reports_have_separate_size_limit_and_revalidate_deficiency(self):
+        original = analyze_document(EXAMPLES['reaction'][3], 'react')['outcome']
+        original['deficiency']['deficiency'] = -999
+        original['network']['analysis_metadata'] = {'note': 'a' * (MAX_INPUT_BYTES+10)}
+        text = json.dumps(original)
+        self.assertGreater(len(text), MAX_INPUT_BYTES)
+        restored = analyze_document(text, 'saved-result')
+        self.assertEqual(restored['outcome']['deficiency']['deficiency'], 0)
+        with self.assertRaises(ValueError):
+            decode_saved_upload('data:text/plain;base64,YQ==', 'past.txt')
+        for report in ('bad JSON', '{}', '[]'):
+            with self.subTest(report=report), self.assertRaises(ValueError):
+                analyze_document(report, 'saved-result')
 
     def test_large_network_analysis_is_complete_but_graph_is_paged(self):
         count = 420
@@ -176,6 +207,27 @@ class WebServiceTests(unittest.TestCase):
 
 @unittest.skipUnless(find_spec('dash') and find_spec('dash_cytoscape'), 'optional web dependencies')
 class WebAppTests(unittest.TestCase):
+    def test_saved_result_upload_opens_without_running_current_model(self):
+        original = analyze_document(EXAMPLES['rational'][3], 'ode', ['lift'])
+        report = json.dumps(original['outcome'])
+        encoded = 'data:application/json;base64,' + base64.b64encode(report.encode()).decode()
+        response = self.post_callback('result.data', {
+            'analyze.n_clicks': 0, 'model.value': 'invalid model intentionally unused',
+            'format.value': 'react', 'options.value': [], 'unresolved.value': 'symbolic',
+            'saved-upload.contents': encoded, 'saved-upload.filename': 'past.analysis'}, 'saved-upload.contents')
+        self.assertEqual(response.status_code, 200)
+        restored = response.get_json()['response']['result']['data']
+        self.assertEqual(restored, original)
+        self.assertIn('restored', response.get_json()['response']['status']['children'])
+        graph_response = self.post_callback('graph.elements', {
+            'result.data': restored, 'mode.value': 'linkage', 'linkage.value': []}, 'result.data')
+        elements = graph_response.get_json()['response']['graph']['elements']
+        self.assertEqual(sum('source' not in x['data'] for x in elements), restored['outcome']['deficiency']['n'])
+        bad = 'data:application/json;base64,' + base64.b64encode(b'not JSON').decode()
+        response = self.post_callback('result.data', {
+            'saved-upload.contents': bad, 'saved-upload.filename': 'bad.output'}, 'saved-upload.contents')
+        self.assertNotIn('result', response.get_json()['response'])
+
     def test_txt_upload_selects_reaction_or_ode_mode_from_content(self):
         for text, expected in [('Reactions:\nA k-> B', 'react'),
                                ('ODE Model:\ndx/dt=x', 'ode'),
@@ -207,21 +259,16 @@ class WebAppTests(unittest.TestCase):
         self.assertEqual(buttons[0]['props']['aria-pressed'], 'false')
         self.assertEqual(buttons[1]['props']['aria-pressed'], 'true')
 
-    def test_linkage_class_click_and_color_styles(self):
-        response = self.post_callback('linkage.value@', {
-            'graph.tapNodeData': {'kind': 'linkage-class', 'linkage_index': '8'},
-            'mode.value': 'linkage'}, 'graph.tapNodeData')
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.get_json()['response']['linkage']['value'], ['8'])
+    def test_linkage_color_and_separated_layout_styles(self):
         response = self.post_callback('graph.stylesheet', {
             'mode.value': 'linkage', 'labels.value': [], 'search.value': '',
             'graph.elements': []}, 'mode.value')
         styles = {x['selector']: x['style'] for x in response.get_json()['response']['graph']['stylesheet']}
         self.assertEqual(styles['edge']['line-color'], 'data(color)')
         response = self.post_callback('graph.layout', {
-            'layout.value': 'cose', 'fit.n_clicks': 0,
-            'graph.elements': [{'data': {'kind': 'linkage-class', 'id': 'LC0'}}]}, 'graph.elements')
-        self.assertEqual(response.get_json()['response']['graph']['layout']['name'], 'grid')
+            'layout.value': 'separated', 'fit.n_clicks': 0,
+            'graph.elements': [{'data': {'id': 'C0'}, 'position': {'x': 0, 'y': 0}}]}, 'graph.elements')
+        self.assertEqual(response.get_json()['response']['graph']['layout']['name'], 'preset')
 
     def test_graph_labels_use_compact_fonts(self):
         response = self.post_callback('graph.stylesheet', {
@@ -276,7 +323,8 @@ class WebAppTests(unittest.TestCase):
                 {'id': 'format', 'property': 'value', 'value': 'react'},
                 {'id': 'options', 'property': 'value', 'value': []},
                 {'id': 'unresolved', 'property': 'value', 'value': 'symbolic'},
-            ], 'state': [],
+                {'id': 'saved-upload', 'property': 'contents', 'value': None},
+            ], 'state': [{'id': 'saved-upload', 'property': 'filename', 'value': None}],
         })
         self.assertEqual(response.status_code, 200)
         payload = response.get_json()['response']['result']['data']

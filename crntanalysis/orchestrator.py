@@ -317,8 +317,19 @@ class AnalysisReportReader:
         report_path = Path(path)
         if report_path.suffix.lower().lstrip(".") not in self.supported_extensions:
             raise ValueError("Choose a structured .analysis or .output file")
+        return self.read_text(report_path.read_text(encoding='utf-8-sig'))
+
+    def read_text(self, text: str) -> AnalysisOutcome:
+        """Restore a report from memory, without creating an uploaded file."""
         try:
-            payload = json.loads(report_path.read_text(encoding="utf-8"))
+            payload = json.loads(text)
+        except (TypeError, json.JSONDecodeError) as error:
+            raise ValueError(f'Invalid analysis report: {error}') from None
+        return self.from_dict(payload)
+
+    def from_dict(self, payload: dict) -> AnalysisOutcome:
+        """Reconstruct the stored network and recompute deficiency for validation."""
+        try:
             input_data = payload["input"]
             network_data = payload["network"]
             complexes = [

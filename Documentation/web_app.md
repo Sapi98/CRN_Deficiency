@@ -55,24 +55,31 @@ Matplotlib. Do not expose the development server publicly.
    clearing the multi-select dropdown restore all classes; removing the last
    selected class also restores all. The legend and dropdown stay synchronized.
    Class changes clear the optional neighborhood focus and reset the graph page.
-6. Large diagrams are paged (300 complexes / 1000 rendered edges by default).
-   Choose a graph page or enter a complex index such as `C123` to inspect its
-   one-hop neighborhood. Linkage filtering works with either view. The status
-   line explicitly reports hidden cross-page or excess edges. The calculation
-   and report downloads always retain the complete accepted network.
-   In the large-network **Linkage graph / All classes** view, the default is
-   instead a linkage-class overview: one colored summary node per actual class,
-   including its complex count and deficiency. These nodes are not complexes
-   and have no inter-class edges. Click one to open its complex graph; choose
-   All classes to return. More than 300 classes are paged. Node/edge colors
-   match the class legend, with distinct colors for the first twelve classes
-   and deterministic generated colors beyond that; labels identify classes
-   independently of color. Detailed complex graphs still use bounded pages.
-   Multiple selected classes use this same overview when their combined size
-   exceeds the rendering budget, so a dominant class cannot hide other selected
-   classes just because its complexes occur first in the index order.
-7. Download the current graph page as PNG or the full report as `.txt` / `.analysis`.
-   Structured downloads can be opened in the desktop application.
+6. Reaction diagrams are paged (300 complexes / 1000 rendered edges by default).
+   The **Linkage graph** instead draws all actual complexes and undirected
+   connections in the selected classes, including multiple large classes.
+   It does not replace classes with rectangular summary nodes or hide their
+   connections behind paging. The default **separated** layout puts each class
+   in its own non-overlapping region using a linear-time position calculation.
+   These positions are visual coordinates, not chemical or physical distances.
+   Pan and zoom to inspect the graph; labels appear when sufficiently zoomed in.
+   Node/edge colors match the legend. Choose fewer classes or a complex
+   neighborhood for very large graphs; alternate force layouts may be slow.
+   Browser memory/performance still limits practical rendering size. The graph
+   page control is disabled in linkage mode; the calculation and downloads
+   remain complete in both modes.
+7. Download the current graph view as PNG or the full report as `.txt` / `.analysis`.
+8. Use **Open saved result (.analysis / .output)** above the results to reopen
+   a previous structured report without entering a model or clicking Analyze.
+   The reader reconstructs the network, validates/recalculates deficiency, and
+   regenerates reports, ODEs, colors, and interactive graph elements. It does not
+   rerun the model parser or re-infer an ODE realization. The model editor is
+   unchanged, and layout/camera positions from a past session are not stored.
+   Plain `.txt` summaries cannot restore a network. Saved reports have their
+   own decoded size limit (8 MiB by default, `CRNT_WEB_MAX_RESULT_BYTES`), not
+   the 1 MiB model limit. Restoring uses the bounded analysis worker and no
+   uploaded files are written to disk. Invalid uploads leave the current
+   displayed result intact. Both desktop and web structured reports are accepted.
 
 Graph labels round rates; scientific data retains precision. Reports include
 indexed complexes, original/augmented ODEs, auxiliary definitions, and warnings.
@@ -250,8 +257,8 @@ all workers. Limits apply to pasted text and uploads of every supported extensio
 | `CRNT_WEB_MAX_RESULT_BYTES` | `8388608` | Serialized result limit (8 MiB). |
 | `CRNT_WEB_MAX_COMPLEXES` | `10000` | Full calculation network-complex limit. |
 | `CRNT_WEB_MAX_REACTIONS` | `50000` | Full calculation network-reaction limit. |
-| `CRNT_WEB_MAX_RENDER_COMPLEXES` | `300` | Complexes per browser graph page. |
-| `CRNT_WEB_MAX_RENDER_REACTIONS` | `1000` | Rendered edges per graph page. |
+| `CRNT_WEB_MAX_RENDER_COMPLEXES` | `300` | Complexes per reaction-graph page; linkage view draws all selected complexes. |
+| `CRNT_WEB_MAX_RENDER_REACTIONS` | `1000` | Edges per reaction-graph page; linkage view draws all selected connections. |
 | `CRNT_WEB_TIMEOUT_SECONDS` | `60` | Analysis wall-clock budget. |
 | `CRNT_WEB_MEMORY_MB` | `1024` | Per-child Linux address-space ceiling, in MiB; provision container headroom separately. |
 | `CRNT_WEB_MAX_REQUEST_BYTES` | automatic | HTTP request limit; at least max(8 x input limit, 3 x result limit). |
@@ -313,6 +320,27 @@ def decode_upload(contents, filename)
 
 - `ValueError`: Invalid extension, encoding, data URL, or input size.
 
+### `decode_saved_upload` — public
+
+```python
+def decode_saved_upload(contents, filename)
+```
+
+#### Parameters
+
+| Name | Type | Default | Purpose |
+|---|---|---|---|
+| `contents` | `str` | required | Base64 data URL of a structured saved report. |
+| `filename` | `str` | required | `.analysis` or `.output` filename. |
+
+#### Returns
+
+- `text` (`str`): Decoded UTF-8 report, bounded by `MAX_RESULT_BYTES`.
+
+#### Raises
+
+- `ValueError`: Unsupported extension, encoding, or oversized upload.
+
 ### `analyze_document` — public
 
 ```python
@@ -324,7 +352,7 @@ def analyze_document(text, input_format='auto', options=(), unresolved='symbolic
 | Name | Type | Default | Purpose |
 |---|---|---|---|
 | `text` | `str` | required | Model document. |
-| `input_format` | `str` | `'auto'` | `auto`, `react`, or `ode`. |
+| `input_format` | `str` | `'auto'` | `auto`, `react`, `ode`, or internal `saved-result` restoration. |
 | `options` | `Sequence[str]` | `()` | `lift` and/or `fractional`. |
 | `unresolved` | `str` | `'symbolic'` | Existing unresolved-value policy. |
 
@@ -428,3 +456,6 @@ the Linux memory limit. The nested `app` callbacks manage loading, analysis,
 metrics, graph rendering/layout/style, inspection, and downloads. They are not
 a stable external API; HTTP callback tests cover their contracts. No application
 state is stored in shared mutable module-level result objects.
+`_decode_text_upload` shares model/report decoding with separate size budgets;
+`GraphPresenter._separated_positions` builds deterministic disjoint class-disk
+coordinates in linear time, without a force solver or synthetic class nodes.

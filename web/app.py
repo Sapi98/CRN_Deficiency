@@ -6,7 +6,7 @@ from pathlib import Path
 from crntanalysis import __version__
 from crntanalysis.orchestrator import CRNAnalysisService, InputFormatError
 from web.limits import MAX_REQUEST_BYTES, MAX_INPUT_BYTES
-from web.service import (AnalysisRunner, EXAMPLES, GraphPresenter, decode_upload,
+from web.service import (AnalysisRunner, EXAMPLES, GraphPresenter, decode_upload, decode_saved_upload,
                          linkage_color, selected_linkages, toggle_linkage_selection)
 
 
@@ -65,11 +65,13 @@ def create_app(runner=None):
                 html.Section([
                     html.P('02 / EXPLORE THE NETWORK', className='eyebrow'),
                     html.H2('Structure, made visible.'),
+                    dcc.Upload(id='saved-upload', children=html.Button('Open saved result (.analysis / .output)…'),
+                               accept='.analysis,.output', multiple=False),
                     dcc.Loading(html.Div(id='metrics', className='metrics'), type='circle'),
                     html.Div([
                         html.Div([html.Label('Graph'), dcc.RadioItems(id='mode', options=[{'label': ' Reactions', 'value': 'reaction'},
                                                                                                     {'label': ' Linkage graph', 'value': 'linkage'}], value='reaction', inline=True)]),
-                        html.Div([html.Label('Layout'), dcc.Dropdown(id='layout', options=['cose', 'circle', 'breadthfirst', 'grid'], value='cose', clearable=False)]),
+                    html.Div([html.Label('Layout'), dcc.Dropdown(id='layout', options=['separated', 'cose', 'circle', 'breadthfirst', 'grid'], value='separated', clearable=False)]),
                         html.Div([html.Label('Linkage classes'), dcc.Dropdown(id='linkage', options=[], value=[],
                                   multi=True, placeholder='All classes', clearable=True)]),
                     ], className='toolbar'),
@@ -79,8 +81,8 @@ def create_app(runner=None):
                     html.Div([html.Label('Graph page'), dcc.Input(id='graph-page', type='number', value=1, min=1, step=1),
                               dcc.Input(id='focus', type='text', placeholder='Neighborhood of C123 (optional)', debounce=True)], className='graph-actions'),
                     html.P(id='graph-status', role='status', className='muted small'),
-                    cyto.Cytoscape(id='graph', elements=[], layout={'name': 'cose'}, responsive=True,
-                                   style={'width': '100%', 'height': '540px'}, minZoom=0.08, maxZoom=5),
+                    cyto.Cytoscape(id='graph', elements=[], layout={'name': 'preset'}, responsive=True,
+                                   style={'width': '100%', 'height': '540px'}, minZoom=0.001, maxZoom=5),
                     html.P('Drag nodes to arrange • scroll to zoom • drag the background to pan • click a node or edge to inspect', className='muted small'),
                     html.Button('All classes / reset selection', id='linkage-all', n_clicks=0),
                     html.Div(id='legend', className='legend'),
@@ -119,13 +121,20 @@ def create_app(runner=None):
 
     @app.callback(Output('result', 'data'), Output('status', 'children'),
                   Input('analyze', 'n_clicks'), Input('model', 'value'), Input('format', 'value'),
-                  Input('options', 'value'), Input('unresolved', 'value'), prevent_initial_call=True,
+                  Input('options', 'value'), Input('unresolved', 'value'),
+                  Input('saved-upload', 'contents'), State('saved-upload', 'filename'), prevent_initial_call=True,
                   running=[(Output('analyze', 'disabled'), True, False),
+                           (Output('saved-upload', 'disabled'), True, False),
                            (Output('analyze', 'children'), 'Analyzing…', 'Analyze network →')])
-    def analyze(clicks, text, kind, options, unresolved):
-        if ctx.triggered_id != 'analyze':
+    def analyze(clicks, text, kind, options, unresolved, saved_contents, saved_filename):
+        saved = ctx.triggered_id == 'saved-upload'
+        if ctx.triggered_id != 'analyze' and not saved:
             return None, 'Input changed. Analyze again to refresh the results.'
         try:
+            if saved:
+                text = decode_saved_upload(saved_contents, saved_filename)
+                payload = analysis.run(text, 'saved-result', [], 'symbolic')
+                return payload, f'Opened {saved_filename}. Graphs and reports restored; the model editor is unchanged.'
             payload = analysis.run(text, kind, options or [], unresolved)
             return payload, 'Analysis complete. Explore the graph below.'
         except ValueError as error:
@@ -133,7 +142,7 @@ def create_app(runner=None):
                        .replace('In the GUI, check', 'In the model panel, check')
                        .replace('at the top of the GUI', 'at the top of the')
                        .replace('Analyze model', 'Analyze network'))
-            return None, html.Pre(message, className='error')
+            return no_update if saved else None, html.Pre(message, className='error')
 
     @app.callback(Output('metrics', 'children'), Output('report', 'children'), Output('classes', 'children'),
                   Output('linkage', 'options'), Output('linkage', 'value'),
@@ -169,8 +178,8 @@ def create_app(runner=None):
                 **{'aria-pressed': 'true' if selection is None or str(x['index']) in selection else 'false'})
                 for x in payload['outcome']['deficiency']['linkage_classes']]
 
-    @app.callback(Output('focus', 'value'), Input('linkage', 'value'), prevent_initial_call=True)
-    def clear_neighborhood_on_class_change(selected):
+    @app.callback(Output('focus', 'value'), Input('linkage', 'value'), Input('result', 'data'), prevent_initial_call=True)
+    def clear_neighborhood_on_class_change(selected, payload):
         return ''
 
     @app.callback(Output('odes', 'children'), Input('result', 'data'))
@@ -190,6 +199,7 @@ def create_app(runner=None):
 
     @app.callback(Output('graph', 'elements'), Output('graph-status', 'children'), Output('graph-page', 'max'),
                   Output('graph-page', 'value'),
+                  Output('graph-page', 'disabled'),
                   Input('result', 'data'), Input('mode', 'value'), Input('linkage', 'value'),
                   Input('graph-page', 'value'), Input('focus', 'value'))
     def graph_elements(payload, mode, linkage, page, focus):
@@ -200,28 +210,25 @@ def create_app(runner=None):
             page = min(pages, max(1, int(page or 1)))
         except (TypeError, ValueError, OverflowError):
             page = 1
-        return elements, message, pages, page
+        return elements, message, pages, page, mode == 'linkage'
 
-    @app.callback(Output('linkage', 'value', allow_duplicate=True), Input('graph', 'tapNodeData'),
+    @app.callback(Output('linkage', 'value', allow_duplicate=True),
                   Input({'type': 'linkage-toggle', 'index': ALL}, 'n_clicks'),
-                  Input('linkage-all', 'n_clicks'), State('mode', 'value'), State('linkage', 'value'),
+                  Input('linkage-all', 'n_clicks'), State('linkage', 'value'),
                   prevent_initial_call=True)
-    def open_linkage(data, legend_clicks, reset_clicks, mode, selected):
+    def open_linkage(legend_clicks, reset_clicks, selected):
         if ctx.triggered_id == 'linkage-all':
             return []
         if isinstance(ctx.triggered_id, dict):
             index = ctx.triggered_id.get('index')
             if isinstance(index, str) and any(legend_clicks or []):
                 return toggle_linkage_selection(selected, index)
-        if ctx.triggered_id == 'graph' and mode == 'linkage' and data and data.get('kind') == 'linkage-class':
-            return [data['linkage_index']]
         raise PreventUpdate
 
     @app.callback(Output('graph', 'layout'), Input('layout', 'value'), Input('fit', 'n_clicks'), Input('graph', 'elements'))
     def graph_layout(name, clicks, elements):
-        overview = elements and all(x['data'].get('kind') == 'linkage-class' for x in elements)
-        if overview and name == 'cose':
-            name = 'grid'
+        if name == 'separated':
+            name = 'preset'
         return {'name': name, 'fit': True, 'padding': 55, 'animate': False,
                 'nodeRepulsion': 12000, 'componentSpacing': 160}
 
@@ -229,16 +236,15 @@ def create_app(runner=None):
     def graph_style(mode, labels, search, elements):
         styles = [
             {'selector': 'node', 'style': {'label': 'data(label)', 'background-color': 'data(color)', 'color': '#143645',
-                                           'font-size': 9, 'text-valign': 'bottom', 'text-margin-y': 5, 'width': 28, 'height': 28}},
+                                           'font-size': 9, 'min-zoomed-font-size': 6,
+                                           'text-valign': 'bottom', 'text-margin-y': 5,
+                                           'width': 'data(render_size)', 'height': 'data(render_size)'}},
             {'selector': 'edge', 'style': {'curve-style': 'bezier', 'line-color': 'data(color)', 'target-arrow-color': 'data(color)',
                                            'target-arrow-shape': 'triangle' if mode == 'reaction' else 'none', 'width': 2,
                                            'label': 'data(label)' if 'rates' in (labels or []) else '',
-                                           'font-size': 7, 'text-background-color': '#fff', 'text-background-opacity': 0.9,
+                                           'font-size': 7, 'min-zoomed-font-size': 6,
+                                           'text-background-color': '#fff', 'text-background-opacity': 0.9,
                                            'text-background-padding': 2, 'text-rotation': 'autorotate'}},
-            {'selector': 'node[kind = "linkage-class"]', 'style': {
-                'shape': 'round-rectangle', 'width': 170, 'height': 64,
-                'label': 'data(label)', 'text-wrap': 'wrap', 'text-valign': 'center',
-                'text-margin-y': 0, 'color': '#ffffff', 'font-size': 10}},
             {'selector': ':selected', 'style': {'border-width': 4, 'border-color': '#e7a84a', 'line-color': '#e7a84a', 'target-arrow-color': '#e7a84a'}},
         ]
         if search:
