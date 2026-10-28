@@ -603,7 +603,7 @@ class Ui_MainWindow(object):
         self.odeHelp.setProperty(u"role", QCoreApplication.translate("MainWindow", u"muted", None))
         self.fileHeading.setText(QCoreApplication.translate("MainWindow", u"File input", None))
         self.fileHeading.setProperty(u"role", QCoreApplication.translate("MainWindow", u"section", None))
-        self.fileHelp.setText(QCoreApplication.translate("MainWindow", u"Select one .react, .ode, or .txt file. For .txt files, choose the matching format above.", None))
+        self.fileHelp.setText(QCoreApplication.translate("MainWindow", u"Select one .react, .ode, or .txt file. Text files are detected from their content; choose a format manually if not recognized.", None))
         self.fileHelp.setProperty(u"role", QCoreApplication.translate("MainWindow", u"muted", None))
         self.resultsHeading.setText(QCoreApplication.translate("MainWindow", u"02  /  Analysis overview", None))
         self.resultsHeading.setProperty(u"role", QCoreApplication.translate("MainWindow", u"section", None))

@@ -725,7 +725,7 @@ Y = 0.0
              <item>
               <widget class="QLabel" name="fileHelp">
                <property name="text">
-                <string>Select one .react, .ode, or .txt file. For .txt files, choose the matching format above.</string>
+                <string>Select one .react, .ode, or .txt file. Text files are detected from their content; choose a format manually if not recognized.</string>
                </property>
                <property name="wordWrap">
                 <bool>true</bool>

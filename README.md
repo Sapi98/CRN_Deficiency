@@ -359,6 +359,9 @@ Open **http://127.0.0.1:8050**. On Windows, activate with
 `.venv-web\Scripts\activate.bat` or `.venv-web\Scripts\Activate.ps1` instead.
 The separate web environment needs no Qt installation. Existing desktop and
 standalone workflows are unchanged.
+`.txt` uploads are accepted: their content automatically selects reaction or
+ODE mode, including XPP-style equations. The desktop file picker and CLI/API
+file analysis also detect supported `.txt` contents; no renaming is required.
 The top-level `web/` app is excluded from pip distributions; run it from a
 repository checkout. Installing `crntanalysis` does not install the web app.
 Model uploads/pasted text support up to 1 MiB by default. Hosts can increase

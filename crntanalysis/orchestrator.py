@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -71,8 +72,8 @@ class CRNAnalysisService:
         lift_rational: bool = False,
     ) -> AnalysisOutcome:
         input_path = Path(path)
-        resolved_format = self._resolve_format(input_format, path=input_path)
-        text = input_path.read_text(encoding="utf-8")
+        text = input_path.read_text(encoding="utf-8-sig")
+        resolved_format = self.detect_format(input_format, path=input_path, text=text)
         return self.analyze_text(
             text,
             input_format=resolved_format,
@@ -92,7 +93,7 @@ class CRNAnalysisService:
         allow_fractional: bool = False,
         lift_rational: bool = False,
     ) -> AnalysisOutcome:
-        resolved_format = self._resolve_format(input_format, text=text)
+        resolved_format = self.detect_format(input_format, text=text)
         warnings: List[str] = []
         if resolved_format == "react":
             if lift_rational:
@@ -115,9 +116,9 @@ class CRNAnalysisService:
             warnings=warnings,
         )
 
-    def _resolve_format(
+    def detect_format(
         self,
-        requested: str,
+        requested: str = "auto",
         *,
         path: Optional[Path] = None,
         text: Optional[str] = None,
@@ -134,10 +135,10 @@ class CRNAnalysisService:
             if suffix in self.supported_formats:
                 return suffix
         if text is not None:
-            headings = {line.strip().lower() for line in text.splitlines()}
-            if "reactions:" in headings:
+            headings = {line.split('#', 1)[0].strip().lower() for line in text.splitlines()}
+            if any(re.fullmatch(r'reactions\s*:', line) for line in headings):
                 return "react"
-            if "ode model:" in headings:
+            if any(re.fullmatch(r'ode model\s*:', line) for line in headings):
                 return "ode"
             if ODEDocumentParser.recognizes(text):
                 return "ode"

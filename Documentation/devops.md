@@ -1777,11 +1777,11 @@ def analyze_text(
 - `DeficiencyError`: The resulting network is invalid for deficiency analysis.
 
 
-#### `CRNAnalysisService._resolve_format` — private
+#### `CRNAnalysisService.detect_format` — public
 
 ```python
-def _resolve_format(
-    self, requested: str, *, path: Optional[Path] = None,
+def detect_format(
+    self, requested: str = 'auto', *, path: Optional[Path] = None,
     text: Optional[str] = None
 ) -> str
 ```
@@ -1790,7 +1790,7 @@ def _resolve_format(
 
 | Parameter | Type | Default | Description |
 |---|---|---:|---|
-| `requested` | `str` | required | `auto`, `react`, or `ode`. |
+| `requested` | `str` | `'auto'` | `auto`, `react`, or `ode`. |
 | `path` | `Path \| None` | `None` | Optional suffix source. |
 | `text` | `str \| None` | `None` | Optional heading source. |
 

@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from crntanalysis import __version__
+from crntanalysis.orchestrator import CRNAnalysisService, InputFormatError
 from web.limits import MAX_REQUEST_BYTES, MAX_INPUT_BYTES
 from web.service import (AnalysisRunner, EXAMPLES, GraphPresenter, decode_upload,
                          linkage_color, selected_linkages, toggle_linkage_selection)
@@ -107,7 +108,12 @@ def create_app(runner=None):
         try:
             text = decode_upload(contents, filename)
             kind = 'ode' if filename.lower().endswith('.ode') else 'react' if filename.lower().endswith('.react') else 'auto'
-            return text, kind, [], f'Loaded {filename}. Choose applicable ODE options, then analyze.'
+            if kind == 'auto':
+                try:
+                    kind = CRNAnalysisService().detect_format(text=text)
+                except InputFormatError:
+                    return text, 'auto', [], f'Loaded {filename}; format not recognized. Choose Reaction network or ODE system manually.'
+            return text, kind, [], f'Loaded {filename}; detected {kind.upper()} input. Choose applicable ODE options, then analyze.'
         except ValueError as error:
             return no_update, no_update, no_update, str(error)
 

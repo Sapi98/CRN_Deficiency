@@ -176,6 +176,18 @@ class WebServiceTests(unittest.TestCase):
 
 @unittest.skipUnless(find_spec('dash') and find_spec('dash_cytoscape'), 'optional web dependencies')
 class WebAppTests(unittest.TestCase):
+    def test_txt_upload_selects_reaction_or_ode_mode_from_content(self):
+        for text, expected in [('Reactions:\nA k-> B', 'react'),
+                               ('ODE Model:\ndx/dt=x', 'ode'),
+                               ("species x\nparam k=2\nx'=-k*x", 'ode')]:
+            with self.subTest(format=expected):
+                encoded = 'data:text/plain;base64,' + base64.b64encode(text.encode()).decode()
+                response = self.post_callback('model.value', {
+                    'upload.contents': encoded, 'upload.filename': 'model.txt'}, 'upload.contents')
+                result = response.get_json()['response']
+                self.assertEqual(result['format']['value'], expected)
+                self.assertEqual(result['model']['value'], text)
+
     def test_clickable_legend_add_remove_and_reset_http_callbacks(self):
         import json
         pattern = json.dumps({'index': ['ALL'], 'type': 'linkage-toggle'}, separators=(',', ':'), sort_keys=True)

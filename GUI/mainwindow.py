@@ -217,6 +217,13 @@ class MainWindow(QMainWindow):
         self.ui.removeButton.setEnabled(True)
         if path.suffix.lower() in {'.react', '.ode'}:
             self.ui.formatCombo.setCurrentIndex(1 if path.suffix.lower() == '.ode' else 0)
+        elif path.suffix.lower() == '.txt':
+            try:
+                detected = CRNAnalysisService().detect_format(text=path.read_text(encoding='utf-8-sig'))
+                self.ui.formatCombo.setCurrentIndex(1 if detected == 'ode' else 0)
+            except (OSError, ValueError):
+                # Unknown text remains available for an explicit format choice.
+                pass
         self.ui.inputTabs.setCurrentIndex(1)
         self.input_changed()
 

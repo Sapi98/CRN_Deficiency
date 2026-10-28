@@ -40,6 +40,9 @@ Matplotlib. Do not expose the development server publicly.
 
 1. Choose a public example, paste a document, or upload a UTF-8 `.react`, `.ode`,
    or `.txt` file. Uploads replace the editor content.
+   Text uploads automatically select Reaction network or ODE system from the
+   document's headings or XPP-style derivatives. If content is not recognized,
+   it remains in the editor with a prompt to select the format manually.
 2. Select format, unresolved-parameter policy, and applicable ODE options.
    Examples select their options automatically; uploads do not silently opt in.
 3. Click **Analyze network**. Editing input invalidates earlier results.
