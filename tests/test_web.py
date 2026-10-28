@@ -228,7 +228,10 @@ class WebAppTests(unittest.TestCase):
         workspace = next(item for item in sections if 'workspace' in item.get('props', {}).get('className', ''))
         heading = workspace['props']['children'][0]
         self.assertEqual(heading['props']['className'], 'workspace-heading')
-        heading_ids = {item.get('props', {}).get('id') for item in walk(heading)
+        actions = workspace['props']['children'][2]
+        self.assertEqual(actions['props']['className'], 'saved-result-actions')
+        self.assertEqual(workspace['props']['children'][3]['props']['className'], 'toolbar')
+        heading_ids = {item.get('props', {}).get('id') for item in walk(actions)
                        if isinstance(item.get('props', {}).get('id'), str)}
         self.assertIn('saved-upload', heading_ids)
         self.assertIn('open-saved-button', heading_ids)

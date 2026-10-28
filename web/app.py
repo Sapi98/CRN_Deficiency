@@ -68,11 +68,13 @@ def create_app(runner=None):
                     html.Div([
                         html.Div([html.P('02 / EXPLORE THE NETWORK', className='eyebrow'),
                                   html.H2('Structure, made visible.')]),
+                    ], className='workspace-heading'),
+                    dcc.Loading(html.Div(id='metrics', className='metrics'), type='circle'),
+                    html.Div([
                         dcc.Upload(id='saved-upload', children=html.Button('Open saved result…', id='open-saved-button',
                                    title='Restore a .analysis or .output file without running a new analysis.'),
                                    accept='.analysis,.output', multiple=False),
-                    ], className='workspace-heading'),
-                    dcc.Loading(html.Div(id='metrics', className='metrics'), type='circle'),
+                    ], className='saved-result-actions'),
                     html.Div([
                         html.Div([html.Label('Graph'), dcc.RadioItems(id='mode', options=[{'label': ' Reactions', 'value': 'reaction'},
                                                                                                     {'label': ' Linkage graph', 'value': 'linkage'}], value='reaction', inline=True)]),
