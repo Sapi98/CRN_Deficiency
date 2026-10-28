@@ -20,6 +20,7 @@ from crntanalysis.ode_parser import ODEFileParser, ODEParseResult
 from crntanalysis.ode_documents import ODEDocumentParser
 from crntanalysis.parser_utils import ParserError
 from crntanalysis.reaction_parser import ReactionFileParser
+from crntanalysis.sparse_adjacency import SparseAdjacencyMatrix
 
 __all__ = [
     "AnalysisOutcome",
@@ -148,12 +149,45 @@ class CRNAnalysisService:
 class ConsoleReportFormatter:
     """Create a detailed report suitable for terminals and GUI text panes."""
 
-    def format(self, outcome: AnalysisOutcome) -> str:
+    def equation_systems(self, outcome):
+        """Return original and analyzed ODEs, deriving reaction-input dynamics."""
+        from sympy import Add, Rational, Symbol, expand
+        from crntanalysis.parser_utils import ArithmeticExpressionParser
+        network = outcome.network
+        metadata = network.analysis_metadata
+        original = metadata.get('original_equations', {})
+        analyzed = metadata.get('transformed_equations', {})
+        if not analyzed:
+            equations = {name: [] for name in outcome.deficiency.species}
+            complexes = {item.index: item for item in network.complexes}
+            parse = ArithmeticExpressionParser.parse
+            for reaction in network.reactions:
+                if reaction.rate_expression is not None:
+                    rate_law = parse(reaction.rate_expression)
+                else:
+                    rate_law = parse(reaction.rate_constant)
+                    orders = (reaction.kinetic_orders if reaction.kinetic_orders is not None
+                              else complexes[reaction.source].species)
+                    for name, power in orders.items():
+                        rate_law *= Symbol(name) ** (parse(power) if isinstance(power, str) else Rational(str(power)))
+                source = complexes[reaction.source].species
+                target = complexes[reaction.target].species
+                for name in source.keys() | target.keys():
+                    first, second = target.get(name, 0), source.get(name, 0)
+                    change = ((parse(first) if isinstance(first, str) else Rational(str(first)))
+                              - (parse(second) if isinstance(second, str) else Rational(str(second))))
+                    if change != 0:
+                        equations[name].append(change * rate_law)
+            analyzed = {name: str(expand(Add(*terms))) for name, terms in equations.items()}
+        return {'original': dict(original), 'analyzed': dict(analyzed)}
+
+    def format(self, outcome: AnalysisOutcome, *, equation_systems=None) -> str:
         result = outcome.deficiency
         network = outcome.network
         metadata = network.analysis_metadata
-        originals = metadata.get('original_equations', {})
-        transformed = metadata.get('transformed_equations', {})
+        systems = self.equation_systems(outcome) if equation_systems is None else equation_systems
+        originals = systems['original']
+        transformed = systems['analyzed']
         auxiliaries = metadata.get('auxiliary_species', [])
         auxiliary_names = {item['species'] for item in auxiliaries}
         species = sorted(set(result.species) | set(originals) | set(transformed))
@@ -207,7 +241,9 @@ class ConsoleReportFormatter:
             lines.extend(['', 'Original ODE system'])
             lines.extend(f'  d{name}/dt = {rhs}' for name, rhs in originals.items())
         if transformed:
-            lines.extend(['', 'ODE system used for network construction (including auxiliaries)'])
+            heading = ('ODE system used for network construction (including auxiliaries)' if originals
+                       else 'ODE system implied by the reaction network')
+            lines.extend(['', heading])
             lines.extend(f'  d{name}/dt = {rhs}' for name, rhs in transformed.items())
         if auxiliaries:
             lines.extend(['', 'Auxiliary definitions and derived ODEs'])
@@ -308,7 +344,9 @@ class AnalysisReportReader:
                 reactions=reactions,
                 complexes=complexes,
                 reaction_graph=ReactionGraph(complexes, reactions),
-                adjacency_matrix=network_data["adjacency_matrix"],
+                adjacency_matrix=(SparseAdjacencyMatrix.from_dict(network_data['adjacency_matrix'])
+                                  if isinstance(network_data['adjacency_matrix'], dict)
+                                  else network_data['adjacency_matrix']),
                 rate_constants=dict(network_data.get("rate_constants", {})),
                 stoichiometric_coefficients=dict(
                     network_data.get("stoichiometric_coefficients", {})

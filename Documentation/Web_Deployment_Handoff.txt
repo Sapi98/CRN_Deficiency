@@ -1,0 +1,137 @@
+CRNTANALYSIS - WEB APPLICATION HOSTING HANDOFF
+============================================
+Prepared: 2026-10-20 | Application version: 1.1.0
+Limits updated: 2026-10-28
+Repository: https://github.com/Sapi98/CRN_Deficiency
+Branch: web_app
+
+1. PURPOSE AND SCOPE
+-------------------
+Host a Python web application for chemical reaction network analysis.
+Users upload/paste equations or reactions, explore interactive network graphs,
+and download deficiency reports. Only the web service needs hosting; desktop
+distribution and Python package publishing are outside this request.
+
+Deploy from the repository: web/ provides the interface and crntanalysis/
+provides its analysis backend. Use requirements-web.txt, not setup.py or the
+general project's requirements.txt.
+
+2. SOFTWARE AND DEPENDENCIES
+---------------------------
+Proposed production runtime: Linux, CPython 3.12 (python:3.12-slim), Gunicorn,
+and Docker or an equivalent institution-managed Python hosting environment.
+No database, GPU, Node/npm build, or desktop Qt stack is required.
+
+Direct requirements                    Purpose
+-------------------------------------  ----------------------------------------
+sympy>=1.13,<2                         Symbolic calculations and analysis.
+dash>=3.0,<4                           Python web interface and callbacks.
+dash-cytoscape>=1.0,<2                  Interactive browser network graphs.
+gunicorn>=23,<24                       Production Linux/UNIX WSGI server.
+
+Observed Python package inventory (development environment):
+dash 3.4.0; dash-cytoscape 1.0.2; sympy 1.14.0; gunicorn 23.0.0;
+Flask 3.1.3; Werkzeug 3.1.9; plotly 7.1.0; mpmath 1.3.0;
+narwhals 2.21.0; requests 2.32.5; retrying 1.4.2; nest-asyncio 1.6.0;
+typing_extensions 4.16.0; importlib_metadata 8.7.1; zipp 3.23.1;
+packaging 26.3; blinker 1.9.0; click 8.1.8; itsdangerous 2.2.0;
+Jinja2 3.1.6; MarkupSafe 3.0.4; certifi 2026.10.19;
+charset-normalizer 3.5.2; idna 3.20; urllib3 2.6.3.
+Observed installation tools: pip 21.2.4; setuptools 58.0.4.
+
+This inventory was captured from macOS/ARM64 with Python 3.9.6, not the proposed
+Linux/Python 3.12 image. It is not a lockfile or recommended production pin set.
+Resolve and record approved versions in the actual hosting environment; use
+supported installation tooling rather than copying the old tool versions.
+
+Browser assets are bundled with Dash/dash-cytoscape and served locally:
+React/ReactDOM 18.3.1, prop-types 15.8.1, Babel polyfill 7.12.1,
+Dash renderer/core components, and Cytoscape.js graph integration.
+Exact embedded JavaScript subdependencies require bundle/SBOM scanning.
+No external CDN/font or external analysis API is configured. No API key is
+required. Node/npm is unnecessary when using these prebuilt Python packages.
+
+3. DEPLOYMENT
+-------------
+From the repository root on a Docker-capable Linux server:
+
+  git switch web_app
+  docker build -f Dockerfile.web -t crntanalysis-web .
+  docker run -d --name crntanalysis-web --restart unless-stopped \
+    --memory=2g --cpus=2 -p 127.0.0.1:8050:8050 crntanalysis-web
+  curl --fail http://127.0.0.1:8050/healthz
+
+Expected health response: {"status":"ok"}.
+
+The image runs as unprivileged user crnt (UID 10001). Its startup command is:
+
+  gunicorn --bind 0.0.0.0:8050 --workers 2 --threads 1 --timeout 35 \
+    web.wsgi:server
+
+Put an institutional HTTPS reverse proxy in front of port 8050. Keep that port
+private; expose the approved HTTPS endpoint instead. Do not use the development
+server for production. Managed Docker hosting should use Dockerfile.web,
+repository-root build context, web_app branch, and health path /healthz.
+The current command binds to fixed port 8050; set PORT=8050 if the platform
+requires a matching environment variable, or override the startup command.
+
+4. CAPACITY, DATA HANDLING, AND ACCESS
+------------------------------------
+Start evaluation at approximately 2 vCPU and 2 GB RAM, then benchmark realistic
+concurrent workloads. This is an estimate, not a capacity guarantee: two large
+analysis children plus web workers can exceed the example 2 GB container cap.
+
+Current limits:
+  Input: 1 MiB; HTTP body: 24 MiB by default; result: 8 MiB.
+  Graph: 500 complexes / 1,500 reactions.
+  Analysis: 20 seconds in a separate spawned process.
+  Linux child address space: 1 GiB. Gunicorn timeout: 35 seconds.
+  Two synchronous web workers; requests can queue during analysis.
+
+Limits are deployment-configurable using CRNT_WEB_MAX_INPUT_BYTES,
+CRNT_WEB_MAX_RESULT_BYTES, CRNT_WEB_MAX_COMPLEXES, CRNT_WEB_MAX_REACTIONS,
+CRNT_WEB_TIMEOUT_SECONDS, and CRNT_WEB_MAX_REQUEST_BYTES. The HTTP limit
+automatically allows encoding/callback overhead. Match proxy body/time limits;
+benchmark memory and browser behavior before increasing graph size, since the
+current adjacency matrix scales quadratically. See Documentation/web_app.md.
+
+Models are processed in server memory and may contain unpublished research.
+The app does not save uploads/reports to disk or maintain a user-result cache.
+Results use browser memory; downloads are user-initiated. There is no database.
+Infrastructure logs, swap, dumps, and browser behavior remain subject to IT
+policies; these statements do not guarantee secure erasure.
+
+There is NO built-in login, SSO, or rate limiter. For restricted use, provide
+institutional sign-in, an authenticated proxy, or VPN access. HTTPS alone is
+not access control. Add request-rate limits and enforce CPU/memory limits.
+Avoid request-body logging. This is not a general-purpose execution sandbox.
+No private research inputs or generated reports are copied by Dockerfile.web.
+
+5. APPROVAL AND ACCEPTANCE
+-------------------------
+Please confirm the hostname, intended audience, authentication, data category,
+expected concurrency, resource budget, and infrastructure maintenance owner.
+Scientific feature development remains with the research/software team.
+
+Before release:
+  - Build/test the actual Linux/Python 3.12 image and record its source revision.
+  - Pin approved dependencies/base-image digest; scan OS, Python, and bundled
+    JavaScript. Current version ranges/base-image tag are not immutable.
+  - Review repository LICENSE: PolyForm Noncommercial License 1.0.0, plus
+    dependency licenses/notices. No licensing/security clearance is implied.
+  - Verify HTTPS/access controls, /healthz, uploads, graphs, ODE display,
+    downloads, concurrent users, errors/timeouts, and absence of private files.
+  - Configure monitoring, log retention, patching, rollback, and incident response.
+
+Web acceptance commands:
+  python -m pip check
+  python -m unittest discover -s tests -p test_web.py
+
+Python/HTTP tests exist. Browser interactions and the production Docker image
+still require validation on the intended platform; no public deployment is
+claimed. /healthz checks liveness, not scientific correctness.
+
+Detailed operations: Documentation/web_app.md
+Hosting overview: README.md, "Hosting the web application"
+Updated inventory: run python -m pip list --format=json and
+python -m pip freeze --all inside the final deployment environment.

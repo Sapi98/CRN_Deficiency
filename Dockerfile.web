@@ -1,0 +1,12 @@
+FROM python:3.12-slim
+WORKDIR /app
+COPY requirements-web.txt ./
+RUN pip install --no-cache-dir -r requirements-web.txt
+# Explicit copies keep private models, desktop code, and reports out of image.
+COPY crntanalysis ./crntanalysis
+COPY web ./web
+COPY LICENSE ./LICENSE
+RUN useradd --create-home --uid 10001 crnt
+USER crnt
+EXPOSE 8050
+CMD ["gunicorn", "--bind", "0.0.0.0:8050", "--workers", "2", "--threads", "1", "--timeout", "90", "web.wsgi:server"]

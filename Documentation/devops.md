@@ -1,5 +1,9 @@
 # Developer and Operations Guide
 
+The optional `web` adapter adds Dash/Cytoscape rendering without
+changing the scientific pipeline. See [Web application operations](web_app.md)
+for its module boundaries, local launch, deployment, limits, privacy, and tests.
+
 This document describes the software architecture, module responsibilities,
 extension points, testing, packaging, and release workflow. User-facing setup
 and examples belong in the repository `README.md`; mathematical methodology

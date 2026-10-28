@@ -15,6 +15,8 @@ from crntanalysis.reaction_parser import (
     parse_reaction_text,
 )
 
+from crntanalysis.sparse_adjacency import SparseAdjacencyMatrix
+
 __version__ = "1.1.0"
 
 __all__ = [
@@ -26,6 +28,7 @@ __all__ = [
     "ODEParseError",
     "ReactionFileParser",
     "ReactionParseError",
+    "SparseAdjacencyMatrix",
     "calculate_deficiency",
     "parse_ode_file",
     "parse_ode_text",

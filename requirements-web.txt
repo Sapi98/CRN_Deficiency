@@ -1,0 +1,5 @@
+# Headless web application: no Qt or desktop dependencies.
+sympy>=1.13,<2
+dash>=3.0,<4
+dash-cytoscape>=1.0,<2
+gunicorn>=23,<24; platform_system != 'Windows'
