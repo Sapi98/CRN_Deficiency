@@ -6,10 +6,8 @@ import json
 from pathlib import PurePath
 
 from crntanalysis.orchestrator import CRNAnalysisService, ConsoleReportFormatter
-
-MAX_INPUT_BYTES = 32_000
-MAX_COMPLEXES = 500
-MAX_REACTIONS = 1500
+from web.limits import (MAX_INPUT_BYTES, MAX_RESULT_BYTES, MAX_COMPLEXES,
+                        MAX_REACTIONS, ANALYSIS_TIMEOUT, input_size_message)
 COLORS = ('#167d8d', '#ae6235', '#6671bc', '#b34d76', '#559451', '#937545')
 EXAMPLES = {
     'reaction': ('Reversible conversion', 'react', [],
@@ -28,11 +26,11 @@ def decode_upload(contents, filename):
     if not filename or PurePath(filename).suffix.lower() not in {'.react', '.ode', '.txt'}:
         raise ValueError('Upload one .react, .ode, or .txt model file.')
     if not isinstance(contents, str) or len(contents) > MAX_INPUT_BYTES * 2:
-        raise ValueError('Model files must be at most 32 KB.')
+        raise ValueError(input_size_message())
     try:
         raw = base64.b64decode(contents.split(',', 1)[1], validate=True)
         if len(raw) > MAX_INPUT_BYTES:
-            raise ValueError('Model files must be at most 32 KB.')
+            raise ValueError(input_size_message())
         return raw.decode('utf-8-sig')
     except (binascii.Error, UnicodeDecodeError, IndexError) as error:
         raise ValueError('The upload must be a UTF-8 text model.') from error
@@ -43,19 +41,22 @@ def analyze_document(text, input_format='auto', options=(), unresolved='symbolic
     if not isinstance(text, str) or not text.strip():
         raise ValueError('Paste a model or upload a file before analyzing.')
     if len(text.encode('utf-8')) > MAX_INPUT_BYTES:
-        raise ValueError('Models must be at most 32 KB.')
+        raise ValueError(input_size_message())
     outcome = CRNAnalysisService().analyze_text(
         text, input_format=input_format, unresolved=unresolved,
         allow_fractional='fractional' in options, lift_rational='lift' in options,
         source='<web input>',
     )
     if len(outcome.network.complexes) > MAX_COMPLEXES or len(outcome.network.reactions) > MAX_REACTIONS:
-        raise ValueError('This network exceeds the interactive limit of 500 complexes or 1500 reactions.')
+        raise ValueError(f'This network exceeds the interactive limit of {MAX_COMPLEXES} complexes '
+                         f'or {MAX_REACTIONS} reactions. The server administrator can adjust '
+                         'CRNT_WEB_MAX_COMPLEXES / CRNT_WEB_MAX_REACTIONS after checking capacity.')
     formatter = ConsoleReportFormatter()
     payload = {'outcome': outcome.to_dict(), 'report': formatter.format(outcome),
                'equations': formatter.equation_systems(outcome)}
-    if len(json.dumps(payload).encode('utf-8')) > 1_000_000:
-        raise ValueError('The result exceeds the 1 MB browser limit. Use the desktop tool for this model.')
+    if len(json.dumps(payload).encode('utf-8')) > MAX_RESULT_BYTES:
+        raise ValueError(f'The result exceeds the {MAX_RESULT_BYTES / 1048576:g} MiB browser limit. '
+                         'The server administrator can adjust CRNT_WEB_MAX_RESULT_BYTES.')
     return payload
 
 
@@ -77,12 +78,12 @@ def _analysis_worker(connection, arguments):
 class AnalysisRunner:
     """Run each request in a killable process with a fixed wall-clock budget."""
 
-    def __init__(self, timeout=20):
+    def __init__(self, timeout=ANALYSIS_TIMEOUT):
         self.timeout = timeout
 
     def run(self, text, input_format, options, unresolved):
         if not isinstance(text, str) or len(text.encode('utf-8')) > MAX_INPUT_BYTES:
-            raise ValueError('Models must be text and at most 32 KB.')
+            raise ValueError(input_size_message())
         context = multiprocessing.get_context('spawn')
         receiver, sender = context.Pipe(duplex=False)
         process = context.Process(target=_analysis_worker,

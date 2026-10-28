@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from crntanalysis import __version__
+from web.limits import MAX_REQUEST_BYTES, MAX_INPUT_BYTES
 from web.service import AnalysisRunner, EXAMPLES, GraphPresenter, decode_upload
 
 
@@ -15,7 +16,7 @@ def create_app(runner=None):
 
     app = Dash(__name__, title='CRNTAnalysis | Network workspace',
                assets_folder=str(Path(__file__).with_name('assets')))
-    app.server.config['MAX_CONTENT_LENGTH'] = 2_500_000
+    app.server.config['MAX_CONTENT_LENGTH'] = MAX_REQUEST_BYTES
     analysis = runner or AnalysisRunner()
     presenter = GraphPresenter()
 
@@ -40,6 +41,7 @@ def create_app(runner=None):
                     dcc.Upload(id='upload', children=html.Div(['Drop a model here or ', html.Strong('browse files')]),
                                accept='.react,.ode,.txt', multiple=False, className='upload'),
                     html.Div(id='upload-status', role='status', className='muted'),
+                    html.P(f'Maximum model size: {MAX_INPUT_BYTES / 1048576:g} MiB.', className='muted small'),
                     html.Label('Input format'),
                     dcc.Dropdown(id='format', options=[{'label': label, 'value': value} for value, label in
                                  [('auto', 'Detect automatically'), ('react', 'Reaction network'), ('ode', 'ODE system')]],

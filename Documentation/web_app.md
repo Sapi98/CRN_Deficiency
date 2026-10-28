@@ -10,6 +10,7 @@
   - [Pre-launch verification and operations](#pre-launch-verification-and-operations)
 - [Architecture and safeguards](#architecture-and-safeguards)
 - [Tests](#tests)
+- [Larger models and deployment settings](#larger-models-and-deployment-settings)
 - [Developer API](#developer-api)
 
 ## Run locally
@@ -186,8 +187,8 @@ is reimplemented in JavaScript. Browser graph layouts do not change the CRN.
   Refresh clears results; tabs have independent stores.
 - Models are processed on the server. Use localhost or an institution-controlled
   host for unpublished research. Hosting/proxy logs are outside app control.
-- Limits: 32 KB model input, 20 seconds per analysis, 500 complexes, 1500
-  reactions, and 1 MB serialized results. HTTP bodies are capped at 2.5 MB to
+- Default limits: 1 MiB model input, 20 seconds per analysis, 500 complexes, 1500
+  reactions, and 8 MiB serialized results. HTTP bodies default to 24 MiB to
   accommodate bounded result state sent back to graph callbacks.
 - Linux analysis children have a 1 GiB address-space ceiling. Other operating
   systems retain the timeout but need deployment-level memory controls.
@@ -212,6 +213,39 @@ channels, process errors/timeouts, Dash routes/assets, and HTTP analysis callbac
 Web HTTP tests skip without Dash; desktop/plotting tests may skip in a headless
 environment. Browser interaction and Docker builds also require manual release
 verification on the intended hosting platform.
+
+## Larger models and deployment settings
+
+Set these environment variables before starting the web server, then restart
+all workers. Limits apply to pasted text and uploads of every supported extension.
+
+| Environment variable | Default | Purpose |
+|---|---|---|
+| `CRNT_WEB_MAX_INPUT_BYTES` | `1048576` | Decoded UTF-8 model limit (1 MiB). |
+| `CRNT_WEB_MAX_RESULT_BYTES` | `8388608` | Serialized result limit (8 MiB). |
+| `CRNT_WEB_MAX_COMPLEXES` | `500` | Network-complex limit. |
+| `CRNT_WEB_MAX_REACTIONS` | `1500` | Network-reaction limit. |
+| `CRNT_WEB_TIMEOUT_SECONDS` | `20` | Analysis wall-clock budget. |
+| `CRNT_WEB_MAX_REQUEST_BYTES` | automatic | HTTP request limit; at least max(8 x input limit, 3 x result limit). |
+
+Example (macOS/Linux):
+
+```bash
+CRNT_WEB_MAX_INPUT_BYTES=10485760 python -m web.app
+```
+
+For Docker add `-e CRNT_WEB_MAX_INPUT_BYTES=10485760` before the image name;
+managed hosts can set the same value in their environment settings. The
+HTTP limit automatically scales for base64/JSON and result callback overhead.
+Match the reverse proxy/platform body-size limits as well. Invalid or undersized
+settings fail at startup instead of silently discarding larger requests.
+
+For longer calculations, also increase Gunicorn's 35-second timeout and proxy
+timeouts beyond the chosen analysis timeout. Input size alone does not measure
+complexity: dense adjacency matrices scale quadratically with complex count,
+and symbolic rank calculations can be costly. Raise graph/result/time limits
+only after benchmarking server memory, browser responsiveness, and concurrent
+users. These changes do not provide unlimited-network support.
 
 ## Developer API
 

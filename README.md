@@ -361,6 +361,10 @@ The separate web environment needs no Qt installation. Existing desktop and
 standalone workflows are unchanged.
 The top-level `web/` app is excluded from pip distributions; run it from a
 repository checkout. Installing `crntanalysis` does not install the web app.
+Model uploads/pasted text support up to 1 MiB by default. Hosts can increase
+this with `CRNT_WEB_MAX_INPUT_BYTES` before startup; see the
+[larger-model settings](Documentation/web_app.md#larger-models-and-deployment-settings)
+for graph/result limits, timeouts, and server-capacity considerations.
 
 See [the web application guide](Documentation/web_app.md) for Docker deployment,
 privacy, interaction details, resource limits, and tests. This implementation

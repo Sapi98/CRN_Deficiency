@@ -5,6 +5,8 @@ import unittest
 import runpy
 from pathlib import Path
 from unittest.mock import patch
+import os
+from web.limits import MAX_INPUT_BYTES
 
 from web.service import (AnalysisRunner, EXAMPLES, GraphPresenter,
                                      analyze_document, decode_upload)
@@ -67,9 +69,40 @@ class WebServiceTests(unittest.TestCase):
             with self.subTest(filename=filename), self.assertRaises(ValueError):
                 decode_upload(content, filename)
         with self.assertRaises(ValueError):
-            analyze_document('x'*32001)
+            analyze_document('x'*(MAX_INPUT_BYTES + 1))
         with self.assertRaises(ValueError):
             analyze_document('')
+
+    def test_valid_model_larger_than_old_32kb_limit(self):
+        text = 'Reactions:\nA k-> B\n#' + 'example padding ' * 3000
+        self.assertGreater(len(text.encode()), 32_000)
+        encoded = 'data:text/plain;base64,' + base64.b64encode(text.encode()).decode()
+        self.assertEqual(decode_upload(encoded, 'large.txt'), text)
+        payload = AnalysisRunner(timeout=10).run(text, 'react', [], 'symbolic')
+        self.assertEqual(payload['outcome']['deficiency']['n'], 2)
+
+    def test_oversize_upload_counts_utf8_bytes(self):
+        text = '#' + '\u03b1' * (MAX_INPUT_BYTES // 2 + 1)
+        encoded = 'data:text/plain;base64,' + base64.b64encode(text.encode()).decode()
+        with self.assertRaisesRegex(ValueError, 'MiB'):
+            decode_upload(encoded, 'large.txt')
+
+    def test_configurable_limits_and_http_overhead(self):
+        path = Path(__file__).resolve().parents[1] / 'web' / 'limits.py'
+        environment = {'CRNT_WEB_MAX_INPUT_BYTES': '2097152',
+                       'CRNT_WEB_MAX_RESULT_BYTES': '16777216',
+                       'CRNT_WEB_MAX_COMPLEXES': '1000', 'CRNT_WEB_MAX_REACTIONS': '3000',
+                       'CRNT_WEB_TIMEOUT_SECONDS': '60'}
+        with patch.dict(os.environ, environment, clear=True):
+            limits = runpy.run_path(str(path))
+        self.assertEqual(limits['MAX_INPUT_BYTES'], 2097152)
+        self.assertEqual(limits['MAX_REQUEST_BYTES'], 3 * 16777216)
+        self.assertEqual(limits['ANALYSIS_TIMEOUT'], 60)
+        for values in ({'CRNT_WEB_MAX_INPUT_BYTES': 'bad'},
+                       {'CRNT_WEB_MAX_INPUT_BYTES': '0'},
+                       {'CRNT_WEB_MAX_REQUEST_BYTES': '10'}):
+            with self.subTest(values=values), patch.dict(os.environ, values, clear=True), self.assertRaises(ValueError):
+                runpy.run_path(str(path))
 
     def test_worker_result_and_errors_cross_process_boundary(self):
         runner = AnalysisRunner(timeout=10)
