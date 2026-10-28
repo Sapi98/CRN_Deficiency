@@ -9,10 +9,25 @@ import os
 from web.limits import MAX_INPUT_BYTES
 
 from web.service import (AnalysisRunner, EXAMPLES, GraphPresenter,
-                                     analyze_document, decode_upload, linkage_color)
+                                     analyze_document, decode_upload, linkage_color, toggle_linkage_selection)
 
 
 class WebServiceTests(unittest.TestCase):
+    def test_multiselect_class_filter_and_toggle_semantics(self):
+        payload = analyze_document('Reactions:\nA k1-> B\nC k2-> D\nE k3-> F', 'react')
+        selected = toggle_linkage_selection([], '0')
+        self.assertEqual(selected, ['0'])
+        selected = toggle_linkage_selection(selected, '2')
+        self.assertEqual(selected, ['0', '2'])
+        elements = GraphPresenter().elements(payload, mode='linkage', linkage=selected)
+        colors = {x['data']['color'] for x in elements}
+        self.assertEqual(colors, {linkage_color(0), linkage_color(2)})
+        self.assertEqual(len([x for x in elements if 'source' not in x['data']]), 4)
+        selected = toggle_linkage_selection(selected, '0')
+        self.assertEqual(selected, ['2'])
+        self.assertEqual(toggle_linkage_selection(selected, '2'), [])
+        self.assertEqual(len(GraphPresenter().elements(payload, linkage=[])), 9)
+
     def test_large_linkage_overview_shows_all_nine_distinct_classes(self):
         text = 'Reactions:\n' + '\n'.join(f'X{i} k{i}-> X{i+1}' for i in range(310))
         text += '\n' + '\n'.join(f'A{i} q{i}-> B{i}' for i in range(8))
@@ -166,7 +181,7 @@ class WebAppTests(unittest.TestCase):
             'graph.tapNodeData': {'kind': 'linkage-class', 'linkage_index': '8'},
             'mode.value': 'linkage'}, 'graph.tapNodeData')
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.get_json()['response']['linkage']['value'], '8')
+        self.assertEqual(response.get_json()['response']['linkage']['value'], ['8'])
         response = self.post_callback('graph.stylesheet', {
             'mode.value': 'linkage', 'labels.value': [], 'search.value': '',
             'graph.elements': []}, 'mode.value')

@@ -163,6 +163,10 @@ def create_app(runner=None):
                 **{'aria-pressed': 'true' if selection is None or str(x['index']) in selection else 'false'})
                 for x in payload['outcome']['deficiency']['linkage_classes']]
 
+    @app.callback(Output('focus', 'value'), Input('linkage', 'value'), prevent_initial_call=True)
+    def clear_neighborhood_on_class_change(selected):
+        return ''
+
     @app.callback(Output('odes', 'children'), Input('result', 'data'))
     def render_odes(payload):
         if not payload:
