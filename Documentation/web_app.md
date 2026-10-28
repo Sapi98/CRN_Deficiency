@@ -47,6 +47,11 @@ Matplotlib. Do not expose the development server publicly.
    linkage classes, or highlight complexes using the search field.
 5. Click nodes or edges for composition or reaction details. Parallel channels
    retain distinct IDs; linkage edges aggregate channel labels.
+   Click a legend button to isolate its class. Click other classes to add them,
+   or selected classes to remove them. **All classes / reset selection** and
+   clearing the multi-select dropdown restore all classes; removing the last
+   selected class also restores all. The legend and dropdown stay synchronized.
+   Class changes clear the optional neighborhood focus and reset the graph page.
 6. Large diagrams are paged (300 complexes / 1000 rendered edges by default).
    Choose a graph page or enter a complex index such as `C123` to inspect its
    one-hop neighborhood. Linkage filtering works with either view. The status
@@ -60,6 +65,9 @@ Matplotlib. Do not expose the development server publicly.
    match the class legend, with distinct colors for the first twelve classes
    and deterministic generated colors beyond that; labels identify classes
    independently of color. Detailed complex graphs still use bounded pages.
+   Multiple selected classes use this same overview when their combined size
+   exceeds the rendering budget, so a dominant class cannot hide other selected
+   classes just because its complexes occur first in the index order.
 7. Download the current graph page as PNG or the full report as `.txt` / `.analysis`.
    Structured downloads can be opened in the desktop application.
 
@@ -363,7 +371,7 @@ def view(self, payload, mode='reaction', linkage='all', page=1, focus=None)
 |---|---|---|---|
 | `payload` | `dict` or `None` | required | Serialized web result. |
 | `mode` | `str` | `'reaction'` | Directed reactions or undirected linkage graph. |
-| `linkage` | `str` | `'all'` | Linkage-class index or all classes. |
+| `linkage` | `str` or `list[str]` | `'all'` | One or multiple linkage-class indices; `'all'`, `[]`, or `None` selects all. |
 | `page` | `int` | `1` | Graph page (clamped to the selected view). |
 | `focus` | `str` or `None` | `None` | Complex ID/index for a one-hop neighborhood. |
 

@@ -176,6 +176,25 @@ class WebServiceTests(unittest.TestCase):
 
 @unittest.skipUnless(find_spec('dash') and find_spec('dash_cytoscape'), 'optional web dependencies')
 class WebAppTests(unittest.TestCase):
+    def test_clickable_legend_add_remove_and_reset_http_callbacks(self):
+        import json
+        pattern = json.dumps({'index': ['ALL'], 'type': 'linkage-toggle'}, separators=(',', ':'), sort_keys=True)
+        target = json.dumps({'index': '2', 'type': 'linkage-toggle'}, separators=(',', ':'), sort_keys=True)
+        values = {pattern + '.n_clicks': [0, 0, 1], 'linkage.value': ['0'], 'mode.value': 'linkage'}
+        response = self.post_callback('linkage.value@', values, target + '.n_clicks')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()['response']['linkage']['value'], ['0', '2'])
+        values['linkage.value'] = ['0', '2']
+        response = self.post_callback('linkage.value@', values, target + '.n_clicks')
+        self.assertEqual(response.get_json()['response']['linkage']['value'], ['0'])
+        response = self.post_callback('linkage.value@', {'linkage-all.n_clicks': 1}, 'linkage-all.n_clicks')
+        self.assertEqual(response.get_json()['response']['linkage']['value'], [])
+        payload = analyze_document('Reactions:\nA k1-> B\nC k2-> D', 'react')
+        response = self.post_callback('legend.children', {'result.data': payload, 'linkage.value': ['1']}, 'linkage.value')
+        buttons = response.get_json()['response']['legend']['children']
+        self.assertEqual(buttons[0]['props']['aria-pressed'], 'false')
+        self.assertEqual(buttons[1]['props']['aria-pressed'], 'true')
+
     def test_linkage_class_click_and_color_styles(self):
         response = self.post_callback('linkage.value@', {
             'graph.tapNodeData': {'kind': 'linkage-class', 'linkage_index': '8'},

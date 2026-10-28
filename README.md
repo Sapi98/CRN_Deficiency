@@ -372,6 +372,9 @@ Use graph pages, linkage filters, or a complex neighborhood to explore larger
 systems. Full reports/downloads retain every accepted reaction; PNG exports
 show only the current graph view. Large structured reports use a tagged sparse
 adjacency object instead of a dense nested list and require an updated reader.
+The clickable legend and multi-select dropdown can show one or several linkage
+classes together. Click **All classes / reset selection** to restore the default
+all-class view; this affects only visualization, never deficiency calculations.
 
 See [the web application guide](Documentation/web_app.md) for Docker deployment,
 privacy, interaction details, resource limits, and tests. This implementation
