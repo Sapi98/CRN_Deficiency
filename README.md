@@ -6,7 +6,7 @@ Network Theory (CRNT) deficiency. It accepts explicit reaction files and
 mass-action polynomial ODE files, provides typed and dictionary APIs, and
 includes a command-line analysis pipeline that writes structured reports.
 
-The current application version is **v1.1** (package version `1.1.0`).
+The current application version is **v1.3.0** (package version `1.3.0`).
 
 ODE formatting examples demonstrate three approaches:
 
@@ -73,7 +73,7 @@ repository also includes machine-readable citation metadata in
 Plain text:
 
 > Biswas, Saptarshi (2026). *CRNTAnalysis: Chemical Reaction Network Theory
-> Analysis* (version 1.1.0) [Software].
+> Analysis* (version 1.3.0) [Software].
 > https://github.com/Sapi98/CRN_Deficiency
 
 BibTeX:
@@ -83,7 +83,7 @@ BibTeX:
   author  = {Biswas, Saptarshi},
   title   = {CRNTAnalysis: Chemical Reaction Network Theory Analysis},
   year    = {2026},
-  version = {1.1.0},
+  version = {1.3.0},
   url     = {https://github.com/Sapi98/CRN_Deficiency}
 }
 ```
@@ -381,9 +381,12 @@ all-class view; this affects only visualization, never deficiency calculations.
 The linkage view draws actual disconnected, color-coded graphs for every
 selected class, with a fast separated layout and pan/zoom, rather than summary
 boxes. Large selections can still demand substantial browser resources.
-Use **Open saved result (.analysis / .output)** above the web results to restore
+Use **Open saved result…** in the web page header, beside the version badge, to restore
 a past network and its rendering without a new model analysis. Saved structured
 reports can be up to 8 MiB by default; plain text summaries are not restorable.
+After updating the source, restart the server and refresh the browser. For a
+hosted/container deployment, deploy or rebuild the updated image; the header
+should display **v1.3.0**. Refreshing alone does not update an older server.
 
 See [the web application guide](Documentation/web_app.md) for Docker deployment,
 privacy, interaction details, resource limits, and tests. This implementation

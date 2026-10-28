@@ -69,8 +69,8 @@ Matplotlib. Do not expose the development server publicly.
    page control is disabled in linkage mode; the calculation and downloads
    remain complete in both modes.
 7. Download the current graph view as PNG or the full report as `.txt` / `.analysis`.
-8. Use **Open saved result (.analysis / .output)** above the results to reopen
-   a previous structured report without entering a model or clicking Analyze.
+8. Use **Open saved result…** in the page header beside the version badge to reopen
+   a previous `.analysis` or `.output` report without entering a model or clicking Analyze.
    The reader reconstructs the network, validates/recalculates deficiency, and
    regenerates reports, ODEs, colors, and interactive graph elements. It does not
    rerun the model parser or re-infer an ODE realization. The model editor is

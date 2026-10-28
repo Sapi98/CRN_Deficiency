@@ -1,6 +1,6 @@
 CRNTANALYSIS - WEB APPLICATION HOSTING HANDOFF
 ============================================
-Prepared: 2026-10-20 | Application version: 1.1.0
+Prepared: 2026-10-20 | Application version: 1.3.0
 Limits updated: 2026-10-28
 Repository: https://github.com/Sapi98/CRN_Deficiency
 Branch: web_app

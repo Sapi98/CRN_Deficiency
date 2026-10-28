@@ -31,7 +31,12 @@ def create_app(runner=None):
             dcc.Store(id='result', storage_type='memory'), dcc.Download(id='download'),
             html.Header([html.Div([html.Div('CR / NT', className='brand-mark'),
                                   html.Div([html.H1('CRNTAnalysis'), html.P('A workspace for chemical reaction networks')])], className='brand'),
-                         html.Span(f'WEB LAB · v{__version__}', className='badge')]),
+                         html.Div([
+                             dcc.Upload(id='saved-upload', children=html.Button('Open saved result…', id='open-saved-button',
+                                        title='Restore a .analysis or .output file without running a new analysis.'),
+                                        accept='.analysis,.output', multiple=False),
+                             html.Span(f'WEB LAB · v{__version__}', className='badge'),
+                         ], className='header-actions')]),
             html.Main([
                 html.Section([
                     html.P('01 / DEFINE YOUR MODEL', className='eyebrow'),
@@ -65,8 +70,6 @@ def create_app(runner=None):
                 html.Section([
                     html.P('02 / EXPLORE THE NETWORK', className='eyebrow'),
                     html.H2('Structure, made visible.'),
-                    dcc.Upload(id='saved-upload', children=html.Button('Open saved result (.analysis / .output)…'),
-                               accept='.analysis,.output', multiple=False),
                     dcc.Loading(html.Div(id='metrics', className='metrics'), type='circle'),
                     html.Div([
                         html.Div([html.Label('Graph'), dcc.RadioItems(id='mode', options=[{'label': ' Reactions', 'value': 'reaction'},

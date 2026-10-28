@@ -207,6 +207,27 @@ class WebServiceTests(unittest.TestCase):
 
 @unittest.skipUnless(find_spec('dash') and find_spec('dash_cytoscape'), 'optional web dependencies')
 class WebAppTests(unittest.TestCase):
+    def test_open_saved_result_is_in_initial_page_header(self):
+        from crntanalysis import __version__
+        layout = self.client.get('/_dash-layout').get_json()
+        def walk(value):
+            if isinstance(value, dict):
+                yield value
+                for child in value.values():
+                    yield from walk(child)
+            elif isinstance(value, list):
+                for child in value:
+                    yield from walk(child)
+        components = list(walk(layout))
+        headers = [item for item in components if item.get('type') == 'Header']
+        self.assertEqual(len(headers), 1)
+        header_ids = {item.get('props', {}).get('id') for item in walk(headers[0])
+                      if isinstance(item.get('props', {}).get('id'), str)}
+        self.assertIn('saved-upload', header_ids)
+        self.assertIn('open-saved-button', header_ids)
+        self.assertEqual(sum(item.get('props', {}).get('id') == 'saved-upload' for item in components), 1)
+        self.assertIn(f'v{__version__}', str(headers[0]))
+
     def test_saved_result_upload_opens_without_running_current_model(self):
         original = analyze_document(EXAMPLES['rational'][3], 'ode', ['lift'])
         report = json.dumps(original['outcome'])
