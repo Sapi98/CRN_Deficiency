@@ -200,9 +200,11 @@ def create_app(runner=None):
                     styles.append({'selector': f'node[id = "{data["id"]}"]', 'style': {'border-width': 5, 'border-color': '#e7a84a'}})
         return styles
 
-    @app.callback(Output('details', 'children'), Input('graph', 'tapNodeData'), Input('graph', 'tapEdgeData'), Input('result', 'data'))
-    def inspect(node, edge, payload):
-        if ctx.triggered_id == 'result':
+    @app.callback(Output('details', 'children'), Input('graph', 'tapNodeData'), Input('graph', 'tapEdgeData'), Input('graph', 'elements'))
+    def inspect(node, edge, elements):
+        # Node clicks need only the bounded current graph, not a multi-MiB
+        # full result round-trip. Changing graph pages resets stale details.
+        if ctx.triggered[0]['prop_id'].endswith('.elements'):
             return 'Select a complex or reaction to inspect it.'
         data = edge if ctx.triggered[0]['prop_id'].endswith('tapEdgeData') else node
         return data.get('details', '') if data else 'Select a complex or reaction to inspect it.'

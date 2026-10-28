@@ -18,6 +18,7 @@ class WebServiceTests(unittest.TestCase):
         text = 'Reactions:\n' + '\n'.join(f'X{i} k{i}-> X{i+1}' for i in range(count))
         payload = analyze_document(text, 'react')
         self.assertEqual(len(payload['outcome']['network']['reactions']), count)
+
         self.assertEqual(payload['outcome']['deficiency']['n'], count+1)
         presenter = GraphPresenter()
         first, message, pages = presenter.view(payload)
@@ -30,6 +31,15 @@ class WebServiceTests(unittest.TestCase):
         self.assertEqual({x['data']['id'] for x in focused if 'source' not in x['data']},
                          {'C309', 'C310', 'C311'})
         self.assertEqual(len(payload['outcome']['network']['reactions']), count)
+    def test_graph_edge_cap_is_explicit_and_does_not_mutate_network(self):
+        payload = analyze_document('Reactions:\nA k-> B', 'react')
+        reaction = payload['outcome']['network']['reactions'][0]
+        payload['outcome']['network']['reactions'] = [dict(reaction, index=i) for i in range(1200)]
+        elements, message, pages = GraphPresenter().view(payload)
+        self.assertEqual(sum('source' in x['data'] for x in elements), 1000)
+        self.assertIn('1000 of 1200', message)
+        self.assertEqual(len(payload['outcome']['network']['reactions']), 1200)
+
     def test_reaction_input_report_includes_its_ode_system(self):
         payload = analyze_document(EXAMPLES['reaction'][3], 'react')
         self.assertIn('ODE system implied by the reaction network', payload['report'])

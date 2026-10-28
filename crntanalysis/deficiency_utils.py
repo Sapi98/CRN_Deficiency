@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Dict, Iterable, List, Mapping, Sequence, Set
-from sympy import Add, Expr, Matrix, Mul, Rational, Symbol, SparseMatrix, QQ
+from sympy import Add, Expr, Mul, Rational, Symbol, SparseMatrix, QQ
 from sympy.polys.matrices import DomainMatrix
 
 from crntanalysis.crn_models import Complex, Reaction, ReactionNetwork, Scalar
@@ -110,7 +110,7 @@ class DeficiencyCalculator:
         generators = []
         by_class = []
         for component in linkage_components:
-            root = min(component)
+            root = min(component, key=lambda index: (len(complexes[index].species), index))
             differences = [(complexes[root], complexes[index]) for index in sorted(component) if index != root]
             by_class.append(differences)
             generators.extend(differences)
