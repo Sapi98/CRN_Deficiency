@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Dict, List, Mapping, Tuple
 
 from crntanalysis.crn_models import AdjacencyCell, Complex, Reaction, ReactionGraph, Scalar, Weight
+from crntanalysis.sparse_adjacency import SparseAdjacencyMatrix
 
 
 class ComplexRegistry:
@@ -56,14 +57,23 @@ class ReactionGraphBuilder:
         self, complexes: List[Complex], reactions: List[Reaction]
     ) -> Tuple[ReactionGraph, List[List[AdjacencyCell]]]:
         size = len(complexes)
-        adjacency = [[0 for _ in range(size)] for _ in range(size)]
+        sparse = size > self.dense_threshold
+        adjacency = SparseAdjacencyMatrix(size) if sparse else [[0] * size for _ in range(size)]
+        positions = {complex_.index: position for position, complex_ in enumerate(complexes)}
         for reaction in reactions:
-            source, target, weight = reaction.source, reaction.target, reaction.weight
+            source, target, weight = positions[reaction.source], positions[reaction.target], reaction.weight
             updated = self._add_weight(adjacency[source][target], weight)
-            adjacency[source][target] = updated
+            if sparse:
+                adjacency.entries[source, target] = updated
+            else:
+                adjacency[source][target] = updated
             if source != target:
                 # Both cells share an immutable scalar or a copied list of weights.
-                adjacency[target][source] = updated[:] if isinstance(updated, list) else updated
+                reverse = updated[:] if isinstance(updated, list) else updated
+                if sparse:
+                    adjacency.entries[target, source] = reverse
+                else:
+                    adjacency[target][source] = reverse
         return ReactionGraph(complexes, reactions), adjacency
 
     @staticmethod
@@ -73,3 +83,6 @@ class ReactionGraphBuilder:
         if isinstance(cell, list):
             return [*cell, weight]
         return [cell, weight]
+    def __init__(self, dense_threshold=256):
+        self.dense_threshold = dense_threshold
+

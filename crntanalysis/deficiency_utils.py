@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Dict, Iterable, List, Mapping, Sequence, Set
-from sympy import Add, Expr, Matrix, Mul, Rational, Symbol
+from sympy import Add, Expr, Matrix, Mul, Rational, Symbol, SparseMatrix, QQ
+from sympy.polys.matrices import DomainMatrix
 
 from crntanalysis.crn_models import Complex, Reaction, ReactionNetwork, Scalar
 
@@ -99,16 +100,26 @@ class DeficiencyCalculator:
             {name for complex_ in network.complexes for name in complex_.species}
         )
         linkage_components = self._linkage_classes(network, complexes)
-        global_rank = self._rank(network.reactions, complexes, species)
+        # Within a connected linkage class, all reaction vectors span exactly
+        # the differences from any one complex to the other complexes.
+        # Use n-l sparse generators instead of every (possibly repeated) edge.
+        membership = {index: group for group, component in enumerate(linkage_components) for index in component}
+        reactions_by_class = [[] for _ in linkage_components]
+        for reaction in network.reactions:
+            reactions_by_class[membership[reaction.source]].append(reaction)
+        generators = []
+        by_class = []
+        for component in linkage_components:
+            root = min(component)
+            differences = [(complexes[root], complexes[index]) for index in sorted(component) if index != root]
+            by_class.append(differences)
+            generators.extend(differences)
+        global_rank = self._difference_rank(generators, species)
 
         class_results = []
         for class_index, component in enumerate(linkage_components):
-            reactions = [
-                reaction
-                for reaction in network.reactions
-                if reaction.source_complex in component
-            ]
-            rank = self._rank(reactions, complexes, species)
+            reactions = reactions_by_class[class_index]
+            rank = global_rank if len(linkage_components) == 1 else self._difference_rank(by_class[class_index], species)
             n = len(component)
             class_results.append(
                 LinkageClassDeficiency(
@@ -177,11 +188,25 @@ class DeficiencyCalculator:
     ) -> int:
         if not reactions or not species:
             return 0
-        vectors = [
-            self._reaction_vector(reaction, complexes, species)
-            for reaction in reactions
-        ]
-        return int(Matrix(vectors).rank())
+        return self._difference_rank([(complexes[r.source], complexes[r.target]) for r in reactions], species)
+
+    def _difference_rank(self, differences, species):
+        if not differences or not species:
+            return 0
+        columns = {name: index for index, name in enumerate(species)}
+        entries = {}
+        for row, (source, target) in enumerate(differences):
+            for name in source.species.keys() | target.species.keys():
+                value = self._sympy_scalar(target.species.get(name, 0)) - self._sympy_scalar(source.species.get(name, 0))
+                if value != 0:
+                    entries[row, columns[name]] = value
+        matrix = SparseMatrix(len(differences), len(species), entries)
+        if all(value.is_Rational for value in entries.values()):
+            # Exact rational-domain elimination, not floating-point SVD or a
+            # probabilistic modular rank. Sparse input avoids the E x S array.
+            return int(DomainMatrix.from_Matrix(matrix).convert_to(QQ).rank())
+        # Preserve the existing generic symbolic-rank semantics.
+        return int(matrix.rank())
 
     def _reaction_vector(
         self,

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Union
+from crntanalysis.sparse_adjacency import SparseAdjacencyMatrix
 
 
 Scalar = Union[int, float, str]
@@ -88,7 +89,7 @@ class ReactionNetwork:
     reactions: List[Reaction]
     complexes: List[Complex]
     reaction_graph: ReactionGraph
-    adjacency_matrix: List[List[AdjacencyCell]]
+    adjacency_matrix: Union[List[List[AdjacencyCell]], SparseAdjacencyMatrix]
     rate_constants: Dict[str, float]
     stoichiometric_coefficients: Dict[str, float]
     initial_conditions: Dict[str, float]
@@ -111,7 +112,7 @@ class ReactionNetwork:
             "complexes": [complex_.to_dict() for complex_ in self.complexes],
             "complex_index": self.complex_index,
             "reaction_graph": self.reaction_graph.to_dict(),
-            "adjacency_matrix": [
+            "adjacency_matrix": self.adjacency_matrix.to_dict() if isinstance(self.adjacency_matrix, SparseAdjacencyMatrix) else [
                 [cell[:] if isinstance(cell, list) else cell for cell in row]
                 for row in self.adjacency_matrix
             ],

@@ -20,6 +20,7 @@ from crntanalysis.ode_parser import ODEFileParser, ODEParseResult
 from crntanalysis.ode_documents import ODEDocumentParser
 from crntanalysis.parser_utils import ParserError
 from crntanalysis.reaction_parser import ReactionFileParser
+from crntanalysis.sparse_adjacency import SparseAdjacencyMatrix
 
 __all__ = [
     "AnalysisOutcome",
@@ -340,7 +341,9 @@ class AnalysisReportReader:
                 reactions=reactions,
                 complexes=complexes,
                 reaction_graph=ReactionGraph(complexes, reactions),
-                adjacency_matrix=network_data["adjacency_matrix"],
+                adjacency_matrix=(SparseAdjacencyMatrix.from_dict(network_data['adjacency_matrix'])
+                                  if isinstance(network_data['adjacency_matrix'], dict)
+                                  else network_data['adjacency_matrix']),
                 rate_constants=dict(network_data.get("rate_constants", {})),
                 stoichiometric_coefficients=dict(
                     network_data.get("stoichiometric_coefficients", {})
