@@ -294,7 +294,7 @@ class AnalysisReportWriter:
         directory = Path(output_directory)
         directory.mkdir(parents=True, exist_ok=True)
         stem = filename or self._default_stem(outcome.source)
-        target = directory / f"{Path(stem).stem}.{normalized_extension}"
+        target = directory / f"{Path(stem).stem if filename else stem}.{normalized_extension}"
         content = (
             ConsoleReportFormatter().format(outcome) + "\n"
             if normalized_extension == "txt"
@@ -305,7 +305,7 @@ class AnalysisReportWriter:
 
     @staticmethod
     def _default_stem(source: Optional[str]) -> str:
-        return f"{Path(source).stem}_analysis" if source else "network_analysis"
+        return f"{Path(source).stem}_report" if source and not source.startswith('<') else "network_analysis"
 
 
 class AnalysisReportReader:

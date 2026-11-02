@@ -29,6 +29,7 @@ def create_app(runner=None):
     def layout():
         return html.Div([
             dcc.Store(id='result', storage_type='memory'), dcc.Download(id='download'),
+            dcc.Store(id='input-filename', storage_type='memory'),
             html.Header([html.Div([html.Div('CR / NT', className='brand-mark'),
                                   html.Div([html.H1('CRNTAnalysis'), html.P('A workspace for chemical reaction networks')])], className='brand'),
                          html.Div([
@@ -109,12 +110,12 @@ def create_app(runner=None):
     app.layout = layout
 
     @app.callback(Output('model', 'value'), Output('format', 'value'), Output('options', 'value'),
-                  Output('upload-status', 'children'), Input('example', 'value'), Input('upload', 'contents'),
+                  Output('upload-status', 'children'), Output('input-filename', 'data'), Input('example', 'value'), Input('upload', 'contents'),
                   State('upload', 'filename'), prevent_initial_call=True)
     def load_model(example, contents, filename):
         if ctx.triggered_id == 'example' and example in EXAMPLES:
             _, kind, options, text = EXAMPLES[example]
-            return text, kind, options, 'Example loaded. Click Analyze network.'
+            return text, kind, options, 'Example loaded. Click Analyze network.', None
         try:
             text = decode_upload(contents, filename)
             kind = 'ode' if filename.lower().endswith('.ode') else 'react' if filename.lower().endswith('.react') else 'auto'
@@ -122,19 +123,19 @@ def create_app(runner=None):
                 try:
                     kind = CRNAnalysisService().detect_format(text=text)
                 except InputFormatError:
-                    return text, 'auto', [], f'Loaded {filename}; format not recognized. Choose Reaction network or ODE system manually.'
-            return text, kind, [], f'Loaded {filename}; detected {kind.upper()} input. Choose applicable ODE options, then analyze.'
+                    return text, 'auto', [], f'Loaded {filename}; format not recognized. Choose Reaction network or ODE system manually.', filename
+            return text, kind, [], f'Loaded {filename}; detected {kind.upper()} input. Choose applicable ODE options, then analyze.', filename
         except ValueError as error:
-            return no_update, no_update, no_update, str(error)
+            return no_update, no_update, no_update, str(error), no_update
 
     @app.callback(Output('result', 'data'), Output('status', 'children'),
                   Input('analyze', 'n_clicks'), Input('model', 'value'), Input('format', 'value'),
                   Input('options', 'value'), Input('unresolved', 'value'),
-                  Input('saved-upload', 'contents'), State('saved-upload', 'filename'), prevent_initial_call=True,
+                  Input('saved-upload', 'contents'), State('saved-upload', 'filename'), State('input-filename', 'data'), prevent_initial_call=True,
                   running=[(Output('analyze', 'disabled'), True, False),
                            (Output('saved-upload', 'disabled'), True, False),
                            (Output('analyze', 'children'), 'Analyzing…', 'Analyze network →')])
-    def analyze(clicks, text, kind, options, unresolved, saved_contents, saved_filename):
+    def analyze(clicks, text, kind, options, unresolved, saved_contents, saved_filename, input_filename):
         saved = ctx.triggered_id == 'saved-upload'
         if ctx.triggered_id != 'analyze' and not saved:
             return None, 'Input changed. Analyze again to refresh the results.'
@@ -144,6 +145,8 @@ def create_app(runner=None):
                 payload = analysis.run(text, 'saved-result', [], 'symbolic')
                 return payload, f'Opened {saved_filename}. Graphs and reports restored; the model editor is unchanged.'
             payload = analysis.run(text, kind, options or [], unresolved)
+            if input_filename:
+                payload['outcome']['input']['source'] = Path(input_filename.replace('\\', '/')).name
             return payload, 'Analysis complete. Explore the graph below.'
         except ValueError as error:
             message = (str(error).replace('GUI Model input panel', 'Model input panel')
