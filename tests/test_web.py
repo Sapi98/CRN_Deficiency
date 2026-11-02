@@ -366,7 +366,7 @@ class WebAppTests(unittest.TestCase):
         })
         self.assertEqual(response.status_code, 200)
         payload = response.get_json()['response']['result']['data']
-        self.assertEqual(build_download(payload, 'txt')['filename'], 'competition_report.txt')
+        self.assertEqual(build_download(payload, 'txt')['filename'], 'competition_analysis.txt')
         self.assertEqual(payload['outcome']['deficiency']['n'], 2)
         self.assertIn('Whole network', payload['report'])
 

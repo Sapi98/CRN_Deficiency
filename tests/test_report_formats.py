@@ -11,9 +11,9 @@ class ReportFormatTests(unittest.TestCase):
         self.payload['outcome']['input']['source'] = 'models/competition.v2.ode'
         for extension in ('txt', 'analysis', 'output'):
             self.assertEqual(build_download(self.payload, extension)['filename'],
-                             'competition.v2_report.' + extension)
+                             'competition.v2_analysis.' + extension)
         restored = analyze_document(build_download(self.payload, 'txt')['content'], 'saved-result')
-        self.assertEqual(build_download(restored, 'txt')['filename'], 'competition.v2_report.txt')
+        self.assertEqual(build_download(restored, 'txt')['filename'], 'competition.v2_analysis.txt')
 
     def setUp(self):
         _, kind, options, text = EXAMPLES['fractional']

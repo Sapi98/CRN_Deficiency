@@ -305,7 +305,7 @@ class AnalysisReportWriter:
 
     @staticmethod
     def _default_stem(source: Optional[str]) -> str:
-        return f"{Path(source).stem}_report" if source and not source.startswith('<') else "network_analysis"
+        return f"{Path(source).stem}_analysis" if source and not source.startswith('<') else "network_analysis"
 
 
 class AnalysisReportReader:
