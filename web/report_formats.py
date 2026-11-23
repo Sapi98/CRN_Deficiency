@@ -6,6 +6,7 @@ import re
 
 from crntanalysis.crn_models import Complex, Reaction, ReactionNetwork
 from crntanalysis.graph_utils import ReactionGraphBuilder
+from crntanalysis.orchestrator import AnalysisReportWriter
 from crntanalysis.parser_policies import SymbolicValuePolicy
 from crntanalysis.reaction_parser import ComplexParser
 
@@ -22,7 +23,8 @@ def build_download(payload, extension):
         content = payload['report'] + '\n\n' + BEGIN_DATA + '\n' + serialized + '\n' + END_DATA + '\n'
     else:
         content = serialized
-    return {'content': content, 'filename': f'network_analysis.{extension}',
+    stem = AnalysisReportWriter._default_stem(payload['outcome'].get('input', {}).get('source'))
+    return {'content': content, 'filename': f'{stem}.{extension}',
             'type': 'text/plain' if extension == 'txt' else 'application/json'}
 
 
